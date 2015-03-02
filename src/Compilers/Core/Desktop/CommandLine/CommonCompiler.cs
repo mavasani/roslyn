@@ -344,7 +344,7 @@ namespace Microsoft.CodeAnalysis
             ConcurrentSet<Diagnostic> analyzerExceptionDiagnostics = null;
             if (!analyzers.IsDefaultOrEmpty)
             {
-                analyzerManager = new AnalyzerManager();
+                analyzerManager = new AnalyzerManager((ex, analyzer, diagnostic) => analyzerExceptionDiagnostics.Add(diagnostic));
                 analyzerExceptionDiagnostics = new ConcurrentSet<Diagnostic>();
                 Action<Diagnostic> addExceptionDiagnostic = diagnostic => analyzerExceptionDiagnostics.Add(diagnostic);
 

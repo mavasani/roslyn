@@ -13,10 +13,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 {
     internal abstract class BaseDiagnosticIncrementalAnalyzer : IIncrementalAnalyzer
     {
-        protected BaseDiagnosticIncrementalAnalyzer(Workspace workspace, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource)
+        protected BaseDiagnosticIncrementalAnalyzer(Workspace workspace, HostAnalyzerManager hostAnalyzerManager)
         {
             this.Workspace = workspace;
-            this.HostDiagnosticUpdateSource = hostDiagnosticUpdateSource;
+            this.HostAnalyzerManager = hostAnalyzerManager;
         }
 
         #region IIncrementalAnalyzer
@@ -163,7 +163,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         #endregion
 
         protected Workspace Workspace { get; private set; }
-        protected AbstractHostDiagnosticUpdateSource HostDiagnosticUpdateSource { get; private set; }
+        protected HostAnalyzerManager HostAnalyzerManager { get; private set; }
 
         public virtual bool NeedsReanalysisOnOptionChanged(object sender, OptionChangedEventArgs e)
         {

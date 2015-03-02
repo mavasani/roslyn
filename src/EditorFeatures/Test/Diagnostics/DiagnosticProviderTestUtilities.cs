@@ -33,6 +33,7 @@ namespace Microsoft.CodeAnalysis.UnitTests.Diagnostics
             }
 
             var exceptionDiagnosticsSource = new TestHostDiagnosticUpdateSource(project.Solution.Workspace);
+            var diagnosticService = new DiagnosticAnalyzerService(project.Language, analyzer, exceptionDiagnosticsSource);
 
             if (getDocumentDiagnostics)
             {
@@ -40,60 +41,14 @@ namespace Microsoft.CodeAnalysis.UnitTests.Diagnostics
                 var root = document.GetSyntaxRootAsync().Result;
                 var semanticModel = document.GetSemanticModelAsync().Result;
 
-                var builder = new List<Diagnostic>();
-                var nodeInBodyAnalyzerService = document.Project.Language == LanguageNames.CSharp ?
-                    (ISyntaxNodeAnalyzerService)new CSharpSyntaxNodeAnalyzerService() :
-                    new VisualBasicSyntaxNodeAnalyzerService();
-
-                // Lets replicate the IDE diagnostic incremental analyzer behavior to determine span to test:
-                //  (a) If the span is contained within a method level member and analyzer supports semantic in span: analyze in member span.
-                //  (b) Otherwise, analyze entire syntax tree span.
-                var spanToTest = root.FullSpan;
-
-                var driver = new DiagnosticAnalyzerDriver(document, spanToTest, root,
-                    syntaxNodeAnalyzerService: nodeInBodyAnalyzerService,
-                    hostDiagnosticUpdateSource: exceptionDiagnosticsSource,
-                    overriddenOnAnalyzerException: onAnalyzerException);
-                var diagnosticAnalyzerCategory = analyzer.GetDiagnosticAnalyzerCategory(driver);
-                bool supportsSemanticInSpan = (diagnosticAnalyzerCategory & DiagnosticAnalyzerCategory.SemanticSpanAnalysis) != 0;
-                if (supportsSemanticInSpan)
-                {
-                    var syntaxFacts = document.Project.LanguageServices.GetService<ISyntaxFactsService>();
-                    if (syntaxFacts != null)
-                    {
-                        var member = syntaxFacts.GetContainingMemberDeclaration(root, span.Start);
-                        if (member != null && syntaxFacts.IsMethodLevelMember(member) && member.FullSpan.Contains(span))
-                        {
-                            spanToTest = member.FullSpan;
-                        }
-                    }
-                }
-
-                if ((diagnosticAnalyzerCategory & DiagnosticAnalyzerCategory.SyntaxAnalysis) != 0)
-                {
-                    builder.AddRange(driver.GetSyntaxDiagnosticsAsync(analyzer).Result);
-                }
-
-                if (supportsSemanticInSpan || (diagnosticAnalyzerCategory & DiagnosticAnalyzerCategory.SemanticDocumentAnalysis) != 0)
-                {
-                    builder.AddRange(driver.GetSemanticDiagnosticsAsync(analyzer).Result);
-                }
-
-                documentDiagnostics = builder.Where(d => d.Location == Location.None ||
-                    (d.Location.SourceTree == tree && d.Location.SourceSpan.IntersectsWith(span)));
+                var dxs = diagnosticService.GetDiagnosticsAsync(project.Solution, project.Id, document.Id, CancellationToken.None).WaitAndGetResult(CancellationToken.None);
+                documentDiagnostics = dxs.Select(d => d.ToDiagnostic(root.SyntaxTree)).Where(d => d.Location.SourceSpan.IntersectsWith(span));
             }
 
             if (getProjectDiagnostics)
             {
-                var nodeInBodyAnalyzerService = project.Language == LanguageNames.CSharp ?
-                    (ISyntaxNodeAnalyzerService)new CSharpSyntaxNodeAnalyzerService() :
-                    new VisualBasicSyntaxNodeAnalyzerService();
-                var driver = new DiagnosticAnalyzerDriver(project, nodeInBodyAnalyzerService, exceptionDiagnosticsSource, overriddenOnAnalyzerException: onAnalyzerException);
-
-                if (analyzer.SupportsProjectDiagnosticAnalysis(driver))
-                {
-                    projectDiagnostics = driver.GetProjectDiagnosticsAsync(analyzer, null).Result;
-                }
+                var dxs = diagnosticService.GetProjectDiagnosticsForIdsAsync(project.Solution, project.Id, cancellationToken: CancellationToken.None).WaitAndGetResult(CancellationToken.None);
+                projectDiagnostics = dxs.Select(d => d.ToDiagnostic(null));
             }
 
             var exceptionDiagnostics = exceptionDiagnosticsSource.TestOnly_GetReportedDiagnostics(analyzer).Select(d => d.ToDiagnostic(tree: null));

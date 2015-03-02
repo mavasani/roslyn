@@ -26,7 +26,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         // for the entire file.
         private readonly TextSpan? _span;
         private readonly Project _project;
-        private readonly AbstractHostDiagnosticUpdateSource _hostDiagnosticUpdateSource;
+        private readonly HostAnalyzerManager _analyzerManager;
         private readonly CancellationToken _cancellationToken;
         private readonly ISyntaxNodeAnalyzerService _syntaxNodeAnalyzerService;
         private readonly Dictionary<SyntaxNode, ImmutableArray<SyntaxNode>> _descendantExecutableNodesMap;
@@ -45,14 +45,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
         private AnalyzerOptions _analyzerOptions = null;
 
-        public DiagnosticAnalyzerDriver(Document document, TextSpan? span, SyntaxNode root, LogAggregator logAggregator, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource, CancellationToken cancellationToken)
-            : this(document, span, root, document.Project.LanguageServices.GetService<ISyntaxNodeAnalyzerService>(), hostDiagnosticUpdateSource, overriddenOnAnalyzerException: null, cancellationToken: cancellationToken)
+        public DiagnosticAnalyzerDriver(Document document, TextSpan? span, SyntaxNode root, LogAggregator logAggregator, HostAnalyzerManager analyzerManager, CancellationToken cancellationToken)
+            : this(document, span, root, document.Project.LanguageServices.GetService<ISyntaxNodeAnalyzerService>(), analyzerManager, overriddenOnAnalyzerException: null, cancellationToken: cancellationToken)
         {
             _logAggregator = logAggregator;
         }
 
-        public DiagnosticAnalyzerDriver(Project project, LogAggregator logAggregator, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource, CancellationToken cancellationToken)
-            : this(project, project.LanguageServices.GetService<ISyntaxNodeAnalyzerService>(), hostDiagnosticUpdateSource, overriddenOnAnalyzerException: null, cancellationToken: cancellationToken)
+        public DiagnosticAnalyzerDriver(Project project, LogAggregator logAggregator, HostAnalyzerManager analyzerManager, CancellationToken cancellationToken)
+            : this(project, project.LanguageServices.GetService<ISyntaxNodeAnalyzerService>(), analyzerManager, overriddenOnAnalyzerException: null, cancellationToken: cancellationToken)
         {
             _logAggregator = logAggregator;
         }
@@ -63,7 +63,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             TextSpan? span,
             SyntaxNode root,
             ISyntaxNodeAnalyzerService syntaxNodeAnalyzerService,
-            AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource,
+            HostAnalyzerManager analyzerManager,
             Action<Exception, DiagnosticAnalyzer, Diagnostic> overriddenOnAnalyzerException = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -72,7 +72,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             _root = root;
             _project = document.Project;
             _syntaxNodeAnalyzerService = syntaxNodeAnalyzerService;
-            _hostDiagnosticUpdateSource = hostDiagnosticUpdateSource;
+            _analyzerManager = analyzerManager;
             _cancellationToken = cancellationToken;
             _descendantExecutableNodesMap = new Dictionary<SyntaxNode, ImmutableArray<SyntaxNode>>();
             _syntaxFacts = document.Project.LanguageServices.GetService<ISyntaxFactsService>();
@@ -87,7 +87,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         internal DiagnosticAnalyzerDriver(
             Project project,
             ISyntaxNodeAnalyzerService syntaxNodeAnalyzerService,
-            AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource,
+            HostAnalyzerManager analyzerManager,
             Action<Exception, DiagnosticAnalyzer, Diagnostic> overriddenOnAnalyzerException = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -96,7 +96,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             _syntaxNodeAnalyzerService = syntaxNodeAnalyzerService;
             _generatedCodeService = project.Solution.Workspace.Services.GetService<IGeneratedCodeRecognitionService>();
             _analyzerDriverService = project.LanguageServices.GetService<IAnalyzerDriverService>();
-            _hostDiagnosticUpdateSource = hostDiagnosticUpdateSource;
+            _analyzerManager = analyzerManager;
             _descendantExecutableNodesMap = null;
             _analyzerOptions = _project.AnalyzerOptions;
             _onAnalyzerException = overriddenOnAnalyzerException ?? Default_OnAnalyzerException;
@@ -344,13 +344,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 return false;
             }
 
-            var analyzerExecutor = AnalyzerHelper.GetAnalyzerExecutorForSupportedDiagnostics(analyzer, _hostDiagnosticUpdateSource, _onAnalyzerException_NoTelemetryLogging, _cancellationToken);
-            return AnalyzerManager.Instance.IsDiagnosticAnalyzerSuppressed(analyzer, options, AnalyzerHelper.IsCompilerAnalyzer, analyzerExecutor);
+            return _analyzerManager.CoreManager.IsDiagnosticAnalyzerSuppressed(analyzer, options, AnalyzerHelper.IsCompilerAnalyzer, _cancellationToken);
         }
 
         private async Task<AnalyzerActions> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
         {
-            var analyzerActions = await AnalyzerManager.Instance.GetAnalyzerActionsAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            var analyzerActions = await _analyzerManager.CoreManager.GetAnalyzerActionsAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
             DiagnosticAnalyzerLogger.UpdateAnalyzerTypeCount(analyzer, analyzerActions, (DiagnosticLogAggregator)_logAggregator);
             return analyzerActions;
         }
@@ -475,7 +474,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 // Get all the analyzer actions, including the per-compilation actions.
                 var analyzerExecutor = GetAnalyzerExecutor(analyzer, compilation, localDiagnostics.Add);
                 var analyzerActions = await this.GetAnalyzerActionsAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
-                var hasDependentCompilationEndAction = await AnalyzerManager.Instance.GetAnalyzerHasDependentCompilationEndAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+                var hasDependentCompilationEndAction = await _analyzerManager.CoreManager.GetAnalyzerHasDependentCompilationEndAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
 
                 if (hasDependentCompilationEndAction && forceAnalyzeAllDocuments != null)
                 {
@@ -511,7 +510,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
         private void Default_OnAnalyzerException_NoTelemetryLogging(Exception e, DiagnosticAnalyzer analyzer, Diagnostic diagnostic)
         {
-            AnalyzerHelper.OnAnalyzerException_NoTelemetryLogging(e, analyzer, diagnostic, _hostDiagnosticUpdateSource, _project);
+            AnalyzerHelper.OnAnalyzerException_NoTelemetryLogging(e, analyzer, diagnostic, _analyzerManager.HostDiagnosticUpdateSource, _project);
         }
 
         private void Default_OnAnalyzerException(Exception e, DiagnosticAnalyzer analyzer, Diagnostic diagnostic)

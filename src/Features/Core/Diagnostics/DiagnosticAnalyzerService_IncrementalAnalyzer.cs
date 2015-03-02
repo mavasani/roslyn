@@ -49,7 +49,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             // subscribe to active context changed event for new workspace
             workspace.DocumentActiveContextChanged += OnDocumentActiveContextChanged;
-            return new IncrementalAnalyzerDelegatee(this, workspace, _hostAnalyzerManager, _hostDiagnosticUpdateSource);
+            return new IncrementalAnalyzerDelegatee(this, workspace, _hostAnalyzerManager);
         }
 
         private void OnDocumentActiveContextChanged(object sender, DocumentEventArgs e)
@@ -60,7 +60,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         // internal for testing
         internal class IncrementalAnalyzerDelegatee : BaseDiagnosticIncrementalAnalyzer
         {
-            private readonly HostAnalyzerManager _hostAnalyzerManager;
             private readonly DiagnosticAnalyzerService _owner;
 
             // v1 diagnostic engine
@@ -69,17 +68,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             // v2 diagnostic engine - for now v1
             private readonly EngineV2.DiagnosticIncrementalAnalyzer _engineV2;
 
-            public IncrementalAnalyzerDelegatee(DiagnosticAnalyzerService owner, Workspace workspace, HostAnalyzerManager hostAnalyzerManager, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource)
-                : base(workspace, hostDiagnosticUpdateSource)
+            public IncrementalAnalyzerDelegatee(DiagnosticAnalyzerService owner, Workspace workspace, HostAnalyzerManager hostAnalyzerManager)
+                : base(workspace, hostAnalyzerManager)
             {
-                _hostAnalyzerManager = hostAnalyzerManager;
                 _owner = owner;
 
                 var v1CorrelationId = LogAggregator.GetNextId();
-                _engineV1 = new EngineV1.DiagnosticIncrementalAnalyzer(_owner, v1CorrelationId, workspace, _hostAnalyzerManager, hostDiagnosticUpdateSource);
+                _engineV1 = new EngineV1.DiagnosticIncrementalAnalyzer(_owner, v1CorrelationId, workspace, hostAnalyzerManager);
 
                 var v2CorrelationId = LogAggregator.GetNextId();
-                _engineV2 = new EngineV2.DiagnosticIncrementalAnalyzer(_owner, v2CorrelationId, workspace, _hostAnalyzerManager, hostDiagnosticUpdateSource);
+                _engineV2 = new EngineV2.DiagnosticIncrementalAnalyzer(_owner, v2CorrelationId, workspace, hostAnalyzerManager);
             }
 
             #region IIncrementalAnalyzer
