@@ -18,6 +18,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     internal partial class DiagnosticAnalyzerService : IDiagnosticAnalyzerService
     {
         private readonly HostAnalyzerManager _hostAnalyzerManager;
+        private readonly AbstractHostDiagnosticUpdateSource _hostDiagnosticUpdateSource;
         private readonly IAsynchronousOperationListener _listener;
 
         [ImportingConstructor]
@@ -38,12 +39,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private DiagnosticAnalyzerService(IEnumerable<string> workspaceAnalyzerAssemblies, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource) : this()
         {
             _hostAnalyzerManager = new HostAnalyzerManager(workspaceAnalyzerAssemblies, hostDiagnosticUpdateSource);
+            _hostDiagnosticUpdateSource = hostDiagnosticUpdateSource;
         }
 
         // internal for testing purposes.
         internal DiagnosticAnalyzerService(ImmutableArray<AnalyzerReference> workspaceAnalyzers, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource = null) : this()
         {
             _hostAnalyzerManager = new HostAnalyzerManager(workspaceAnalyzers, hostDiagnosticUpdateSource);
+            _hostDiagnosticUpdateSource = hostDiagnosticUpdateSource;
         }
 
         public ImmutableDictionary<string, ImmutableArray<DiagnosticDescriptor>> GetDiagnosticDescriptors(Project projectOpt)

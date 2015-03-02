@@ -112,8 +112,6 @@
     <Compile Include="Compilation\SymbolFilter.cs" />
     <Compile Include="DiagnosticAnalyzer\CompilerDiagnosticAnalyzer.CompilationAnalyzer.cs" />
     <Compile Include="DiagnosticAnalyzer\CompilerDiagnosticAnalyzer.cs" />
-    <Compile Include="Diagnostic\LocalizableString.ExceptionSafeLocalizableString.cs" />
-    <Compile Include="Diagnostic\LocalizableString.FixedLocalizableString.cs" />
     <Compile Include="Diagnostic\LocalizableResourceString.cs" />
     <Compile Include="Diagnostic\LocalizableString.cs" />
     <Compile Include="Emit\DebugInformationFormat.cs" />

@@ -661,12 +661,12 @@ class AnonymousFunctions
                 ' Verify that for an analyzer which has a registered compilation start action such that the start action registered an end action,
                 ' we go and force complete all document diagnostics for entire project and then invoke and report end action diagnostics.
                 Dim driver = New DiagnosticAnalyzerDriver(project, project.LanguageServices.GetService(Of ISyntaxNodeAnalyzerService)(), Nothing)
-                Dim projectDiagnostics = diagnosticService.GetDiagnosticsAsync(project.Solution, project.Id).WaitAndGetResult(CancellationToken.None)
+                Dim projectDiagnostics = driver.GetProjectDiagnosticsAsync(analyzer, AddressOf incrementalAnalyzer.ForceAnalyzeAllDocuments).WaitAndGetResult(CancellationToken.None)
                 Assert.Equal(1, projectDiagnostics.Count())
                 Dim diagnostic = projectDiagnostics.Single()
                 Assert.Equal(StatefulCompilationAnalyzer.Descriptor.Id, diagnostic.Id)
                 Dim expectedMessage = String.Format(StatefulCompilationAnalyzer.Descriptor.MessageFormat.ToString(), 1)
-                Assert.Equal(expectedMessage, diagnostic.Message)
+                Assert.Equal(expectedMessage, diagnostic.GetMessage)
             End Using
         End Sub
 

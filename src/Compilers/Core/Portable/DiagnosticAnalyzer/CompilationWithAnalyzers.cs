@@ -16,10 +16,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly CancellationToken _cancellationToken;
         private readonly ConcurrentSet<Diagnostic> _exceptionDiagnostics;
 
-        // TODO: Figure out how to report host level analyzer exception diagnostics (i.e. not dependent on any compilation).
-        // For example, diagnostics for exceptions from DiagnosticAnalyzer.SupportedDiagnostics.
-        private static readonly AnalyzerManager _analyzerManager = new AnalyzerManager(onAnalyzerException: null);
-
         public Compilation Compilation
         {
             get { return _compilation; }
@@ -36,7 +32,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             _cancellationToken = cancellationToken;
             _exceptionDiagnostics = new ConcurrentSet<Diagnostic>();
-            _driver = AnalyzerDriver.Create(compilation, analyzers, options, _analyzerManager, AddExceptionDiagnostic, out _compilation, _cancellationToken);
+            _driver = AnalyzerDriver.Create(compilation, analyzers, options, AnalyzerManager.Instance, AddExceptionDiagnostic, out _compilation, _cancellationToken);
         }
 
         private void AddExceptionDiagnostic(Diagnostic diagnostic)
@@ -110,7 +106,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Delegate can do custom tasks such as report the given analyzer exception diagnostic, report a non-fatal watson for the exception, etc.
         /// </param>
         /// </summary>
-        internal static bool IsDiagnosticAnalyzerSuppressed(DiagnosticAnalyzer analyzer, CompilationOptions options, Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException = null)
+        public static bool IsDiagnosticAnalyzerSuppressed(DiagnosticAnalyzer analyzer, CompilationOptions options, Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException = null)
         {
             if (analyzer == null)
             {
@@ -122,7 +118,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 throw new ArgumentNullException(nameof(options));
             }
 
-            return AnalyzerDriver.IsDiagnosticAnalyzerSuppressed(analyzer, options, _analyzerManager, CancellationToken.None);
+            Action<Exception, DiagnosticAnalyzer, Diagnostic> voidHandler = (ex, a, diag) => { };
+            onAnalyzerException = onAnalyzerException ?? voidHandler;
+            var analyzerExecutor = AnalyzerExecutor.CreateForSupportedDiagnostics(onAnalyzerException, CancellationToken.None);
+
+            return AnalyzerDriver.IsDiagnosticAnalyzerSuppressed(analyzer, options, AnalyzerManager.Instance, analyzerExecutor);
         }
     }
 }

@@ -26,6 +26,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     /// </remarks>
     internal class AnalyzerManager
     {
+        /// <summary>
+        /// Gets the default instance of the AnalyzerManager for the lifetime of the analyzer host process.
+        /// </summary>
+        public static readonly AnalyzerManager Instance = new AnalyzerManager();
+
         // This map stores the tasks to compute HostSessionStartAnalysisScope for session wide analyzer actions, i.e. AnalyzerActions registered by analyzer's Initialize method.
         // These are run only once per every analyzer.
         private readonly ConditionalWeakTable<DiagnosticAnalyzer, Task<HostSessionStartAnalysisScope>> _sessionScopeMap =
@@ -43,14 +48,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         private readonly ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyList<DiagnosticDescriptor>> _descriptorCache =
             new ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyList<DiagnosticDescriptor>>();
-
-        private readonly Action<Exception, DiagnosticAnalyzer, Diagnostic> _onAnalyzerException;
-
-        public AnalyzerManager(Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException)
-        {
-            Action<Exception, DiagnosticAnalyzer, Diagnostic> defaultOnAnalyzerException = (ex, analyzer, diag) => { };
-            _onAnalyzerException = onAnalyzerException ?? defaultOnAnalyzerException;
-        }
 
         private Task<HostCompilationStartAnalysisScope> GetCompilationAnalysisScopeCoreAsync(
             DiagnosticAnalyzer analyzer,
@@ -176,21 +173,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public ImmutableArray<DiagnosticDescriptor> GetSupportedDiagnosticDescriptors(
             DiagnosticAnalyzer analyzer,
-            CancellationToken cancellationToken)
+            AnalyzerExecutor analyzerExecutor)
         {
             var descriptors = _descriptorCache.GetValue(analyzer, key =>
             {
                 var supportedDiagnostics = ImmutableArray<DiagnosticDescriptor>.Empty;
 
                 // Catch Exception from analyzer.SupportedDiagnostics
-                var analyzerExecutor = AnalyzerExecutor.CreateForSupportedDiagnostics(_onAnalyzerException, cancellationToken);
                 analyzerExecutor.ExecuteAndCatchIfThrows(analyzer, () => { supportedDiagnostics = analyzer.SupportedDiagnostics; });
-
-                // Set the exception handler for exceptions from lazily evaluated localizable strings in the descriptors.
-                foreach (var descriptor in supportedDiagnostics)
-                {
-                    descriptor.SetOnLocalizableStringException(analyzer, _onAnalyzerException);
-                }
 
                 return supportedDiagnostics;
             });
@@ -205,7 +195,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             DiagnosticAnalyzer analyzer,
             CompilationOptions options,
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
-            CancellationToken cancellelationToken = default(CancellationToken))
+            AnalyzerExecutor analyzerExecutor)
         {
             if (isCompilerAnalyzer(analyzer))
             {
@@ -213,7 +203,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return false;
             }
 
-            var supportedDiagnostics = GetSupportedDiagnosticDescriptors(analyzer, cancellelationToken);
+            var supportedDiagnostics = GetSupportedDiagnosticDescriptors(analyzer, analyzerExecutor);
             var diagnosticOptions = options.SpecificDiagnosticOptions;
 
             foreach (var diag in supportedDiagnostics)

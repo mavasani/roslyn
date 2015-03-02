@@ -27,7 +27,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly ImmutableArray<DiagnosticAnalyzer> _analyzers;
         private readonly CancellationTokenRegistration _queueRegistration;
         protected readonly AnalyzerManager analyzerManager;
-
+        
         // Lazy fields initialized in Initialize() API
         private Compilation _compilation;
         protected AnalyzerExecutor analyzerExecutor;
@@ -148,12 +148,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// a new compilation. Any further actions on the compilation should use the new compilation.
         /// </remarks>
         public static AnalyzerDriver Create(
-            Compilation compilation,
-            ImmutableArray<DiagnosticAnalyzer> analyzers,
-            AnalyzerOptions options,
-            AnalyzerManager analyzerManager,
-            Action<Diagnostic> addExceptionDiagnostic,
-            out Compilation newCompilation,
+            Compilation compilation, 
+            ImmutableArray<DiagnosticAnalyzer> analyzers, 
+            AnalyzerOptions options, 
+            AnalyzerManager analyzerManager, 
+            Action<Diagnostic> addExceptionDiagnostic, 
+            out Compilation newCompilation, 
             CancellationToken cancellationToken)
         {
             if (compilation == null)
@@ -176,7 +176,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 if (addExceptionDiagnostic != null)
                 {
                     addExceptionDiagnostic(diagnostic);
-                }
+        }
             };
             return Create(compilation, analyzers, options, analyzerManager, onAnalyzerException, out newCompilation, cancellationToken: cancellationToken);
         }
@@ -184,11 +184,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         // internal for testing purposes
         internal static AnalyzerDriver Create(
             Compilation compilation,
-            ImmutableArray<DiagnosticAnalyzer> analyzers,
-            AnalyzerOptions options,
+            ImmutableArray<DiagnosticAnalyzer> analyzers, 
+            AnalyzerOptions options, 
             AnalyzerManager analyzerManager,
             Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException,
-            out Compilation newCompilation,
+            out Compilation newCompilation, 
             CancellationToken cancellationToken)
         {
             options = options ?? AnalyzerOptions.Empty;
@@ -202,7 +202,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 // Wrap onAnalyzerException to pass in filtered diagnostic.
                 var comp = newCompilation;
-                newOnAnalyzerException = (ex, analyzer, diagnostic) =>
+                newOnAnalyzerException = (ex, analyzer, diagnostic) => 
                     onAnalyzerException(ex, analyzer, GetFilteredDiagnostic(diagnostic, comp));
             }
             else
@@ -212,7 +212,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             var analyzerExecutor = AnalyzerExecutor.Create(newCompilation, options, addDiagnostic, newOnAnalyzerException, cancellationToken);
-
+            
             analyzerDriver.Initialize(newCompilation, analyzerExecutor, cancellationToken);
 
             return analyzerDriver;
@@ -492,7 +492,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                         analyzerExecutor.ExecuteSemanticModelActions(analyzerAndActions.Value, semanticModel);
                     }, cancellationToken);
 
-                    tasks.Add(task);
+                    tasks.Add(task); 
                 }
 
                 return Task.WhenAll(tasks.ToArrayAndFree());
@@ -542,15 +542,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private static Diagnostic GetFilteredDiagnostic(Diagnostic diagnostic, Compilation compilation, ISymbol symbolOpt = null)
         {
-            var filteredDiagnostic = compilation.FilterDiagnostic(diagnostic);
-            if (filteredDiagnostic != null)
-            {
-                var suppressMessageState = SuppressMessageStateByCompilation.GetValue(compilation, (c) => new SuppressMessageAttributeState(c));
-                if (suppressMessageState.IsDiagnosticSuppressed(filteredDiagnostic, symbolOpt: symbolOpt))
+                var filteredDiagnostic = compilation.FilterDiagnostic(diagnostic);
+                if (filteredDiagnostic != null)
                 {
+                    var suppressMessageState = SuppressMessageStateByCompilation.GetValue(compilation, (c) => new SuppressMessageAttributeState(c));
+                if (suppressMessageState.IsDiagnosticSuppressed(filteredDiagnostic, symbolOpt: symbolOpt))
+                    {
                     return null;
+                    }
                 }
-            }
 
             return filteredDiagnostic;
         }
@@ -565,7 +565,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 AnalyzerActions allAnalyzerActions = new AnalyzerActions();
                 foreach (var analyzer in analyzers)
                 {
-                    if (!IsDiagnosticAnalyzerSuppressed(analyzer, analyzerExecutor.Compilation.Options, analyzerManager, analyzerExecutor.CancellationToken))
+                    if (!IsDiagnosticAnalyzerSuppressed(analyzer, analyzerExecutor.Compilation.Options, analyzerManager, analyzerExecutor))
                     {
                         var analyzerActions = await analyzerManager.GetAnalyzerActionsAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
                         allAnalyzerActions = allAnalyzerActions.Append(analyzerActions);
@@ -583,9 +583,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             DiagnosticAnalyzer analyzer,
             CompilationOptions options,
             AnalyzerManager analyzerManager,
-            CancellationToken cancellationToken)
+            AnalyzerExecutor analyzerExecutor)
         {
-            return analyzerManager.IsDiagnosticAnalyzerSuppressed(analyzer, options, IsCompilerAnalyzer, cancellationToken);
+            return analyzerManager.IsDiagnosticAnalyzerSuppressed(analyzer, options, IsCompilerAnalyzer, analyzerExecutor);
         }
 
         private static bool IsCompilerAnalyzer(DiagnosticAnalyzer analyzer)
@@ -859,7 +859,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                         {
                             return;
                         }
-
+                        
                         break;
                     }
 

@@ -15,12 +15,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
     {
         private readonly int _correlationId;
         private readonly DiagnosticAnalyzerService _owner;
+        private readonly HostAnalyzerManager _hostAnalyzerManager;
 
-        public DiagnosticIncrementalAnalyzer(DiagnosticAnalyzerService owner, int correlationId, Workspace workspace, HostAnalyzerManager hostAnalyzerManager)
-            : base(workspace, hostAnalyzerManager)
+        public DiagnosticIncrementalAnalyzer(DiagnosticAnalyzerService owner, int correlationId, Workspace workspace, HostAnalyzerManager hostAnalyzerManager, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource)
+            : base(workspace, hostDiagnosticUpdateSource)
         {
             _correlationId = correlationId;
             _owner = owner;
+            _hostAnalyzerManager = hostAnalyzerManager;
         }
 
         #region IIncrementalAnalyzer
@@ -152,7 +154,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
 
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
 
-            var analyzers = this.HostAnalyzerManager.CreateDiagnosticAnalyzers(project);
+            var analyzers = _hostAnalyzerManager.CreateDiagnosticAnalyzers(project);
 
             var compilationWithAnalyzer = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions, cancellationToken);
 

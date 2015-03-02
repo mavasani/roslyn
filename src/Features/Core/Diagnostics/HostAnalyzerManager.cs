@@ -53,8 +53,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         private readonly AbstractHostDiagnosticUpdateSource _hostDiagnosticUpdateSource;
 
-        private readonly AnalyzerManager _coreAnalyzerManager;
-
         public HostAnalyzerManager(IEnumerable<string> hostAnalyzerAssemblies, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource) :
             this(CreateAnalyzerReferencesFromAssemblies(hostAnalyzerAssemblies), hostDiagnosticUpdateSource)
         {
@@ -63,7 +61,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public HostAnalyzerManager(ImmutableArray<AnalyzerReference> hostAnalyzerReferences, AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource)
         {
             _hostDiagnosticUpdateSource = hostDiagnosticUpdateSource;
-            _coreAnalyzerManager = new AnalyzerManager(OnAnalyzerException);
 
             _hostAnalyzerReferencesMap = hostAnalyzerReferences.IsDefault ? ImmutableDictionary<string, AnalyzerReference>.Empty : CreateAnalyzerReferencesMap(hostAnalyzerReferences);
             _hostDiagnosticAnalyzersPerLanguageMap = new ConcurrentDictionary<string, ImmutableDictionary<string, ImmutableArray<DiagnosticAnalyzer>>>(concurrencyLevel: 2, capacity: 2);
@@ -71,14 +68,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             DiagnosticAnalyzerLogger.LogWorkspaceAnalyzers(hostAnalyzerReferences);
         }
-
-        private void OnAnalyzerException(Exception ex, DiagnosticAnalyzer analyzer, Diagnostic exceptionDiagnostic)
-        {
-            AnalyzerHelper.OnAnalyzerException_NoTelemetryLogging(ex, analyzer, exceptionDiagnostic, _hostDiagnosticUpdateSource);
-        }
-
-        internal AnalyzerManager CoreManager => _coreAnalyzerManager;
-        internal AbstractHostDiagnosticUpdateSource HostDiagnosticUpdateSource => _hostDiagnosticUpdateSource;
 
         /// <summary>
         /// It returns a string that can be used as a way to de-duplicate <see cref="AnalyzerReference"/>s.
@@ -91,9 +80,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <summary>
         /// Return <see cref="DiagnosticAnalyzer.SupportedDiagnostics"/> of given <paramref name="analyzer"/>.
         /// </summary>
-        public ImmutableArray<DiagnosticDescriptor> GetDiagnosticDescriptors(DiagnosticAnalyzer analyzer, CancellationToken cancellationToken = default(CancellationToken))
+        public ImmutableArray<DiagnosticDescriptor> GetDiagnosticDescriptors(DiagnosticAnalyzer analyzer)
         {
-            return _coreAnalyzerManager.GetSupportedDiagnosticDescriptors(analyzer, cancellationToken);
+            var analyzerExecutor = AnalyzerHelper.GetAnalyzerExecutorForSupportedDiagnostics(analyzer, _hostDiagnosticUpdateSource);
+            return AnalyzerManager.Instance.GetSupportedDiagnosticDescriptors(analyzer, analyzerExecutor);
         }
 
         /// <summary>

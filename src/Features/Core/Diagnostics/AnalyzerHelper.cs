@@ -43,6 +43,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return ValueTuple.Create(type.AssemblyQualifiedName, GetAnalyzerVersion(type.Assembly.Location));
         }
 
+        internal static AnalyzerExecutor GetAnalyzerExecutorForSupportedDiagnostics(
+            DiagnosticAnalyzer analyzer,
+            AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource,
+            Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            // Skip telemetry logging if the exception is thrown as we are computing supported diagnostics and
+            // we can't determine if any descriptors support getting telemetry without having the descriptors.
+            Action<Exception, DiagnosticAnalyzer, Diagnostic> defaultOnAnalyzerException = (ex, a, diagnostic) =>
+                OnAnalyzerException_NoTelemetryLogging(ex, a, diagnostic, hostDiagnosticUpdateSource);
+            
+            return AnalyzerExecutor.CreateForSupportedDiagnostics(onAnalyzerException ?? defaultOnAnalyzerException, cancellationToken);
+        }
+
         internal static void OnAnalyzerException_NoTelemetryLogging(
             Exception e,
             DiagnosticAnalyzer analyzer,
@@ -51,12 +65,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Project projectOpt = null)
         {
             if (diagnostic != null)
-            {
+        {
                 hostDiagnosticUpdateSource?.ReportAnalyzerDiagnostic(analyzer, diagnostic, hostDiagnosticUpdateSource?.Workspace, projectOpt);
-            }
+        }
 
             if (IsBuiltInAnalyzer(analyzer))
-            {
+        {
                 FatalError.ReportWithoutCrashUnlessCanceled(e);
             }
         }
