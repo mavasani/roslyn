@@ -937,5 +937,7 @@ public class B
                 }, SymbolKind.Method);
             }
         }
+
+        public class 
     }
 }
