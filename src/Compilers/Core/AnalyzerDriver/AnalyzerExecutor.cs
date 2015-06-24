@@ -128,15 +128,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="analyzer">Analyzer to get session wide analyzer actions.</param>
         /// <param name="sessionScope">Session scope to store register session wide analyzer actions.</param>
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
         /// <remarks>
         /// Note that this API doesn't execute any <see cref="CompilationStartAnalyzerAction"/> registered by the Initialize invocation.
-        /// Use <see cref="ExecuteCompilationStartActions(ImmutableArray{CompilationStartAnalyzerAction}, HostCompilationStartAnalysisScope)"/> API
+        /// Use <see cref="ExecuteCompilationStartActions(ImmutableArray{CompilationStartAnalyzerAction}, HostCompilationStartAnalysisScope, object)"/> API
         /// to get execute these actions to get the per-compilation analyzer actions.
         /// </remarks>
-        public void ExecuteInitializeMethod(DiagnosticAnalyzer analyzer, HostSessionStartAnalysisScope sessionScope)
+        public void ExecuteInitializeMethod(DiagnosticAnalyzer analyzer, HostSessionStartAnalysisScope sessionScope, object hostSpecificContext = null)
         {
             // The Initialize method should be run asynchronously in case it is not well behaved, e.g. does not terminate.
-            ExecuteAndCatchIfThrows(analyzer, () => analyzer.Initialize(new AnalyzerAnalysisContext(analyzer, sessionScope)));
+            ExecuteAndCatchIfThrows(analyzer, () => analyzer.Initialize(new AnalyzerAnalysisContext(analyzer, sessionScope, hostSpecificContext)));
         }
 
         /// <summary>
@@ -144,13 +145,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="actions"><see cref="AnalyzerActions"/> whose compilation start actions are to be executed.</param>
         /// <param name="compilationScope">Compilation scope to store the analyzer actions.</param>
-        public void ExecuteCompilationStartActions(ImmutableArray<CompilationStartAnalyzerAction> actions, HostCompilationStartAnalysisScope compilationScope)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteCompilationStartActions(ImmutableArray<CompilationStartAnalyzerAction> actions, HostCompilationStartAnalysisScope compilationScope, object hostSpecificContext = null)
         {
             foreach (var startAction in actions)
             {
                 _cancellationToken.ThrowIfCancellationRequested();
                 ExecuteAndCatchIfThrows(startAction.Analyzer,
-                    () => startAction.Action(new AnalyzerCompilationStartAnalysisContext(startAction.Analyzer, compilationScope, _compilation, _analyzerOptions, _cancellationToken)));
+                    () => startAction.Action(new AnalyzerCompilationStartAnalysisContext(startAction.Analyzer, compilationScope, _compilation, _analyzerOptions, hostSpecificContext, _cancellationToken)));
             }
         }
 
@@ -158,14 +160,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Executes compilation actions or compilation end actions.
         /// </summary>
         /// <param name="compilationActions">Compilation actions to be executed.</param>
-        public void ExecuteCompilationActions(ImmutableArray<CompilationAnalyzerAction> compilationActions)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteCompilationActions(ImmutableArray<CompilationAnalyzerAction> compilationActions, object hostSpecificContext = null)
         {
             foreach (var endAction in compilationActions)
             {
                 _cancellationToken.ThrowIfCancellationRequested();
                 ExecuteAndCatchIfThrows(endAction.Analyzer,
                     () => endAction.Action(new CompilationAnalysisContext(_compilation, _analyzerOptions, _addDiagnostic,
-                        d => IsSupportedDiagnostic(endAction.Analyzer, d), _cancellationToken)));
+                        d => IsSupportedDiagnostic(endAction.Analyzer, d), hostSpecificContext, _cancellationToken)));
             }
         }
 
@@ -174,9 +177,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="actions"><see cref="AnalyzerActions"/> whose symbol actions are to be executed.</param>
         /// <param name="symbols">Symbols to be analyzed.</param>
-        public void ExecuteSymbolActions(AnalyzerActions actions, IEnumerable<ISymbol> symbols)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteSymbolActions(AnalyzerActions actions, IEnumerable<ISymbol> symbols, object hostSpecificContext = null)
         {
-            ExecuteSymbolActions(actions.SymbolActions, symbols);
+            ExecuteSymbolActions(actions.SymbolActions, symbols, hostSpecificContext);
         }
 
         /// <summary>
@@ -184,11 +188,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="symbolActions">Symbol actions to be executed.</param>
         /// <param name="symbols">Symbols to be analyzed.</param>
-        public void ExecuteSymbolActions(ImmutableArray<SymbolAnalyzerAction> symbolActions, IEnumerable<ISymbol> symbols)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteSymbolActions(ImmutableArray<SymbolAnalyzerAction> symbolActions, IEnumerable<ISymbol> symbols, object hostSpecificContext = null)
         {
             foreach (var symbol in symbols)
             {
-                ExecuteSymbolActions(symbolActions, symbol);
+                ExecuteSymbolActions(symbolActions, symbol, overriddenAddDiagnostic: null, hostSpecificContext: hostSpecificContext);
             }
         }
 
@@ -198,7 +203,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="symbolActions">Symbol actions to be executed.</param>
         /// <param name="symbol">Symbol to be analyzed.</param>
         /// <param name="overriddenAddDiagnostic">Optional overridden add diagnostic delegate.</param>
-        public void ExecuteSymbolActions(ImmutableArray<SymbolAnalyzerAction> symbolActions, ISymbol symbol, Action<Diagnostic> overriddenAddDiagnostic = null)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteSymbolActions(ImmutableArray<SymbolAnalyzerAction> symbolActions, ISymbol symbol, Action<Diagnostic> overriddenAddDiagnostic = null, object hostSpecificContext = null)
         {
             var addDiagnostic = overriddenAddDiagnostic ?? _addDiagnostic;
 
@@ -212,7 +218,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     _cancellationToken.ThrowIfCancellationRequested();
                     ExecuteAndCatchIfThrows(symbolAction.Analyzer,
                         () => action(new SymbolAnalysisContext(symbol, _compilation, _analyzerOptions, addDiagnostic,
-                            d => IsSupportedDiagnostic(symbolAction.Analyzer, d), _cancellationToken)));
+                            d => IsSupportedDiagnostic(symbolAction.Analyzer, d), hostSpecificContext, _cancellationToken)));
                 }
             }
         }
@@ -222,9 +228,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="actions"><see cref="AnalyzerActions"/> whose semantic model actions are to be executed.</param>
         /// <param name="semanticModel">Semantic model to analyze.</param>
-        public void ExecuteSemanticModelActions(AnalyzerActions actions, SemanticModel semanticModel)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteSemanticModelActions(AnalyzerActions actions, SemanticModel semanticModel, object hostSpecificContext = null)
         {
-            ExecuteSemanticModelActions(actions.SemanticModelActions, semanticModel);
+            ExecuteSemanticModelActions(actions.SemanticModelActions, semanticModel, hostSpecificContext);
         }
 
         /// <summary>
@@ -232,7 +239,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="semanticModelActions">Semantic model actions to be executed.</param>
         /// <param name="semanticModel">Semantic model to analyze.</param>
-        public void ExecuteSemanticModelActions(ImmutableArray<SemanticModelAnalyzerAction> semanticModelActions, SemanticModel semanticModel)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteSemanticModelActions(ImmutableArray<SemanticModelAnalyzerAction> semanticModelActions, SemanticModel semanticModel, object hostSpecificContext = null)
         {
             foreach (var semanticModelAction in semanticModelActions)
             {
@@ -241,7 +249,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 // Catch Exception from action.
                 ExecuteAndCatchIfThrows(semanticModelAction.Analyzer,
                     () => semanticModelAction.Action(new SemanticModelAnalysisContext(semanticModel, _analyzerOptions, _addDiagnostic,
-                        d => IsSupportedDiagnostic(semanticModelAction.Analyzer, d), _cancellationToken)));
+                        d => IsSupportedDiagnostic(semanticModelAction.Analyzer, d), hostSpecificContext, _cancellationToken)));
             }
         }
 
@@ -250,9 +258,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="actions"><see cref="AnalyzerActions"/> whose syntax tree actions are to be executed.</param>
         /// <param name="tree">Syntax tree to analyze.</param>
-        public void ExecuteSyntaxTreeActions(AnalyzerActions actions, SyntaxTree tree)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteSyntaxTreeActions(AnalyzerActions actions, SyntaxTree tree, object hostSpecificContext = null)
         {
-            ExecuteSyntaxTreeActions(actions.SyntaxTreeActions, tree);
+            ExecuteSyntaxTreeActions(actions.SyntaxTreeActions, tree, hostSpecificContext);
         }
 
         /// <summary>
@@ -260,7 +269,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="syntaxTreeActions">Syntax tree actions to be executed.</param>
         /// <param name="tree">Syntax tree to analyze.</param>
-        public void ExecuteSyntaxTreeActions(ImmutableArray<SyntaxTreeAnalyzerAction> syntaxTreeActions, SyntaxTree tree)
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
+        public void ExecuteSyntaxTreeActions(ImmutableArray<SyntaxTreeAnalyzerAction> syntaxTreeActions, SyntaxTree tree, object hostSpecificContext = null)
         {
             foreach (var syntaxTreeAction in syntaxTreeActions)
             {
@@ -269,7 +279,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 // Catch Exception from action.
                 ExecuteAndCatchIfThrows(syntaxTreeAction.Analyzer,
                     () => syntaxTreeAction.Action(new SyntaxTreeAnalysisContext(tree, _analyzerOptions, _addDiagnostic,
-                        d => IsSupportedDiagnostic(syntaxTreeAction.Analyzer, d), _cancellationToken)));
+                        d => IsSupportedDiagnostic(syntaxTreeAction.Analyzer, d), hostSpecificContext, _cancellationToken)));
             }
         }
 
@@ -280,11 +290,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="nodes">Syntax nodes to be analyzed.</param>
         /// <param name="semanticModel">SemanticModel to be used in the analysis.</param>
         /// <param name="getKind">Delegate to compute language specific syntax kind for a syntax node.</param>
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
         public void ExecuteSyntaxNodeActions<TLanguageKindEnum>(
             AnalyzerActions actions,
             IEnumerable<SyntaxNode> nodes,
             SemanticModel semanticModel,
-            Func<SyntaxNode, TLanguageKindEnum> getKind)
+            Func<SyntaxNode, TLanguageKindEnum> getKind,
+            object hostSpecificContext = null)
             where TLanguageKindEnum : struct
         {
             var syntaxNodeActions = actions.GetSyntaxNodeActions<TLanguageKindEnum>();
@@ -295,7 +307,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     if (syntaxNodeAction.Kinds.Contains(getKind(node)))
                     {
-                        ExecuteSyntaxNodeAction(syntaxNodeAction, node, semanticModel);
+                        ExecuteSyntaxNodeAction(syntaxNodeAction, node, semanticModel, hostSpecificContext);
                     }
                 }
             }
@@ -304,11 +316,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private void ExecuteSyntaxNodeAction<TLanguageKindEnum>(
             SyntaxNodeAnalyzerAction<TLanguageKindEnum> syntaxNodeAction,
             SyntaxNode node,
-            SemanticModel semanticModel)
+            SemanticModel semanticModel,
+            object hostSpecificContext)
             where TLanguageKindEnum : struct
         {
             var syntaxNodeContext = new SyntaxNodeAnalysisContext(node, semanticModel, _analyzerOptions, _addDiagnostic,
-                d => IsSupportedDiagnostic(syntaxNodeAction.Analyzer, d), _cancellationToken);
+                d => IsSupportedDiagnostic(syntaxNodeAction.Analyzer, d), hostSpecificContext, _cancellationToken);
             ExecuteAndCatchIfThrows(syntaxNodeAction.Analyzer, () => syntaxNodeAction.Action(syntaxNodeContext));
         }
 
@@ -319,11 +332,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="declarationsInNode">Declarations to be analyzed.</param>
         /// <param name="semanticModel">SemanticModel to be shared amongst all actions.</param>
         /// <param name="getKind">Delegate to compute language specific syntax kind for a syntax node.</param>
+        /// <param name="hostSpecificContext">An optional context object, specific to the analyzer host driving the analysis.</param>
         public void ExecuteCodeBlockActions<TLanguageKindEnum>(
             AnalyzerActions actions,
             IEnumerable<DeclarationInfo> declarationsInNode,
             SemanticModel semanticModel,
-            Func<SyntaxNode, TLanguageKindEnum> getKind)
+            Func<SyntaxNode, TLanguageKindEnum> getKind,
+            object hostSpecificContext = null)
             where TLanguageKindEnum : struct
         {
             var codeBlockStartActions = actions.GetCodeBlockStartActions<TLanguageKindEnum>();
@@ -344,7 +359,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 if (declaredSymbol != null && declInfo.ExecutableCodeBlocks.Any())
                 {
                     ExecuteCodeBlockActions(codeBlockStartActions, codeBlockActions, codeBlockEndActions,
-                        declaredNode, declaredSymbol, executableCodeBlocks, semanticModel, getKind);
+                        declaredNode, declaredSymbol, executableCodeBlocks, semanticModel, getKind, hostSpecificContext);
                 }
             }
         }
@@ -357,7 +372,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ISymbol declaredSymbol,
             ImmutableArray<SyntaxNode> executableCodeBlocks,
             SemanticModel semanticModel,
-            Func<SyntaxNode, TLanguageKindEnum> getKind)
+            Func<SyntaxNode, TLanguageKindEnum> getKind,
+            object hostSpecificContext = null)
             where TLanguageKindEnum : struct
         {
             Debug.Assert(declaredNode != null);
@@ -385,7 +401,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     var codeBlockScope = new HostCodeBlockStartAnalysisScope<TLanguageKindEnum>();
                     var blockStartContext = new AnalyzerCodeBlockStartAnalysisContext<TLanguageKindEnum>(da.Analyzer,
-                        codeBlockScope, declaredNode, declaredSymbol, semanticModel, _analyzerOptions, _cancellationToken);
+                        codeBlockScope, declaredNode, declaredSymbol, semanticModel, _analyzerOptions, hostSpecificContext, _cancellationToken);
                     da.Action(blockStartContext);
                     blockEndActions.AddAll(codeBlockScope.CodeBlockEndActions);
                     executableNodeActions.AddRange(codeBlockScope.SyntaxNodeActions);
@@ -398,22 +414,22 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 var executableNodeActionsByKind = GetNodeActionsByKind(executableNodeActions);
 
                 var nodesToAnalyze = executableCodeBlocks.SelectMany(cb => cb.DescendantNodesAndSelf());
-                ExecuteSyntaxNodeActions(nodesToAnalyze, executableNodeActionsByKind, semanticModel, getKind);
+                ExecuteSyntaxNodeActions(nodesToAnalyze, executableNodeActionsByKind, semanticModel, getKind, hostSpecificContext);
             }
 
             executableNodeActions.Free();
 
-            ExecuteCodeBlockActions(blockActions, declaredNode, declaredSymbol, semanticModel);
-            ExecuteCodeBlockActions(blockEndActions, declaredNode, declaredSymbol, semanticModel);
+            ExecuteCodeBlockActions(blockActions, declaredNode, declaredSymbol, semanticModel, hostSpecificContext);
+            ExecuteCodeBlockActions(blockEndActions, declaredNode, declaredSymbol, semanticModel, hostSpecificContext);
         }
 
-        private void ExecuteCodeBlockActions(PooledHashSet<CodeBlockAnalyzerAction> blockActions, SyntaxNode declaredNode, ISymbol declaredSymbol, SemanticModel semanticModel)
+        private void ExecuteCodeBlockActions(PooledHashSet<CodeBlockAnalyzerAction> blockActions, SyntaxNode declaredNode, ISymbol declaredSymbol, SemanticModel semanticModel, object hostSpecificContext)
         {
             foreach (var blockAction in blockActions)
             {
                 ExecuteAndCatchIfThrows(blockAction.Analyzer,
                     () => blockAction.Action(new CodeBlockAnalysisContext(declaredNode, declaredSymbol, semanticModel, _analyzerOptions, _addDiagnostic,
-                        d => IsSupportedDiagnostic(blockAction.Analyzer, d), _cancellationToken)));
+                        d => IsSupportedDiagnostic(blockAction.Analyzer, d), hostSpecificContext, _cancellationToken)));
             }
 
             blockActions.Free();
@@ -450,7 +466,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             IEnumerable<SyntaxNode> nodesToAnalyze,
             IDictionary<TLanguageKindEnum, ImmutableArray<SyntaxNodeAnalyzerAction<TLanguageKindEnum>>> nodeActionsByKind,
             SemanticModel model,
-            Func<SyntaxNode, TLanguageKindEnum> getKind)
+            Func<SyntaxNode, TLanguageKindEnum> getKind,
+            object hostSpecificContext = null)
             where TLanguageKindEnum : struct
         {
             Debug.Assert(nodeActionsByKind != null);
@@ -463,7 +480,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     foreach (var action in actionsForKind)
                     {
-                        ExecuteSyntaxNodeAction(action, child, model);
+                        ExecuteSyntaxNodeAction(action, child, model, hostSpecificContext);
                     }
                 }
             }

@@ -25,7 +25,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             new ConditionalWeakTable<DiagnosticAnalyzer, object>();
 
         private readonly Document _document;
-
+        
         // The root of the document.  May be null for documents without a root.
         private readonly SyntaxNode _root;
 
@@ -33,6 +33,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         // for the entire file.
         private readonly TextSpan? _span;
         private readonly Project _project;
+        private readonly HostAnalysisContext _hostDocumentAnalysisContext;
+        private readonly HostAnalysisContext _hostProjectAnalysisContext;
         private readonly BaseDiagnosticIncrementalAnalyzer _owner;
         private readonly CancellationToken _cancellationToken;
         private readonly ISyntaxNodeAnalyzerService _syntaxNodeAnalyzerService;
@@ -46,8 +48,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         private ImmutableArray<ISymbol> _lazySymbols;
         private ImmutableArray<SyntaxNode> _lazyAllSyntaxNodesToAnalyze;
 
-        private readonly AnalyzerOptions _analyzerOptions;
-
         public DiagnosticAnalyzerDriver(
             Document document,
             TextSpan? span,
@@ -59,6 +59,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             _document = document;
             _span = span;
             _root = root;
+            _hostDocumentAnalysisContext = new HostAnalysisContext(document);
         }
 
         public DiagnosticAnalyzerDriver(
@@ -68,11 +69,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         {
             _project = project;
             _owner = owner;
+            _hostProjectAnalysisContext = new HostAnalysisContext(project);
             _syntaxNodeAnalyzerService = project.LanguageServices.GetService<ISyntaxNodeAnalyzerService>();
             _cancellationToken = cancellationToken;
             _generatedCodeService = project.Solution.Workspace.Services.GetService<IGeneratedCodeRecognitionService>();
             _analyzerDriverService = project.LanguageServices.GetService<IAnalyzerDriverService>();
-            _analyzerOptions = new WorkspaceAnalyzerOptions(project.AnalyzerOptions, project.Solution.Workspace);
             _onAnalyzerException = owner.GetOnAnalyzerException(project.Id);
             _onAnalyzerException_NoTelemetryLogging = owner.GetOnAnalyzerException_NoTelemetryLogging(project.Id);
         }
@@ -252,7 +253,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 {
                     if (_document.SupportsSyntaxTree)
                     {
-                        analyzerExecutor.ExecuteSyntaxTreeActions(analyzerActions, _root.SyntaxTree);
+                        analyzerExecutor.ExecuteSyntaxTreeActions(analyzerActions, _root.SyntaxTree, _hostDocumentAnalysisContext);
                     }
                 }
 
@@ -300,7 +301,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
         private AnalyzerExecutor GetAnalyzerExecutor(Compilation compilation, Action<Diagnostic> addDiagnostic)
         {
-            return AnalyzerExecutor.Create(compilation, _analyzerOptions, addDiagnostic, _onAnalyzerException, AnalyzerHelper.IsCompilerAnalyzer, AnalyzerManager.Instance, s_analyzerGateMap.GetOrCreateValue, cancellationToken: _cancellationToken);
+            return AnalyzerExecutor.Create(compilation, _project.AnalyzerOptions, addDiagnostic, _onAnalyzerException, AnalyzerHelper.IsCompilerAnalyzer, AnalyzerManager.Instance, s_analyzerGateMap.GetOrCreateValue, cancellationToken: _cancellationToken);
         }
 
         private AnalyzerExecutor GetAnalyzerExecutorForClone(Compilation compilation, Action<Diagnostic> addDiagnostic, DiagnosticAnalyzer analyzerForExceptionDiagnostics)
@@ -309,7 +310,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException = (ex, a, diag) =>
                 _onAnalyzerException(ex, analyzerForExceptionDiagnostics, diag);
 
-            return AnalyzerExecutor.Create(compilation, _analyzerOptions, addDiagnostic, onAnalyzerException, AnalyzerHelper.IsCompilerAnalyzer, AnalyzerManager.Instance, s_analyzerGateMap.GetOrCreateValue, cancellationToken: _cancellationToken);
+            return AnalyzerExecutor.Create(compilation, _project.AnalyzerOptions, addDiagnostic, onAnalyzerException, AnalyzerHelper.IsCompilerAnalyzer, AnalyzerManager.Instance, s_analyzerGateMap.GetOrCreateValue, cancellationToken: _cancellationToken);
         }
 
         public async Task<AnalyzerActions> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer)
@@ -333,7 +334,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
         private async Task<AnalyzerActions> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
         {
-            var analyzerActions = await AnalyzerManager.Instance.GetAnalyzerActionsAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            var analyzerActions = await AnalyzerManager.Instance.GetAnalyzerActionsAsync(analyzer, analyzerExecutor, hostSpecificSessionContext: _owner.HostAnalysisContext, hostSpecificCompilationContext: _hostProjectAnalysisContext).ConfigureAwait(false);
             DiagnosticAnalyzerLogger.UpdateAnalyzerTypeCount(analyzer, analyzerActions, _owner.DiagnosticLogAggregator);
             return analyzerActions;
         }
@@ -378,14 +379,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                         // SemanticModel actions.
                         if (analyzerActions.SemanticModelActionsCount > 0)
                         {
-                            analyzerExecutor.ExecuteSemanticModelActions(analyzerActions, model);
+                            analyzerExecutor.ExecuteSemanticModelActions(analyzerActions, model, _hostDocumentAnalysisContext);
                         }
 
                         // Symbol actions.
                         if (analyzerActions.SymbolActionsCount > 0)
                         {
                             var symbols = this.GetSymbolsToAnalyze(model);
-                            analyzerExecutor.ExecuteSymbolActions(analyzerActions, symbols);
+                            analyzerExecutor.ExecuteSymbolActions(analyzerActions, symbols, _hostDocumentAnalysisContext);
                         }
 
                         if (this.SyntaxNodeAnalyzerService != null)
@@ -488,10 +489,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     }
 
                     // Compilation actions.
-                    analyzerExecutor.ExecuteCompilationActions(analyzerActions.CompilationActions);
+                    analyzerExecutor.ExecuteCompilationActions(analyzerActions.CompilationActions, _hostProjectAnalysisContext);
 
                     // CompilationEnd actions.
-                    analyzerExecutor.ExecuteCompilationActions(analyzerActions.CompilationEndActions);
+                    analyzerExecutor.ExecuteCompilationActions(analyzerActions.CompilationEndActions, _hostProjectAnalysisContext);
 
                     var filteredDiagnostics = CompilationWithAnalyzers.GetEffectiveDiagnostics(localDiagnostics, compilation);
                     diagnostics.AddRange(filteredDiagnostics);

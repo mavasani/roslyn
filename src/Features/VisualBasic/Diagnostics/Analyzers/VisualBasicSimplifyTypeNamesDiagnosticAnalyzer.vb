@@ -34,7 +34,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.CodeFixes.SimplifyTypeNames
                     Dim diagnostic As diagnostic = Nothing
 
                     If Not IsCandidate(n) OrElse
-                       Not TrySimplifyTypeNameExpression(context.SemanticModel, n, context.Options, diagnostic, context.CancellationToken) Then
+                       Not TrySimplifyTypeNameExpression(context.SemanticModel, n, context.HostSpecificContext, diagnostic, context.CancellationToken) Then
                         Return True
                     End If
 

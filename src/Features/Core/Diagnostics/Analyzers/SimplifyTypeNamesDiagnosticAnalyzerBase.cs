@@ -54,12 +54,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics.SimplifyTypeNames
 
         protected abstract bool CanSimplifyTypeNameExpressionCore(SemanticModel model, SyntaxNode node, OptionSet optionSet, out TextSpan issueSpan, out string diagnosticId, CancellationToken cancellationToken);
 
-        private OptionSet GetOptionSet(AnalyzerOptions analyzerOptions)
+        private OptionSet GetOptionSet(object hostSpecificContext)
         {
-            var workspaceOptions = analyzerOptions as WorkspaceAnalyzerOptions;
-            if (workspaceOptions != null)
+            var hostAnalysisContext = hostSpecificContext as HostAnalysisContext;
+            if (hostAnalysisContext?.Workspace != null)
             {
-                return workspaceOptions.Workspace.Options;
+                return hostAnalysisContext.Workspace.Options;
             }
 
             if (_lazyDefaultOptionSet == null)
@@ -72,11 +72,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics.SimplifyTypeNames
 
         protected abstract string GetLanguageName();
 
-        protected bool TrySimplifyTypeNameExpression(SemanticModel model, SyntaxNode node, AnalyzerOptions analyzerOptions, out Diagnostic diagnostic, CancellationToken cancellationToken)
+        protected bool TrySimplifyTypeNameExpression(SemanticModel model, SyntaxNode node, object hostSpecificContext, out Diagnostic diagnostic, CancellationToken cancellationToken)
         {
             diagnostic = default(Diagnostic);
 
-            var optionSet = GetOptionSet(analyzerOptions);
+            var optionSet = GetOptionSet(hostSpecificContext);
             string diagnosticId;
 
             TextSpan issueSpan;

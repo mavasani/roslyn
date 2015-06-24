@@ -16,7 +16,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly DiagnosticAnalyzer _analyzer;
         private readonly HostSessionStartAnalysisScope _scope;
 
-        public AnalyzerAnalysisContext(DiagnosticAnalyzer analyzer, HostSessionStartAnalysisScope scope)
+        public AnalyzerAnalysisContext(DiagnosticAnalyzer analyzer, HostSessionStartAnalysisScope scope, object hostSpecificContext)
+            : base(hostSpecificContext)
         {
             _analyzer = analyzer;
             _scope = scope;
@@ -79,8 +80,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly DiagnosticAnalyzer _analyzer;
         private readonly HostCompilationStartAnalysisScope _scope;
 
-        public AnalyzerCompilationStartAnalysisContext(DiagnosticAnalyzer analyzer, HostCompilationStartAnalysisScope scope, Compilation compilation, AnalyzerOptions options, CancellationToken cancellationToken)
-            : base(compilation, options, cancellationToken)
+        public AnalyzerCompilationStartAnalysisContext(DiagnosticAnalyzer analyzer, HostCompilationStartAnalysisScope scope, Compilation compilation, AnalyzerOptions options, object hostSpecificContext, CancellationToken cancellationToken)
+            : base(compilation, options, hostSpecificContext, cancellationToken)
         {
             _analyzer = analyzer;
             _scope = scope;
@@ -136,8 +137,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                                                        ISymbol owningSymbol,
                                                        SemanticModel semanticModel,
                                                        AnalyzerOptions options,
+                                                       object hostSpecificContext,
                                                        CancellationToken cancellationToken)
-            : base(codeBlock, owningSymbol, semanticModel, options, cancellationToken)
+            : base(codeBlock, owningSymbol, semanticModel, options, hostSpecificContext, cancellationToken)
         {
             _analyzer = analyzer;
             _scope = scope;

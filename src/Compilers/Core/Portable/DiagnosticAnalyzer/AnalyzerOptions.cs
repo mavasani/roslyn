@@ -8,7 +8,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     /// <summary>
     /// Options passed to <see cref="DiagnosticAnalyzer"/>.
     /// </summary>
-    public class AnalyzerOptions
+    public sealed class AnalyzerOptions
     {
         internal static readonly AnalyzerOptions Empty = new AnalyzerOptions(ImmutableArray<AdditionalText>.Empty);
 

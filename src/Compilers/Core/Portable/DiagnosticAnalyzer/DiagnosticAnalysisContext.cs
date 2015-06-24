@@ -38,6 +38,19 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     /// </summary>
     public abstract class AnalysisContext
     {
+        private readonly object _hostSpecificContext;
+
+        protected AnalysisContext(object hostSpecificContext = null)
+        {
+            _hostSpecificContext = hostSpecificContext;
+        }
+
+        /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+        
         /// <summary>
         /// Register an action to be executed at compilation start.
         /// A compilation start action can register other actions and/or collect state information to be used in diagnostic analysis,
@@ -158,6 +171,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     {
         private readonly Compilation _compilation;
         private readonly AnalyzerOptions _options;
+        private readonly object _hostSpecificContext;
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -171,14 +185,26 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public AnalyzerOptions Options { get { return _options; } }
 
         /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+
+        /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
         public CancellationToken CancellationToken { get { return _cancellationToken; } }
 
         protected CompilationStartAnalysisContext(Compilation compilation, AnalyzerOptions options, CancellationToken cancellationToken)
+            : this(compilation, options, hostSpecificContext: null, cancellationToken: cancellationToken)
+        {
+        }
+
+        protected CompilationStartAnalysisContext(Compilation compilation, AnalyzerOptions options, object hostSpecificContext, CancellationToken cancellationToken)
         {
             _compilation = compilation;
             _options = options;
+            _hostSpecificContext = hostSpecificContext;
             _cancellationToken = cancellationToken;
         }
 
@@ -273,6 +299,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerOptions _options;
         private readonly Action<Diagnostic> _reportDiagnostic;
         private readonly Func<Diagnostic, bool> _isSupportedDiagnostic;
+        private readonly object _hostSpecificContext;
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -286,16 +313,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public AnalyzerOptions Options { get { return _options; } }
 
         /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+
+        /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
         public CancellationToken CancellationToken { get { return _cancellationToken; } }
 
         public CompilationAnalysisContext(Compilation compilation, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
+            : this(compilation, options, reportDiagnostic, isSupportedDiagnostic, hostSpecificContext: null, cancellationToken: cancellationToken)
+        {
+        }
+
+        public CompilationAnalysisContext(Compilation compilation, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, object hostSpecificContext, CancellationToken cancellationToken)
         {
             _compilation = compilation;
             _options = options;
             _reportDiagnostic = reportDiagnostic;
             _isSupportedDiagnostic = isSupportedDiagnostic;
+            _hostSpecificContext = hostSpecificContext;
             _cancellationToken = cancellationToken;
         }
 
@@ -323,6 +362,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerOptions _options;
         private readonly Action<Diagnostic> _reportDiagnostic;
         private readonly Func<Diagnostic, bool> _isSupportedDiagnostic;
+        private readonly object _hostSpecificContext;
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -336,16 +376,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public AnalyzerOptions Options { get { return _options; } }
 
         /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+
+        /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
         public CancellationToken CancellationToken { get { return _cancellationToken; } }
 
         public SemanticModelAnalysisContext(SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
+            : this(semanticModel, options, reportDiagnostic, isSupportedDiagnostic, hostSpecificContext: null, cancellationToken: cancellationToken)
+        {
+        }
+
+        public SemanticModelAnalysisContext(SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, object hostSpecificContext, CancellationToken cancellationToken)
         {
             _semanticModel = semanticModel;
             _options = options;
             _reportDiagnostic = reportDiagnostic;
             _isSupportedDiagnostic = isSupportedDiagnostic;
+            _hostSpecificContext = hostSpecificContext;
             _cancellationToken = cancellationToken;
         }
 
@@ -374,6 +426,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerOptions _options;
         private readonly Action<Diagnostic> _reportDiagnostic;
         private readonly Func<Diagnostic, bool> _isSupportedDiagnostic;
+        private readonly object _hostSpecificContext;
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -392,17 +445,29 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public AnalyzerOptions Options { get { return _options; } }
 
         /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+
+        /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
         public CancellationToken CancellationToken { get { return _cancellationToken; } }
 
         public SymbolAnalysisContext(ISymbol symbol, Compilation compilation, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
+            : this (symbol, compilation, options, reportDiagnostic, isSupportedDiagnostic, hostSpecificContext: null, cancellationToken: cancellationToken)
+        {
+        }
+
+        public SymbolAnalysisContext(ISymbol symbol, Compilation compilation, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, object hostSpecificContext, CancellationToken cancellationToken)
         {
             _symbol = symbol;
             _compilation = compilation;
             _options = options;
             _reportDiagnostic = reportDiagnostic;
             _isSupportedDiagnostic = isSupportedDiagnostic;
+            _hostSpecificContext = hostSpecificContext;
             _cancellationToken = cancellationToken;
         }
 
@@ -439,6 +504,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly ISymbol _owningSymbol;
         private readonly SemanticModel _semanticModel;
         private readonly AnalyzerOptions _options;
+        private readonly object _hostSpecificContext;
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -462,16 +528,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public AnalyzerOptions Options { get { return _options; } }
 
         /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+
+        /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
         public CancellationToken CancellationToken { get { return _cancellationToken; } }
 
         protected CodeBlockStartAnalysisContext(SyntaxNode codeBlock, ISymbol owningSymbol, SemanticModel semanticModel, AnalyzerOptions options, CancellationToken cancellationToken)
+            : this(codeBlock, owningSymbol, semanticModel, options, hostSpecificContext: null, cancellationToken: cancellationToken)
+        {
+        }
+
+        protected CodeBlockStartAnalysisContext(SyntaxNode codeBlock, ISymbol owningSymbol, SemanticModel semanticModel, AnalyzerOptions options, object hostSpecificContext, CancellationToken cancellationToken)
         {
             _codeBlock = codeBlock;
             _owningSymbol = owningSymbol;
             _semanticModel = semanticModel;
             _options = options;
+            _hostSpecificContext = hostSpecificContext;
             _cancellationToken = cancellationToken;
         }
 
@@ -516,6 +594,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerOptions _options;
         private readonly Action<Diagnostic> _reportDiagnostic;
         private readonly Func<Diagnostic, bool> _isSupportedDiagnostic;
+        private readonly object _hostSpecificContext;
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -539,11 +618,22 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public AnalyzerOptions Options { get { return _options; } }
 
         /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+
+        /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
         public CancellationToken CancellationToken { get { return _cancellationToken; } }
 
         public CodeBlockAnalysisContext(SyntaxNode codeBlock, ISymbol owningSymbol, SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
+            : this(codeBlock, owningSymbol, semanticModel, options, reportDiagnostic, isSupportedDiagnostic, hostSpecificContext: null, cancellationToken: cancellationToken)
+        {
+        }
+
+        public CodeBlockAnalysisContext(SyntaxNode codeBlock, ISymbol owningSymbol, SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, object hostSpecificContext, CancellationToken cancellationToken)
         {
             _codeBlock = codeBlock;
             _owningSymbol = owningSymbol;
@@ -551,6 +641,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _options = options;
             _reportDiagnostic = reportDiagnostic;
             _isSupportedDiagnostic = isSupportedDiagnostic;
+            _hostSpecificContext = hostSpecificContext;
             _cancellationToken = cancellationToken;
         }
 
@@ -578,6 +669,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerOptions _options;
         private readonly Action<Diagnostic> _reportDiagnostic;
         private readonly Func<Diagnostic, bool> _isSupportedDiagnostic;
+        private readonly object _hostSpecificContext;
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -591,16 +683,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public AnalyzerOptions Options { get { return _options; } }
 
         /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+
+        /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
         public CancellationToken CancellationToken { get { return _cancellationToken; } }
 
         public SyntaxTreeAnalysisContext(SyntaxTree tree, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
+            : this(tree, options, reportDiagnostic, isSupportedDiagnostic, hostSpecificContext: null, cancellationToken: cancellationToken)
+        {
+        }
+
+        public SyntaxTreeAnalysisContext(SyntaxTree tree, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, object hostSpecificContext, CancellationToken cancellationToken)
         {
             _tree = tree;
             _options = options;
             _reportDiagnostic = reportDiagnostic;
             _isSupportedDiagnostic = isSupportedDiagnostic;
+            _hostSpecificContext = hostSpecificContext;
             _cancellationToken = cancellationToken;
         }
 
@@ -629,6 +733,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerOptions _options;
         private readonly Action<Diagnostic> _reportDiagnostic;
         private readonly Func<Diagnostic, bool> _isSupportedDiagnostic;
+        private readonly object _hostSpecificContext;
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -647,17 +752,29 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public AnalyzerOptions Options { get { return _options; } }
 
         /// <summary>
+        /// An optional context object, specific to the analyzer host driving the analysis.
+        /// For example, when the analyzer executes within a workspace, it may have the workspace/solution/project/document context for analysis.
+        /// </summary>
+        public object HostSpecificContext => _hostSpecificContext;
+
+        /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
         public CancellationToken CancellationToken { get { return _cancellationToken; } }
 
         public SyntaxNodeAnalysisContext(SyntaxNode node, SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
+            : this (node, semanticModel, options, reportDiagnostic, isSupportedDiagnostic, hostSpecificContext: null, cancellationToken: cancellationToken)
+        {
+        }
+
+        public SyntaxNodeAnalysisContext(SyntaxNode node, SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, object hostSpecificContext, CancellationToken cancellationToken)
         {
             _node = node;
             _semanticModel = semanticModel;
             _options = options;
             _reportDiagnostic = reportDiagnostic;
             _isSupportedDiagnostic = isSupportedDiagnostic;
+            _hostSpecificContext = hostSpecificContext;
             _cancellationToken = cancellationToken;
         }
 

@@ -20,8 +20,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     /// 3) <see cref="CompilationStartAnalyzerAction"/> registered during Initialize are invoked only once per-compilation per-<see cref="AnalyzerAndOptions"/>
     /// </summary>
     /// <remarks>
-    /// TODO: Consider moving <see cref="_compilationScopeMap"/> and relevant APIs <see cref="GetCompilationAnalysisScopeAsync(DiagnosticAnalyzer, HostSessionStartAnalysisScope, AnalyzerExecutor)"/> and
-    /// <see cref="GetAnalyzerHasDependentCompilationEndAsync(DiagnosticAnalyzer, AnalyzerExecutor)"/> out of the AnalyzerManager and into analyzer drivers.
+    /// TODO: Consider moving <see cref="_compilationScopeMap"/> and relevant APIs <see cref="GetCompilationAnalysisScopeAsync(DiagnosticAnalyzer, HostSessionStartAnalysisScope, AnalyzerExecutor, object)"/> and
+    /// <see cref="GetAnalyzerHasDependentCompilationEndAsync(DiagnosticAnalyzer, AnalyzerExecutor, object)"/> out of the AnalyzerManager and into analyzer drivers.
     /// </remarks>
     internal partial class AnalyzerManager
     {
@@ -51,14 +51,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private Task<HostCompilationStartAnalysisScope> GetCompilationAnalysisScopeCoreAsync(
             AnalyzerAndOptions analyzerAndOptions,
             HostSessionStartAnalysisScope sessionScope,
-            AnalyzerExecutor analyzerExecutor)
+            AnalyzerExecutor analyzerExecutor,
+            object hostSpecificContext)
         {
             Func<Compilation, Task<HostCompilationStartAnalysisScope>> getTask = comp =>
             {
                 return Task.Run(() =>
                 {
                     var compilationAnalysisScope = new HostCompilationStartAnalysisScope(sessionScope);
-                    analyzerExecutor.ExecuteCompilationStartActions(sessionScope.CompilationStartActions, compilationAnalysisScope);
+                    analyzerExecutor.ExecuteCompilationStartActions(sessionScope.CompilationStartActions, compilationAnalysisScope, hostSpecificContext);
                     return compilationAnalysisScope;
                 }, analyzerExecutor.CancellationToken);
             };
@@ -71,13 +72,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private async Task<HostCompilationStartAnalysisScope> GetCompilationAnalysisScopeAsync(
             DiagnosticAnalyzer analyzer,
             HostSessionStartAnalysisScope sessionScope,
-            AnalyzerExecutor analyzerExecutor)
+            AnalyzerExecutor analyzerExecutor,
+            object hostSpecificContext)
         {
             var analyzerAndOptions = new AnalyzerAndOptions(analyzer, analyzerExecutor.AnalyzerOptions);
 
             try
             {
-                return await GetCompilationAnalysisScopeCoreAsync(analyzerAndOptions, sessionScope, analyzerExecutor).ConfigureAwait(false);
+                return await GetCompilationAnalysisScopeCoreAsync(analyzerAndOptions, sessionScope, analyzerExecutor, hostSpecificContext).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -90,20 +92,21 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 }
 
                 analyzerExecutor.CancellationToken.ThrowIfCancellationRequested();
-                return await GetCompilationAnalysisScopeAsync(analyzer, sessionScope, analyzerExecutor).ConfigureAwait(false);
+                return await GetCompilationAnalysisScopeAsync(analyzer, sessionScope, analyzerExecutor, hostSpecificContext).ConfigureAwait(false);
             }
         }
 
         private Task<HostSessionStartAnalysisScope> GetSessionAnalysisScopeCoreAsync(
             DiagnosticAnalyzer analyzer,
-            AnalyzerExecutor analyzerExecutor)
+            AnalyzerExecutor analyzerExecutor,
+            object hostSpecificContext)
         {
             Func<DiagnosticAnalyzer, Task<HostSessionStartAnalysisScope>> getTask = a =>
             {
                 return Task.Run(() =>
                 {
                     var sessionScope = new HostSessionStartAnalysisScope();
-                    analyzerExecutor.ExecuteInitializeMethod(a, sessionScope);
+                    analyzerExecutor.ExecuteInitializeMethod(a, sessionScope, hostSpecificContext);
                     return sessionScope;
                 }, analyzerExecutor.CancellationToken);
             };
@@ -113,11 +116,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private async Task<HostSessionStartAnalysisScope> GetSessionAnalysisScopeAsync(
             DiagnosticAnalyzer analyzer,
-            AnalyzerExecutor analyzerExecutor)
+            AnalyzerExecutor analyzerExecutor,
+            object hostSpecificContext)
         {
             try
             {
-                return await GetSessionAnalysisScopeCoreAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+                return await GetSessionAnalysisScopeCoreAsync(analyzer, analyzerExecutor, hostSpecificContext).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -127,7 +131,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 _sessionScopeMap.TryRemove(analyzer, out cancelledTask);
 
                 analyzerExecutor.CancellationToken.ThrowIfCancellationRequested();
-                return await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+                return await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor, hostSpecificContext).ConfigureAwait(false);
             }
         }
 
@@ -136,12 +140,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// The returned actions include the actions registered during <see cref="DiagnosticAnalyzer.Initialize(AnalysisContext)"/> method as well as
         /// the actions registered during <see cref="CompilationStartAnalyzerAction"/> for the given compilation.
         /// </summary>
-        public async Task<AnalyzerActions> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+        public async Task<AnalyzerActions> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor, object hostSpecificSessionContext = null, object hostSpecificCompilationContext = null)
         {
-            var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor, hostSpecificSessionContext).ConfigureAwait(false);
             if (sessionScope.CompilationStartActions.Length > 0 && analyzerExecutor.Compilation != null)
             {
-                var compilationScope = await GetCompilationAnalysisScopeAsync(analyzer, sessionScope, analyzerExecutor).ConfigureAwait(false);
+                var compilationScope = await GetCompilationAnalysisScopeAsync(analyzer, sessionScope, analyzerExecutor, hostSpecificCompilationContext).ConfigureAwait(false);
                 return compilationScope.GetAnalyzerActions(analyzer);
             }
 
@@ -152,12 +156,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Returns true if analyzer registered a compilation start action during <see cref="DiagnosticAnalyzer.Initialize(AnalysisContext)"/>
         /// which registered a compilation end action and at least one other analyzer action, that the end action depends upon.
         /// </summary>
-        public async Task<bool> GetAnalyzerHasDependentCompilationEndAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+        public async Task<bool> GetAnalyzerHasDependentCompilationEndAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor, object hostSpecificContext = null)
         {
-            var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor, hostSpecificContext).ConfigureAwait(false);
             if (sessionScope.CompilationStartActions.Length > 0 && analyzerExecutor.Compilation != null)
             {
-                var compilationScope = await GetCompilationAnalysisScopeAsync(analyzer, sessionScope, analyzerExecutor).ConfigureAwait(false);
+                var compilationScope = await GetCompilationAnalysisScopeAsync(analyzer, sessionScope, analyzerExecutor, hostSpecificContext).ConfigureAwait(false);
                 var compilationActions = compilationScope.GetCompilationOnlyAnalyzerActions(analyzer);
                 return compilationActions != null &&
                     compilationActions.CompilationEndActionsCount > 0 &&

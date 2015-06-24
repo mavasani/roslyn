@@ -102,6 +102,15 @@ Microsoft.CodeAnalysis.CodeRefactorings.ExportCodeRefactoringProviderAttribute.E
 Microsoft.CodeAnalysis.CodeRefactorings.ExportCodeRefactoringProviderAttribute.Languages.get -> string[]
 Microsoft.CodeAnalysis.CodeRefactorings.ExportCodeRefactoringProviderAttribute.Name.get -> string
 Microsoft.CodeAnalysis.CodeRefactorings.ExportCodeRefactoringProviderAttribute.Name.set -> void
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContext
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContext.Document.get -> Microsoft.CodeAnalysis.Document
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContext.Kind.get -> Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContextKind
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContext.Project.get -> Microsoft.CodeAnalysis.Project
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContext.Workspace.get -> Microsoft.CodeAnalysis.Workspace
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContextKind
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContextKind.Document = 2 -> Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContextKind
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContextKind.Project = 1 -> Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContextKind
+Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContextKind.Workspace = 0 -> Microsoft.CodeAnalysis.Diagnostics.HostAnalysisContextKind
 Microsoft.CodeAnalysis.Differencing.Edit<TNode>
 Microsoft.CodeAnalysis.Differencing.Edit<TNode>.Equals(Microsoft.CodeAnalysis.Differencing.Edit<TNode> other) -> bool
 Microsoft.CodeAnalysis.Differencing.Edit<TNode>.Kind.get -> Microsoft.CodeAnalysis.Differencing.EditKind

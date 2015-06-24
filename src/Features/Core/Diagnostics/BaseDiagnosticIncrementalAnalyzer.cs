@@ -19,6 +19,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             this.Owner = owner;
             this.Workspace = workspace;
             this.HostAnalyzerManager = hostAnalyzerManager;
+            this.HostAnalysisContext = new HostAnalysisContext(workspace);
             this.HostDiagnosticUpdateSource = hostDiagnosticUpdateSource;
             this.DiagnosticLogAggregator = new DiagnosticLogAggregator(owner);
         }
@@ -206,6 +207,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         internal AbstractHostDiagnosticUpdateSource HostDiagnosticUpdateSource { get; }
         internal HostAnalyzerManager HostAnalyzerManager { get; }
         internal DiagnosticLogAggregator DiagnosticLogAggregator { get; private set; }
+        internal HostAnalysisContext HostAnalysisContext { get; private set; }
 
         protected void ResetDiagnosticLogAggregator()
         {
