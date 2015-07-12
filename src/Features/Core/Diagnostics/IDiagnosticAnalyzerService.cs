@@ -72,10 +72,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         ImmutableDictionary<string, ImmutableArray<DiagnosticDescriptor>> GetDiagnosticDescriptors(Project projectOpt);
 
         /// <summary>
-        /// Gets a list of the diagnostics provided by the given <see cref="DiagnosticAnalyzer"/>.
+        /// Gets a list of the diagnostics provided by the given <see cref="DiagnosticAnalyzer"/>, executing in the context of an optional project.
         /// </summary>
         /// <returns>A list of the diagnostics produced by the given analyzer</returns>
-        ImmutableArray<DiagnosticDescriptor> GetDiagnosticDescriptors(DiagnosticAnalyzer analyzer);
+        ImmutableArray<DiagnosticDescriptor> GetDiagnosticDescriptors(DiagnosticAnalyzer analyzer, ProjectId projectIdOpt);
 
         /// <summary>
         /// Check whether given diagnostic is compiler diagnostic or not

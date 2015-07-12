@@ -27,7 +27,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
                 foreach (var stateSet in _stateManager.GetStateSets(project))
                 {
-                    var descriptors = HostAnalyzerManager.GetDiagnosticDescriptors(stateSet.Analyzer);
+                    var descriptors = HostAnalyzerManager.GetDiagnosticDescriptors(stateSet.Analyzer, project.Id);
                     var liveDiagnostics = ConvertToLiveDiagnostics(lookup, descriptors, poolObject.Object);
 
                     // we are using Default so that things like LB can't use cached information
@@ -75,7 +75,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     await PersistAndReportAsync(stateSet, StateType.Project, document, textVersion, semanticVersion, ImmutableArray<DiagnosticData>.Empty).ConfigureAwait(false);
                     await PersistAndReportAsync(stateSet, StateType.Syntax, document, textVersion, semanticVersion, ImmutableArray<DiagnosticData>.Empty).ConfigureAwait(false);
 
-                    var descriptors = HostAnalyzerManager.GetDiagnosticDescriptors(stateSet.Analyzer);
+                    var descriptors = HostAnalyzerManager.GetDiagnosticDescriptors(stateSet.Analyzer, document.Project.Id);
                     var liveDiagnostics = ConvertToLiveDiagnostics(lookup, descriptors, poolObject.Object);
 
                     // REVIEW: for now, we are putting build error in document state rather than creating its own state.
