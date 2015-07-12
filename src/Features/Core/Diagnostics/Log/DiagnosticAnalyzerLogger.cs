@@ -38,7 +38,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Log
             }));
         }
 
-        public static void LogAnalyzerCrashCount(DiagnosticAnalyzer analyzer, Exception ex, LogAggregator logAggregator)
+        public static void LogAnalyzerCrashCount(DiagnosticAnalyzer analyzer, Exception ex, LogAggregator logAggregator, ProjectId projectId)
         {
             if (logAggregator == null || analyzer == null || ex == null || ex is OperationCanceledException)
             {
@@ -46,7 +46,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Log
             }
 
             // TODO: once we create description manager, pass that into here.
-            bool telemetry = DiagnosticAnalyzerLogger.AllowsTelemetry(null, analyzer);
+            bool telemetry = DiagnosticAnalyzerLogger.AllowsTelemetry(null, analyzer, projectId);
             var tuple = ValueTuple.Create(telemetry, analyzer.GetType(), ex.GetType());
             logAggregator.IncreaseCount(tuple);
         }
@@ -86,14 +86,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Log
             }
         }
 
-        public static void UpdateAnalyzerTypeCount(DiagnosticAnalyzer analyzer, AnalyzerActions analyzerActions, DiagnosticLogAggregator logAggregator)
+        public static void UpdateAnalyzerTypeCount(DiagnosticAnalyzer analyzer, AnalyzerActionCounts analyzerActions, Project projectOpt, DiagnosticLogAggregator logAggregator)
         {
             if (analyzerActions == null || analyzer == null || logAggregator == null)
             {
                 return;
             }
 
-            logAggregator.UpdateAnalyzerTypeCount(analyzer, analyzerActions);
+            logAggregator.UpdateAnalyzerTypeCount(analyzer, analyzerActions, projectOpt);
         }
 
         public static void LogAnalyzerTypeCountSummary(int correlationId, DiagnosticLogAggregator logAggregator)
@@ -131,7 +131,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Log
             }
         }
 
-        public static bool AllowsTelemetry(DiagnosticAnalyzerService service, DiagnosticAnalyzer analyzer)
+        public static bool AllowsTelemetry(DiagnosticAnalyzerService service, DiagnosticAnalyzer analyzer, ProjectId projectIdOpt)
         {
             StrongBox<bool> value;
             if (s_telemetryCache.TryGetValue(analyzer, out value))
@@ -139,10 +139,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Log
                 return value.Value;
             }
 
-            return s_telemetryCache.GetValue(analyzer, a => new StrongBox<bool>(CheckTelemetry(service, a))).Value;
+            return s_telemetryCache.GetValue(analyzer, a => new StrongBox<bool>(CheckTelemetry(service, a, projectIdOpt))).Value;
         }
 
-        private static bool CheckTelemetry(DiagnosticAnalyzerService service, DiagnosticAnalyzer analyzer)
+        private static bool CheckTelemetry(DiagnosticAnalyzerService service, DiagnosticAnalyzer analyzer, ProjectId projectIdOpt)
         {
             if (analyzer.IsCompilerAnalyzer())
             {
@@ -153,7 +153,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Log
             try
             {
                 // SupportedDiagnostics is potentially user code and can throw an exception.
-                diagDescriptors = service != null ? service.GetDiagnosticDescriptors(analyzer) : analyzer.SupportedDiagnostics;
+                diagDescriptors = service != null ? service.GetDiagnosticDescriptors(analyzer, projectIdOpt) : analyzer.SupportedDiagnostics;
             }
             catch (Exception)
             {

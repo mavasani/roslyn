@@ -57,35 +57,21 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return type.AssemblyQualifiedName;
         }
 
-        internal static AnalyzerExecutor GetAnalyzerExecutorForSupportedDiagnostics(
-            DiagnosticAnalyzer analyzer,
-            AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource,
-            Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException = null,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            // Skip telemetry logging if the exception is thrown as we are computing supported diagnostics and
-            // we can't determine if any descriptors support getting telemetry without having the descriptors.
-            Action<Exception, DiagnosticAnalyzer, Diagnostic> defaultOnAnalyzerException = (ex, a, diagnostic) =>
-                OnAnalyzerException_NoTelemetryLogging(ex, a, diagnostic, hostDiagnosticUpdateSource);
-
-            return AnalyzerExecutor.CreateForSupportedDiagnostics(onAnalyzerException ?? defaultOnAnalyzerException, AnalyzerManager.Instance, cancellationToken: cancellationToken);
-        }
-
         internal static void OnAnalyzerException_NoTelemetryLogging(
-            Exception e,
+            Exception ex,
             DiagnosticAnalyzer analyzer,
             Diagnostic diagnostic,
             AbstractHostDiagnosticUpdateSource hostDiagnosticUpdateSource,
-            ProjectId projectIdOpt = null)
+            ProjectId projectIdOpt)
         {
             if (diagnostic != null)
             {
-                hostDiagnosticUpdateSource?.ReportAnalyzerDiagnostic(analyzer, diagnostic, hostDiagnosticUpdateSource?.Workspace, projectIdOpt);
+                hostDiagnosticUpdateSource?.ReportAnalyzerDiagnostic(analyzer, diagnostic, hostDiagnosticUpdateSource?.Workspace, projectIdOpt: null);
             }
 
             if (IsBuiltInAnalyzer(analyzer))
             {
-                FatalError.ReportWithoutCrashUnlessCanceled(e);
+                FatalError.ReportWithoutCrashUnlessCanceled(ex);
             }
         }
 
