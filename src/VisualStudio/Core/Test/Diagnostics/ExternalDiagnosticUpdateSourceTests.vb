@@ -194,7 +194,7 @@ Namespace Microsoft.VisualStudio.LanguageServices.UnitTests.Diagnostics
                 Return SpecializedTasks.EmptyImmutableArray(Of DiagnosticData)()
             End Function
 
-            Public Function GetDiagnosticDescriptors(analyzer As DiagnosticAnalyzer) As ImmutableArray(Of DiagnosticDescriptor) Implements IDiagnosticAnalyzerService.GetDiagnosticDescriptors
+            Public Function GetDiagnosticDescriptors(analyzer As DiagnosticAnalyzer, projectIdOpt As ProjectId) As ImmutableArray(Of DiagnosticDescriptor) Implements IDiagnosticAnalyzerService.GetDiagnosticDescriptors
                 Return ImmutableArray(Of DiagnosticDescriptor).Empty
             End Function
 
