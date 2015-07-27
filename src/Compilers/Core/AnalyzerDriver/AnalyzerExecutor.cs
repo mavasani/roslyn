@@ -29,7 +29,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerManager _analyzerManager;
         private readonly Func<DiagnosticAnalyzer, bool> _isCompilerAnalyzer;
         private readonly Func<DiagnosticAnalyzer, object> _getAnalyzerGateOpt;
-        private readonly ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan> _analyzerExecutionTimeMapOpt;
+        private static readonly ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan> _analyzerExecutionTimeMapOpt = new ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan>();
 
         private readonly CancellationToken _cancellationToken;
 
@@ -113,7 +113,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _isCompilerAnalyzer = isCompilerAnalyzer;
             _analyzerManager = analyzerManager;
             _getAnalyzerGateOpt = getAnalyzerGateOpt;
-            _analyzerExecutionTimeMapOpt = logExecutionTime ? new ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan>() : null;
             _cancellationToken = cancellationToken;
         }
 
@@ -252,8 +251,24 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="tree">Syntax tree to analyze.</param>
         public void ExecuteSyntaxTreeActions(AnalyzerActions actions, SyntaxTree tree)
         {
+            if (actions.SyntaxTreeActions.IsEmpty)
+            {
+                return;
+            }
+
+            analyzers.Add(actions.SyntaxTreeActions.First().Analyzer);
+            Interlocked.Add(ref actionCounts, actions.SyntaxTreeActions.Length);
+
+            var start = DateTime.UtcNow;
+
             ExecuteSyntaxTreeActions(actions.SyntaxTreeActions, tree);
+
+            _totalTimeSyntax += (DateTime.UtcNow - start);
         }
+
+        private static TimeSpan _totalTimeSyntax = default(TimeSpan);
+        private static ConcurrentSet<DiagnosticAnalyzer> analyzers = new ConcurrentSet<DiagnosticAnalyzer>();
+        private static int actionCounts = 0;
 
         /// <summary>
         /// Executes the syntax tree actions on the given syntax tree.

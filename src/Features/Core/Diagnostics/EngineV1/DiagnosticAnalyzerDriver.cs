@@ -220,10 +220,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             return _lazyAllSyntaxNodesToAnalyze;
         }
 
+        private static TimeSpan _totalTimeSyntax = default(TimeSpan);
+        private static TimeSpan _totalTimeSemantic = default(TimeSpan);
+        private static TimeSpan _totalTimeSymbolDeclared = default(TimeSpan);
         public async Task<ImmutableArray<Diagnostic>> GetSyntaxDiagnosticsAsync(DiagnosticAnalyzer analyzer)
         {
             var compilation = _document.Project.SupportsCompilation ? await _document.Project.GetCompilationAsync(_cancellationToken).ConfigureAwait(false) : null;
-
+            var start = DateTime.UtcNow;
             Contract.ThrowIfNull(_document);
 
             using (var pooledObject = SharedPools.Default<List<Diagnostic>>().GetPooledObject())
@@ -261,7 +264,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     return ImmutableArray<Diagnostic>.Empty;
                 }
 
-                return GetFilteredDocumentDiagnostics(diagnostics, compilation).ToImmutableArray();
+                var diags = GetFilteredDocumentDiagnostics(diagnostics, compilation).ToImmutableArray();
+                var end = DateTime.UtcNow;
+                _totalTimeSyntax += (end - start);
+                return diags;
             }
         }
 
@@ -340,6 +346,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
         public async Task<ImmutableArray<Diagnostic>> GetSemanticDiagnosticsAsync(DiagnosticAnalyzer analyzer)
         {
+            var start = DateTime.UtcNow;
             var model = await _document.GetSemanticModelAsync(_cancellationToken).ConfigureAwait(false);
             var compilation = model?.Compilation;
 
@@ -381,6 +388,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                             analyzerExecutor.ExecuteSemanticModelActions(analyzerActions, model);
                         }
 
+                        var startSymbolDeclared = DateTime.UtcNow;
                         // Symbol actions.
                         if (analyzerActions.SymbolActionsCount > 0)
                         {
@@ -402,10 +410,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                                 this.SyntaxNodeAnalyzerService.ExecuteCodeBlockActions(analyzerActions, this.GetDeclarationInfos(model), model, analyzerExecutor);
                             }
                         }
+
+                        var endSymbolDeclared = DateTime.UtcNow;
+                        _totalTimeSymbolDeclared += (endSymbolDeclared - startSymbolDeclared);
                     }
                 }
 
-                return GetFilteredDocumentDiagnostics(diagnostics, compilation).ToImmutableArray();
+                var diags = GetFilteredDocumentDiagnostics(diagnostics, compilation).ToImmutableArray();
+                var end = DateTime.UtcNow;
+                _totalTimeSemantic += (end - start);
+                return diags;
             }
         }
 
