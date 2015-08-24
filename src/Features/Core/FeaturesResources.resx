@@ -697,11 +697,8 @@ Do you want to continue?</value>
   <data name="UseTheNavigationBarToSwitchContext" xml:space="preserve">
     <value>You can use the navigation bar to switch context.</value>
   </data>
-  <data name="SuppressWithGlobalSuppressMessage" xml:space="preserve">
-    <value>with SuppressMessageAttribute (separate file)</value>
-  </data>
-  <data name="SuppressWithLocalSuppressMessage" xml:space="preserve">
-    <value>with SuppressMessageAttribute</value>
+  <data name="TriageDiagnostic" xml:space="preserve">
+    <value>as '{0}'</value>
   </data>
   <data name="SuppressionPendingJustification" xml:space="preserve">
     <value>&lt;Pending&gt;</value>
@@ -730,8 +727,11 @@ Do you want to continue?</value>
   <data name="CategoryStyle" xml:space="preserve">
     <value>Style</value>
   </data>
-  <data name="SuppressionCodeActionTitle" xml:space="preserve">
-    <value>Suppress {0}</value>
+  <data name="TriageCodeActionTitle" xml:space="preserve">
+    <value>Triage {0}</value>
+  </data>
+  <data name="TriageCodeActionTitleForTriagedDiagnostic" xml:space="preserve">
+    <value>Re-triage {0}(currently '{1}')</value>
   </data>
   <data name="ArgumentElementCannotBeNull" xml:space="preserve">
     <value>Argument cannot have a null element.</value>

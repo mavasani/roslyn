@@ -24,6 +24,7 @@ namespace Microsoft.CodeAnalysis
             private readonly IReadOnlyList<Location> _additionalLocations;
             private readonly object[] _messageArgs;
             private readonly ImmutableDictionary<string, string> _properties;
+            private readonly string _workflowState;
 
             private SimpleDiagnostic(
                 DiagnosticDescriptor descriptor,
@@ -32,7 +33,8 @@ namespace Microsoft.CodeAnalysis
                 Location location,
                 IEnumerable<Location> additionalLocations,
                 object[] messageArgs,
-                ImmutableDictionary<string, string> properties)
+                ImmutableDictionary<string, string> properties,
+                string workflowState)
             {
                 if ((warningLevel == 0 && severity != DiagnosticSeverity.Error) ||
                     (warningLevel != 0 && severity == DiagnosticSeverity.Error))
@@ -52,6 +54,7 @@ namespace Microsoft.CodeAnalysis
                 _additionalLocations = additionalLocations?.ToImmutableArray() ?? SpecializedCollections.EmptyReadOnlyList<Location>();
                 _messageArgs = messageArgs ?? SpecializedCollections.EmptyArray<object>();
                 _properties = properties ?? ImmutableDictionary<string, string>.Empty;
+                _workflowState = workflowState;
             }
 
             internal static SimpleDiagnostic Create(
@@ -61,20 +64,21 @@ namespace Microsoft.CodeAnalysis
                 Location location,
                 IEnumerable<Location> additionalLocations,
                 object[] messageArgs,
-                ImmutableDictionary<string, string> properties)
+                ImmutableDictionary<string, string> properties,
+                string workflowState = null)
             {
-                return new SimpleDiagnostic(descriptor, severity, warningLevel, location, additionalLocations, messageArgs, properties);
+                return new SimpleDiagnostic(descriptor, severity, warningLevel, location, additionalLocations, messageArgs, properties, workflowState);
             }
 
             internal static SimpleDiagnostic Create(string id, LocalizableString title, string category, LocalizableString message, LocalizableString description, string helpLink,
                                       DiagnosticSeverity severity, DiagnosticSeverity defaultSeverity,
                                       bool isEnabledByDefault, int warningLevel, Location location,
                                       IEnumerable<Location> additionalLocations, IEnumerable<string> customTags,
-                                      ImmutableDictionary<string, string> properties)
+                                      ImmutableDictionary<string, string> properties, string workflowState = null)
             {
                 var descriptor = new DiagnosticDescriptor(id, title, message,
                      category, defaultSeverity, isEnabledByDefault, description, helpLink, customTags.ToImmutableArrayOrEmpty());
-                return new SimpleDiagnostic(descriptor, severity, warningLevel, location, additionalLocations, messageArgs: null, properties: properties);
+                return new SimpleDiagnostic(descriptor, severity, warningLevel, location, additionalLocations, messageArgs: null, properties: properties, workflowState: workflowState);
             }
 
             public override DiagnosticDescriptor Descriptor
@@ -111,6 +115,11 @@ namespace Microsoft.CodeAnalysis
             public override int WarningLevel
             {
                 get { return _warningLevel; }
+            }
+
+            public override string WorkflowState
+            {
+                get { return _workflowState; }
             }
 
             public override Location Location
@@ -171,7 +180,7 @@ namespace Microsoft.CodeAnalysis
 
                 if (location != _location)
                 {
-                    return new SimpleDiagnostic(_descriptor, _severity, _warningLevel, location, _additionalLocations, _messageArgs, _properties);
+                    return new SimpleDiagnostic(_descriptor, _severity, _warningLevel, location, _additionalLocations, _messageArgs, _properties, _workflowState);
                 }
 
                 return this;
@@ -182,7 +191,17 @@ namespace Microsoft.CodeAnalysis
                 if (this.Severity != severity)
                 {
                     var warningLevel = GetDefaultWarningLevel(severity);
-                    return new SimpleDiagnostic(_descriptor, severity, warningLevel, _location, _additionalLocations, _messageArgs, _properties);
+                    return new SimpleDiagnostic(_descriptor, severity, warningLevel, _location, _additionalLocations, _messageArgs, _properties, _workflowState);
+                }
+
+                return this;
+            }
+
+            internal override Diagnostic WithWorkflowState(string workflowState)
+            {
+                if (this.WorkflowState != workflowState)
+                {
+                    return new SimpleDiagnostic(_descriptor, _severity, _warningLevel, _location, _additionalLocations, _messageArgs, _properties, workflowState);
                 }
 
                 return this;

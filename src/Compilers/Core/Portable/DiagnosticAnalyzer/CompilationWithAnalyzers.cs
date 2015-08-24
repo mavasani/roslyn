@@ -961,14 +961,21 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 throw new ArgumentNullException(nameof(compilation));
             }
 
-            var suppressMessageState = AnalyzerDriver.SuppressMessageStateByCompilation.GetValue(compilation, (c) => new SuppressMessageAttributeState(c));
             foreach (var diagnostic in diagnostics.ToImmutableArray())
             {
                 if (diagnostic != null)
                 {
                     var effectiveDiagnostic = compilation.Options.FilterDiagnostic(diagnostic);
-                    if (effectiveDiagnostic != null && !suppressMessageState.IsDiagnosticSuppressed(effectiveDiagnostic))
+                    if (effectiveDiagnostic != null)
                     {
+                        SuppressMessageInfo info;
+                        if (SuppressMessageAttributeState.IsDiagnosticTriaged(effectiveDiagnostic, compilation, out info))
+                        {
+                            // Attach the workflow state to the diagnostic.
+                            Debug.Assert(info.WorkflowState != null);
+                            effectiveDiagnostic = effectiveDiagnostic.WithWorkflowState(info.WorkflowState);
+                        }
+
                         yield return effectiveDiagnostic;
                     }
                 }

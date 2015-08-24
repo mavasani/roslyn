@@ -765,7 +765,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 originalEndLine: originalLineInfo.EndLinePosition.Line,
                 originalEndColumn: originalLineInfo.EndLinePosition.Character,
                 description: diagnostic.Description,
-                helpLink: diagnostic.HelpLink);
+                helpLink: diagnostic.HelpLink,
+                workflowState: diagnostic.WorkflowState);
         }
 
         private static IEnumerable<DiagnosticData> GetDiagnosticData(Document document, SyntaxTree tree, TextSpan? span, IEnumerable<Diagnostic> diagnostics)

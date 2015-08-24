@@ -124,6 +124,11 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
                 get { throw new NotImplementedException(); }
             }
 
+            public override string WorkflowState
+            {
+                get { return null; }
+            }
+
             public override bool Equals(Diagnostic obj)
             {
                 throw new NotImplementedException();
@@ -150,6 +155,11 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
             }
 
             internal override Diagnostic WithSeverity(DiagnosticSeverity severity)
+            {
+                throw new NotImplementedException();
+            }
+
+            internal override Diagnostic WithWorkflowState(string workflowState)
             {
                 throw new NotImplementedException();
             }

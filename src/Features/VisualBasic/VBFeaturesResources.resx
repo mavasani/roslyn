@@ -1022,7 +1022,7 @@ Sub(&lt;parameterList&gt;) &lt;statement&gt;</value>
     <value>Use the correct control variable</value>
   </data>
   <data name="SuppressWithPragma" xml:space="preserve">
-    <value>with #Disable directive</value>
+    <value>Suppress with #Disable directive</value>
   </data>
   <data name="NameOfFunction" xml:space="preserve">
     <value>NameOf function</value>

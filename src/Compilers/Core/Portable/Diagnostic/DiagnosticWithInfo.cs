@@ -18,13 +18,15 @@ namespace Microsoft.CodeAnalysis
     {
         private readonly DiagnosticInfo _info;
         private readonly Location _location;
+        private readonly string _workflowState;
 
-        internal DiagnosticWithInfo(DiagnosticInfo info, Location location)
+        internal DiagnosticWithInfo(DiagnosticInfo info, Location location, string workflowState = null)
         {
             Debug.Assert(info != null);
             Debug.Assert(location != null);
             _info = info;
             _location = location;
+            _workflowState = workflowState;
         }
 
         public override Location Location
@@ -77,6 +79,11 @@ namespace Microsoft.CodeAnalysis
         public sealed override DiagnosticSeverity DefaultSeverity
         {
             get { return this.Info.DefaultSeverity; }
+        }
+
+        public sealed override string WorkflowState
+        {
+            get { return this._workflowState; }
         }
 
         internal sealed override bool IsEnabledByDefault
@@ -188,7 +195,7 @@ namespace Microsoft.CodeAnalysis
 
             if (location != _location)
             {
-                return new DiagnosticWithInfo(_info, location);
+                return new DiagnosticWithInfo(_info, location, _workflowState);
             }
 
             return this;
@@ -198,7 +205,17 @@ namespace Microsoft.CodeAnalysis
         {
             if (this.Severity != severity)
             {
-                return new DiagnosticWithInfo(this.Info.GetInstanceWithSeverity(severity), _location);
+                return new DiagnosticWithInfo(this.Info.GetInstanceWithSeverity(severity), _location, _workflowState);
+            }
+
+            return this;
+        }
+
+        internal override Diagnostic WithWorkflowState(string workflowState)
+        {
+            if (this.WorkflowState != workflowState)
+            {
+                return new DiagnosticWithInfo(this.Info, _location, workflowState);
             }
 
             return this;

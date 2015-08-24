@@ -167,6 +167,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     var severity = (DiagnosticSeverity)reader.ReadInt32();
                     var defaultSeverity = (DiagnosticSeverity)reader.ReadInt32();
                     var isEnabledByDefault = reader.ReadBoolean();
+                    var hasWorkflowState = reader.ReadBoolean();
+                    var workflowState = hasWorkflowState ? reader.ReadString() : null;
                     var warningLevel = reader.ReadInt32();
 
                     var start = reader.ReadInt32();
@@ -198,7 +200,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                         originalFile, originalStartLine, originalStartColumn, originalEndLine, originalEndColumn,
                         title: title,
                         description: description,
-                        helpLink: helpLink));
+                        helpLink: helpLink,
+                        workflowState: workflowState));
                 }
             }
 
@@ -272,6 +275,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                         writer.WriteInt32((int)item.Severity);
                         writer.WriteInt32((int)item.DefaultSeverity);
                         writer.WriteBoolean(item.IsEnabledByDefault);
+
+                        var hasWorkflowState = item.WorkflowState != null;
+                        writer.WriteBoolean(hasWorkflowState);
+                        if (hasWorkflowState)
+                        {
+                            writer.WriteString(item.WorkflowState);
+                        }
+
                         writer.WriteInt32(item.WarningLevel);
 
                         if (item.HasTextSpan)

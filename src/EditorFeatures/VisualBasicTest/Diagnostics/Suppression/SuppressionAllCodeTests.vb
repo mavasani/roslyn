@@ -25,10 +25,10 @@ Namespace Microsoft.CodeAnalysis.Editor.VisualBasic.UnitTests.Diagnostics.Suppre
         End Sub
 
         <Fact, Trait(Traits.Feature, Traits.Features.CodeActionsSuppression)>
-        Public Sub TestLocalSuppressionOnEveryNodes()
+        Public Sub TestSuppressionWithAttributeOnEveryNodes()
             Dim facts = New VisualBasicSyntaxFactsService()
 
-            TestLocalSuppression(
+            TestSuppressionWithAttribute(
                 TestResource.AllInOneVisualBasicCode,
                 VisualBasicParseOptions.Default,
                 digInto:=Function(n)
@@ -39,7 +39,7 @@ Namespace Microsoft.CodeAnalysis.Editor.VisualBasic.UnitTests.Diagnostics.Suppre
 
                              Return Not TypeOf n Is StatementSyntax
                          End Function,
-                verifier:=Function(t) t.IndexOf("SuppressMessage", StringComparison.Ordinal) >= 0)
+                verifier:=Function(t) t.IndexOf(AbstractSuppressionCodeFixProvider.DiagnosticTriageAttributeName, StringComparison.Ordinal) >= 0)
         End Sub
     End Class
 End Namespace

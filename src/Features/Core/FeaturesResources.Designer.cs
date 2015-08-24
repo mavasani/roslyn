@@ -1753,38 +1753,11 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Suppress {0}.
-        /// </summary>
-        internal static string SuppressionCodeActionTitle {
-            get {
-                return ResourceManager.GetString("SuppressionCodeActionTitle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to &lt;Pending&gt;.
         /// </summary>
         internal static string SuppressionPendingJustification {
             get {
                 return ResourceManager.GetString("SuppressionPendingJustification", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to with SuppressMessageAttribute (separate file).
-        /// </summary>
-        internal static string SuppressWithGlobalSuppressMessage {
-            get {
-                return ResourceManager.GetString("SuppressWithGlobalSuppressMessage", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to with SuppressMessageAttribute.
-        /// </summary>
-        internal static string SuppressWithLocalSuppressMessage {
-            get {
-                return ResourceManager.GetString("SuppressWithLocalSuppressMessage", resourceCulture);
             }
         }
         
@@ -1850,6 +1823,33 @@ namespace Microsoft.CodeAnalysis {
         internal static string ToDetectRedundantCalls {
             get {
                 return ResourceManager.GetString("ToDetectRedundantCalls", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Triage {0}.
+        /// </summary>
+        internal static string TriageCodeActionTitle {
+            get {
+                return ResourceManager.GetString("TriageCodeActionTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Re-triage {0}(currently &apos;{1}&apos;).
+        /// </summary>
+        internal static string TriageCodeActionTitleForTriagedDiagnostic {
+            get {
+                return ResourceManager.GetString("TriageCodeActionTitleForTriagedDiagnostic", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to as &apos;{0}&apos;.
+        /// </summary>
+        internal static string TriageDiagnostic {
+            get {
+                return ResourceManager.GetString("TriageDiagnostic", resourceCulture);
             }
         }
         

@@ -27,6 +27,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public readonly int WarningLevel;
         public readonly IReadOnlyList<string> CustomTags;
         public readonly ImmutableDictionary<string, string> Properties;
+        public readonly string WorkflowState;
+        public bool HasSourceSuppression => WorkflowState == WellKnownWorkflowStates.SuppressedFalsePositive || WorkflowState == WellKnownWorkflowStates.SuppressedWontFix;
 
         public readonly string ENUMessageForBingSearch;
 
@@ -74,7 +76,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             int originalEndColumn = 0,
             string title = null,
             string description = null,
-            string helpLink = null) :
+            string helpLink = null,
+            string workflowState = null) :
                 this(
                     id, category, message, enuMessageForBingSearch,
                     severity, severity, isEnabledByDefault, warningLevel,
@@ -82,7 +85,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     workspace, projectId, documentId, span,
                     null, originalStartLine, originalStartColumn, originalEndLine, originalEndColumn,
                     originalFilePath, originalStartLine, originalStartColumn, originalEndLine, originalEndColumn,
-                    title, description, helpLink)
+                    title, description, helpLink, workflowState)
         {
         }
 
@@ -113,7 +116,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             int originalEndColumn = 0,
             string title = null,
             string description = null,
-            string helpLink = null)
+            string helpLink = null,
+            string workflowState = null)
         {
             this.Id = id;
             this.Category = category;
@@ -123,6 +127,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             this.Severity = severity;
             this.DefaultSeverity = defaultSeverity;
             this.IsEnabledByDefault = isEnabledByDefault;
+            this.WorkflowState = workflowState;
             this.WarningLevel = warningLevel;
             this.CustomTags = customTags;
             this.Properties = properties;
@@ -173,6 +178,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     Message == other.Message &&
                     Severity == other.Severity &&
                     WarningLevel == other.WarningLevel &&
+                    WorkflowState == other.WorkflowState &&
                     ProjectId == other.ProjectId &&
                     DocumentId == other.DocumentId &&
                     OriginalStartLine == other.OriginalStartLine &&
@@ -185,10 +191,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                    Hash.Combine(this.Category,
                    Hash.Combine(this.Message,
                    Hash.Combine(this.WarningLevel,
+                   Hash.Combine(this.WorkflowState ?? string.Empty,
                    Hash.Combine(this.ProjectId,
                    Hash.Combine(this.DocumentId,
                    Hash.Combine(this.OriginalStartLine,
-                   Hash.Combine(this.OriginalStartColumn, (int)this.Severity))))))));
+                   Hash.Combine(this.OriginalStartColumn, (int)this.Severity)))))))));
         }
 
         public override string ToString()
@@ -222,7 +229,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     new LinePosition(OriginalEndLine, OriginalEndColumn)));
             }
 
-            return Diagnostic.Create(this.Id, this.Category, this.Message, this.Severity, this.DefaultSeverity, this.IsEnabledByDefault, this.WarningLevel, this.Title, this.Description, this.HelpLink, location, customTags: this.CustomTags, properties: this.Properties);
+            return Diagnostic.Create(this.Id, this.Category, this.Message, this.Severity, this.DefaultSeverity, this.IsEnabledByDefault, this.WorkflowState,
+                this.WarningLevel, title: this.Title, description: this.Description, helpLink: this.HelpLink, location: location, customTags: this.CustomTags, properties: this.Properties);
         }
 
         public TextSpan GetExistingOrCalculatedTextSpan(SourceText text)
@@ -308,7 +316,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 projectId: null,
                 title: diagnostic.Descriptor.Title.ToString(CultureInfo.CurrentUICulture),
                 description: diagnostic.Descriptor.Description.ToString(CultureInfo.CurrentUICulture),
-                helpLink: diagnostic.Descriptor.HelpLinkUri);
+                helpLink: diagnostic.Descriptor.HelpLinkUri,
+                workflowState: diagnostic.WorkflowState);
         }
 
         public static DiagnosticData Create(Project project, Diagnostic diagnostic)
@@ -330,7 +339,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 project.Id,
                 title: diagnostic.Descriptor.Title.ToString(CultureInfo.CurrentUICulture),
                 description: diagnostic.Descriptor.Description.ToString(CultureInfo.CurrentUICulture),
-                helpLink: diagnostic.Descriptor.HelpLinkUri);
+                helpLink: diagnostic.Descriptor.HelpLinkUri,
+                workflowState: diagnostic.WorkflowState);
         }
 
         public static DiagnosticData Create(Document document, Diagnostic diagnostic)
@@ -379,7 +389,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 originalEndColumn,
                 title: diagnostic.Descriptor.Title.ToString(CultureInfo.CurrentUICulture),
                 description: diagnostic.Descriptor.Description.ToString(CultureInfo.CurrentUICulture),
-                helpLink: diagnostic.Descriptor.HelpLinkUri);
+                helpLink: diagnostic.Descriptor.HelpLinkUri,
+                workflowState: diagnostic.WorkflowState);
         }
 
         private static void GetLocationInfo(Document document, Location location, out TextSpan sourceSpan, out FileLinePositionSpan originalLineInfo, out FileLinePositionSpan mappedLineInfo)

@@ -199,7 +199,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 diagnostic.OriginalFilePath, diagnostic.OriginalStartLine, diagnostic.OriginalStartColumn, diagnostic.OriginalEndLine, diagnostic.OriginalEndColumn,
                 descriptor.Title.ToString(CultureInfo.CurrentUICulture),
                 descriptor.Description.ToString(CultureInfo.CurrentUICulture),
-                descriptor.HelpLinkUri);
+                descriptor.HelpLinkUri,
+                workflowState: diagnostic.WorkflowState);
         }
     }
 }

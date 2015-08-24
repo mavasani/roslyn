@@ -34,13 +34,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.Diagnostics.Suppression
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsSuppression)]
-        public void TestLocalSuppressionOnEveryNodes()
+        public void TestSuppressionWithAttributeOnEveryNodes()
         {
-            TestLocalSuppression(
+            TestSuppressionWithAttribute(
                 TestResource.AllInOneCSharpCode,
                 CSharpParseOptions.Default,
                 digInto: n => !(n is StatementSyntax) || n is BlockSyntax,
-                verifier: t => t.IndexOf("SuppressMessage", StringComparison.Ordinal) >= 0);
+                verifier: t => t.IndexOf(AbstractSuppressionCodeFixProvider.DiagnosticTriageAttributeName, StringComparison.Ordinal) >= 0);
         }
     }
 }

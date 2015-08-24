@@ -20,8 +20,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     /// </summary>
     internal abstract partial class AnalyzerDriver : IDisposable
     {
-        internal static readonly ConditionalWeakTable<Compilation, SuppressMessageAttributeState> SuppressMessageStateByCompilation = new ConditionalWeakTable<Compilation, SuppressMessageAttributeState>();
-
         // Protect against vicious analyzers that provide large values for SymbolKind.
         private const int MaxSymbolKind = 100;
 
@@ -809,10 +807,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var filteredDiagnostic = compilation.Options.FilterDiagnostic(diagnostic);
             if (filteredDiagnostic != null)
             {
-                var suppressMessageState = SuppressMessageStateByCompilation.GetValue(compilation, (c) => new SuppressMessageAttributeState(c));
-                if (suppressMessageState.IsDiagnosticSuppressed(filteredDiagnostic, symbolOpt: symbolOpt))
+                SuppressMessageInfo info;
+                if (SuppressMessageAttributeState.IsDiagnosticTriaged(filteredDiagnostic, compilation, out info, symbolOpt: symbolOpt))
                 {
-                    return null;
+                    // Attach the workflow state to the diagnostic.
+                    Debug.Assert(info.WorkflowState != null);
+                    filteredDiagnostic = filteredDiagnostic.WithWorkflowState(info.WorkflowState);
                 }
             }
 

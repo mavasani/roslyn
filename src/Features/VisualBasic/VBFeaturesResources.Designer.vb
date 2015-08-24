@@ -2758,7 +2758,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.VBFeaturesResources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to with #Disable directive.
+        '''  Looks up a localized string similar to Suppress with #Disable directive.
         '''</summary>
         Friend ReadOnly Property SuppressWithPragma() As String
             Get

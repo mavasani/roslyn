@@ -101,6 +101,14 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Diagnostics
 
         private string GetErrorTypeFromDiagnostic(DiagnosticData diagnostic)
         {
+            if (diagnostic.HasSourceSuppression ||
+                diagnostic.WorkflowState == WellKnownWorkflowStates.DeferredTriage ||
+                diagnostic.WorkflowState == WellKnownWorkflowStates.DeferredFix)
+            {
+                // Don't squiggle suppressed diagnostics.
+                return null;
+            }
+
             return GetErrorTypeFromDiagnosticTags(diagnostic) ??
                    GetErrorTypeFromDiagnosticProperty(diagnostic) ??
                    GetErrorTypeFromDiagnosticSeverity(diagnostic);
@@ -129,7 +137,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Diagnostics
 
         private string GetErrorTypeFromDiagnosticTags(DiagnosticData diagnostic)
         {
-            if (diagnostic.CustomTags.Count <= 1)
+            if (diagnostic.CustomTags.Count < 1)
             {
                 return null;
             }

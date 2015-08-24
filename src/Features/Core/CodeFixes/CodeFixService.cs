@@ -42,8 +42,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes
         private readonly ImmutableDictionary<LanguageKind, Lazy<ISuppressionFixProvider>> _suppressionProvidersMap;
         private readonly IEnumerable<Lazy<IErrorLoggerService>> _errorLoggers;
 
-        private ImmutableDictionary<CodeFixProvider, FixAllProviderInfo> _fixAllProviderMap;
-
+        private ImmutableDictionary<object, FixAllProviderInfo> _fixAllProviderMap;
+        
         [ImportingConstructor]
         public CodeFixService(
             IDiagnosticAnalyzerService service,
@@ -66,7 +66,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes
             _projectFixersMap = new ConditionalWeakTable<IReadOnlyList<AnalyzerReference>, ImmutableDictionary<string, List<CodeFixProvider>>>();
             _analyzerReferenceToFixersMap = new ConditionalWeakTable<AnalyzerReference, ProjectCodeFixProvider>();
             _createProjectCodeFixProvider = new ConditionalWeakTable<AnalyzerReference, ProjectCodeFixProvider>.CreateValueCallback(r => new ProjectCodeFixProvider(r));
-            _fixAllProviderMap = ImmutableDictionary<CodeFixProvider, FixAllProviderInfo>.Empty;
+            _fixAllProviderMap = ImmutableDictionary<object, FixAllProviderInfo>.Empty;
         }
 
         public async Task<FirstDiagnosticResult> GetFirstDiagnosticWithFixAsync(Document document, TextSpan range, bool considerSuppressionFixes, CancellationToken cancellationToken)
@@ -240,7 +240,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes
             var tree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
             var diagnostics = diagnosticDataCollection.Select(data => data.ToDiagnostic(tree));
 
-            Func<Diagnostic, bool> hasFix = (d) => lazySuppressionProvider.Value.CanBeSuppressed(d);
+            Func<Diagnostic, bool> hasFix = (d) => lazySuppressionProvider.Value.CanBeSuppressedOrTriaged(d);
             Func<ImmutableArray<Diagnostic>, Task<IEnumerable<CodeFix>>> getFixes = (dxs) => lazySuppressionProvider.Value.GetSuppressionsAsync(document, span, dxs, cancellationToken);
             await AppendFixesOrSuppressionsAsync(document, span, diagnostics, result, lazySuppressionProvider.Value, hasFix, getFixes, cancellationToken).ConfigureAwait(false);
             return result;
@@ -268,17 +268,14 @@ namespace Microsoft.CodeAnalysis.CodeFixes
 
             if (fixes != null && fixes.Any())
             {
-                FixAllCodeActionContext fixAllContext = null;
-                var codeFixProvider = fixer as CodeFixProvider;
-                if (codeFixProvider != null)
-                {
-                    // If the codeFixProvider supports fix all occurrences, then get the corresponding FixAllProviderInfo and fix all context.
-                    var fixAllProviderInfo = extensionManager.PerformFunction(codeFixProvider, () => ImmutableInterlocked.GetOrAdd(ref _fixAllProviderMap, codeFixProvider, FixAllProviderInfo.Create), defaultValue: null);
+                // If the fix provider supports fix all occurrences, then get the corresponding FixAllProviderInfo and fix all context.
+                var fixAllProviderInfo = extensionManager.PerformFunction(fixer, () => ImmutableInterlocked.GetOrAdd(ref _fixAllProviderMap, fixer, FixAllProviderInfo.Create), defaultValue: null);
 
-                    if (fixAllProviderInfo != null)
-                    {
-                        fixAllContext = FixAllCodeActionContext.Create(document, fixAllProviderInfo, codeFixProvider, diagnostics, this.GetDocumentDiagnosticsAsync, this.GetProjectDiagnosticsAsync, cancellationToken);
-                    }
+                FixAllCodeActionContext fixAllContext = null;
+                if (fixAllProviderInfo != null)
+                {
+                    var codeFixProvider = (fixer as CodeFixProvider) ?? new WrapperCodeFixProvider((ISuppressionFixProvider)fixer, diagnostics);
+                    fixAllContext = FixAllCodeActionContext.Create(document, fixAllProviderInfo, codeFixProvider, diagnostics, this.GetDocumentDiagnosticsAsync, this.GetProjectDiagnosticsAsync, cancellationToken);
                 }
 
                 result = result ?? new List<CodeFixCollection>();
@@ -365,7 +362,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes
             var tree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
             var dx = diagnostic.ToDiagnostic(tree);
 
-            if (hasSuppressionFixer && lazySuppressionProvider.Value.CanBeSuppressed(dx))
+            if (hasSuppressionFixer && lazySuppressionProvider.Value.CanBeSuppressedOrTriaged(dx))
             {
                 return true;
             }

@@ -20,7 +20,9 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
         public SuppressionCodeAction(Diagnostic diagnostic, IEnumerable<CodeAction> nestedActions)
         {
-            _title = string.Format(FeaturesResources.SuppressionCodeActionTitle, diagnostic.Id);
+            _title = string.IsNullOrEmpty(diagnostic.WorkflowState) ?
+                string.Format(FeaturesResources.TriageCodeActionTitle, diagnostic.Id) :
+                string.Format(FeaturesResources.TriageCodeActionTitleForTriagedDiagnostic, diagnostic.Id, diagnostic.WorkflowState);
             this.NestedActions = nestedActions;
         }
     }
