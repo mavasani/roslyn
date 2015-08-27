@@ -9,18 +9,19 @@ Imports Microsoft.CodeAnalysis.Simplification
 Imports Microsoft.CodeAnalysis.Text
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 
+
 Namespace Microsoft.CodeAnalysis.VisualBasic.CodeFixes.Suppression
     <ExportSuppressionFixProvider(PredefinedCodeFixProviderNames.Suppression, LanguageNames.VisualBasic), [Shared]>
     Friend Class VisualBasicSuppressionCodeFixProvider
         Inherits AbstractSuppressionCodeFixProvider
 
-        Private Const DiagnosticTriageAttributeDefinition As String = "
+        Private Const AttributeDefinition As String = "
 Imports System
-Imports CompilerGeneratedAttributes
+Imports System.Diagnostics.CodeAnalysis
 
-Namespace CompilerGeneratedAttributes
+Namespace System.Diagnostics.CodeAnalysis
 	<AttributeUsage(AttributeTargets.All, Inherited := False, AllowMultiple := True)> _
-	Friend NotInheritable Class DiagnosticTriageAttribute
+	Friend NotInheritable Class SuppressMessageAttribute
 		Inherits Attribute
 
 		Private m_category As String
@@ -163,7 +164,7 @@ End Namespace
             If namespaceDecl IsNot Nothing Then
                 If namespaceDecl.Members.Count = 1 AndAlso namespaceDecl.Members(0).Kind = SyntaxKind.ClassBlock Then
                     Dim classDecl = DirectCast(namespaceDecl.Members(0), ClassBlockSyntax).ClassStatement
-                    If classDecl.Identifier.ValueText = DiagnosticTriageAttributeName Then
+                    If classDecl.Identifier.ValueText = SuppressMessageAttributeName Then
                         Return True
                     End If
                 End If
@@ -189,7 +190,7 @@ End Namespace
             Dim addHeaderComment = Not compilationRoot.Attributes.Any
 
             If defineAttribute Then
-                compilationRoot = SyntaxFactory.ParseCompilationUnit(DiagnosticTriageAttributeDefinition).
+                compilationRoot = SyntaxFactory.ParseCompilationUnit(AttributeDefinition).
                     WithAdditionalAnnotations(Formatter.Annotation)
             End If
 
@@ -205,7 +206,7 @@ End Namespace
 
         Private Function CreateAttributeList(targetSymbol As ISymbol, diagnostic As Diagnostic, workflowState As String) As AttributeListSyntax
             Dim attributeTarget = SyntaxFactory.AttributeTarget(SyntaxFactory.Token(SyntaxKind.AssemblyKeyword))
-            Dim attributeName = SyntaxFactory.ParseName(DiagnosticTriageAttributeFullName)
+            Dim attributeName = SyntaxFactory.ParseName(SuppressMessageAttributeFullName)
             Dim attributeArguments = CreateAttributeArguments(targetSymbol, diagnostic, workflowState)
 
             Dim attribute As AttributeSyntax = SyntaxFactory.Attribute(attributeTarget, attributeName, attributeArguments) _

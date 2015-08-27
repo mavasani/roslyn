@@ -31,8 +31,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private GlobalSuppressions _lazyGlobalSuppressions;
         private readonly ConcurrentDictionary<ISymbol, ImmutableDictionary<string, SuppressMessageInfo>> _localSuppressionsBySymbol;
         private ISymbol _lazySuppressMessageAttribute;
-        private bool _lazyDiagnosticTriageAttributeInitialized;
-        private ISymbol _lazyDiagnosticTriageAttribute;
 
         private class GlobalSuppressions
         {
@@ -82,7 +80,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             _compilation = compilation;
             _localSuppressionsBySymbol = new ConcurrentDictionary<ISymbol, ImmutableDictionary<string, SuppressMessageInfo>>();
-            _lazyDiagnosticTriageAttributeInitialized = false;
         }
 
         public static bool IsDiagnosticTriaged(Diagnostic diagnostic, Compilation compilation, out SuppressMessageInfo info, ISymbol symbolOpt = null)
@@ -207,42 +204,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private ISymbol DiagnosticTriageAttribute
-        {
-            get
-            {
-                if (!_lazyDiagnosticTriageAttributeInitialized)
-                {
-                    _lazyDiagnosticTriageAttribute = _compilation.GetTypeByMetadataName("CompilerGeneratedAttributes.DiagnosticTriageAttribute");
-                    _lazyDiagnosticTriageAttributeInitialized = true;
-                }
-
-                return _lazyDiagnosticTriageAttribute;
-            }
-        }
-
-        private bool IsSuppressMessageOrDiagnosticTriageAttribute(AttributeData attribute)
-        {
-            if (attribute.AttributeClass == null)
-            {
-                return false;
-            }
-
-            var suppressMessageAttribute = this.SuppressMessageAttribute;
-            if (suppressMessageAttribute != null && attribute.AttributeClass == suppressMessageAttribute)
-            {
-                return true;
-            }
-
-            var diagnosticTriageAttribute = this.DiagnosticTriageAttribute;
-            if (diagnosticTriageAttribute != null && attribute.AttributeClass == diagnosticTriageAttribute)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
         private void DecodeGlobalSuppressMessageAttributes()
         {
             if (_lazyGlobalSuppressions == null)
@@ -261,7 +222,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private ImmutableDictionary<string, SuppressMessageInfo> DecodeSuppressMessageAttributes(ISymbol symbol)
         {
-            var attributes = symbol.GetAttributes().Where(IsSuppressMessageOrDiagnosticTriageAttribute);
+            var attributes = symbol.GetAttributes().Where(a => a.AttributeClass == this.SuppressMessageAttribute);
             return DecodeSuppressMessageAttributes(symbol, attributes);
         }
 
@@ -297,7 +258,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             Debug.Assert(symbol is IAssemblySymbol || symbol is IModuleSymbol);
 
-            var attributes = symbol.GetAttributes().Where(IsSuppressMessageOrDiagnosticTriageAttribute);
+            var attributes = symbol.GetAttributes().Where(a => a.AttributeClass == this.SuppressMessageAttribute);
             DecodeGlobalSuppressMessageAttributes(compilation, symbol, globalSuppressions, attributes);
         }
 

@@ -15,16 +15,16 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.Suppression
     [ExportSuppressionFixProvider(PredefinedCodeFixProviderNames.Suppression, LanguageNames.CSharp), Shared]
     internal class CSharpSuppressionCodeFixProvider : AbstractSuppressionCodeFixProvider
     {
-        private const string DiagnosticTriageAttributeDefinition = @"
+        private const string AttributeDefinition = @"
 using System;
-using CompilerGeneratedAttributes;
+using System.Diagnostics.CodeAnalysis;
 
-namespace CompilerGeneratedAttributes
+namespace System.Diagnostics.CodeAnalysis
 {
     [AttributeUsage(AttributeTargets.All, Inherited = false, AllowMultiple = true)]
-    internal sealed class DiagnosticTriageAttribute : Attribute
+    internal sealed class SuppressMessageAttribute : Attribute
     {
-        public DiagnosticTriageAttribute(string category, string checkId)
+        public SuppressMessageAttribute(string category, string checkId)
         {
             this.Category = category;
             this.CheckId = checkId;
@@ -119,7 +119,7 @@ namespace CompilerGeneratedAttributes
                 if (namespaceDecl.Members.Count == 1 && namespaceDecl.Members[0].Kind() == SyntaxKind.ClassDeclaration)
                 {
                     var classDecl = (ClassDeclarationSyntax)namespaceDecl.Members[0];
-                    if (classDecl.Identifier.ValueText == DiagnosticTriageAttributeName)
+                    if (classDecl.Identifier.ValueText == SuppressMessageAttributeName)
                     {
                         return true;
                     }
@@ -151,7 +151,7 @@ namespace CompilerGeneratedAttributes
 
             if (defineAttribute)
             {
-                compilationRoot = SyntaxFactory.ParseCompilationUnit(DiagnosticTriageAttributeDefinition)
+                compilationRoot = SyntaxFactory.ParseCompilationUnit(AttributeDefinition)
                     .WithAdditionalAnnotations(Formatter.Annotation);
             }
 
@@ -168,7 +168,7 @@ namespace CompilerGeneratedAttributes
         private AttributeListSyntax CreateAttributeList(ISymbol targetSymbol, Diagnostic diagnostic, string workflowState)
         {
             var attributeArguments = CreateAttributeArguments(targetSymbol, diagnostic, workflowState);
-            var attribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName(DiagnosticTriageAttributeFullName), attributeArguments)
+            var attribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName(SuppressMessageAttributeFullName), attributeArguments)
                 .WithAdditionalAnnotations(Simplifier.Annotation);
             var attributes = new SeparatedSyntaxList<AttributeSyntax>().Add(attribute);
 

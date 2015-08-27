@@ -5,14 +5,9 @@ namespace Microsoft.CodeAnalysis
     public static class WellKnownWorkflowStates
     {
         /// <summary>
-        /// Indicates that the diagnostic has been marked to be triaged in future.
+        /// Indicates that the diagnostic has been deferred for triage/fix in future.
         /// </summary>
-        public const string DeferredTriage = "DeferredTriage";
-
-        /// <summary>
-        /// Indicates that the diagnostic has been triaged to be a valid issue, but has been deferred to be fixed in future, possibly due to its low priority and/or presence of a workaround.
-        /// </summary>
-        public const string DeferredFix = "DeferredFix";
+        public const string Deferred = "Deferred";
 
         /// <summary>
         /// Indicates that the diagnostic has been triaged as a valid issue that will never be fixed, possibly due to its low priority and/or presence of a workaround.

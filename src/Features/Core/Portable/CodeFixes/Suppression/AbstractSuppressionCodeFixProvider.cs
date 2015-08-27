@@ -17,8 +17,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 {
     internal abstract partial class AbstractSuppressionCodeFixProvider : ISuppressionFixProvider
     {
-        public const string DiagnosticTriageAttributeFullName = "CompilerGeneratedAttributes.DiagnosticTriageAttribute";
-        public const string DiagnosticTriageAttributeName = "DiagnosticTriageAttribute";
+        public const string SuppressMessageAttributeFullName = "System.Diagnostics.CodeAnalysis.SuppressMessageAttribute";
+        public const string SuppressMessageAttributeName = "SuppressMessageAttribute";
         private static readonly string s_globalSuppressionsFileName = "GlobalSuppressions";
         private static readonly string s_suppressionsFileCommentTemplate =
 @"
@@ -144,8 +144,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 var nestedActions = new List<CodeAction>();
 
                 // global assembly-level suppress message attribute.
-                AddGlobalSuppressMessageCodeAction(nestedActions, suppressionTargetInfo.TargetSymbol, document, diagnostic, WellKnownWorkflowStates.DeferredTriage, onlyPragmaSuppressions);
-                AddGlobalSuppressMessageCodeAction(nestedActions, suppressionTargetInfo.TargetSymbol, document, diagnostic, WellKnownWorkflowStates.DeferredFix, onlyPragmaSuppressions);
+                AddGlobalSuppressMessageCodeAction(nestedActions, suppressionTargetInfo.TargetSymbol, document, diagnostic, WellKnownWorkflowStates.Deferred, onlyPragmaSuppressions);
 
                 if (!diagnostic.HasSourceSuppression && suppressableDiagnostics.Contains(diagnostic))
         {
