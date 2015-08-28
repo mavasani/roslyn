@@ -177,11 +177,6 @@ namespace Roslyn.Utilities
                 .GetTypeInfo()
                 .GetDeclaredMethod(nameof(ReadAllBytes), paramTypes: new[] { typeof(string) })
                 .CreateDelegate<Func<string, byte[]>>();
-
-            internal static readonly Action<string, byte[]> WriteAllBytes = Type
-                .GetTypeInfo()
-                .GetDeclaredMethod(nameof(WriteAllBytes), paramTypes: new[] { typeof(string), typeof(byte[]) })
-                .CreateDelegate<Action<string, byte[]>>();
         }
 
         internal static class Directory

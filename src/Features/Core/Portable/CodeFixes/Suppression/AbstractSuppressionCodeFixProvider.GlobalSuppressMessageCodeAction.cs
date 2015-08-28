@@ -41,8 +41,13 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 };
             }
 
-            public override string Title => _title;
-            public override string EquivalenceKey => _title + _diagnostic.Id;
+            public override string Title
+            {
+                get
+                {
+                    return _title;
+                }
+            }
 
             private async Task<Document> GetChangedSuppressionDocumentAsync(CancellationToken cancellationToken)
             {

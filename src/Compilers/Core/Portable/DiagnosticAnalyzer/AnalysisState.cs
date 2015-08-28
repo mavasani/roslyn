@@ -531,6 +531,22 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
+        /// True if the given symbol declaration is fully analyzed.
+        /// </summary>
+        public bool IsDeclarationComplete(SyntaxReference decl)
+        {
+            foreach (var analyzerState in _analyzerStateMap.Values)
+            {
+                if (!analyzerState.IsDeclarationComplete(decl))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        /// <summary>
         /// Marks the given symbol declaration as fully analyzed for the given analyzer.
         /// </summary>
         public void MarkDeclarationComplete(SyntaxReference decl, DiagnosticAnalyzer analyzer)

@@ -19,7 +19,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
             // Only keep hold CompilationWithAnalyzers instances for projects whose documents were analyzed within the last minute.
             // TODO: Tune this cache cleanup interval based on performance measurements.
-            private const int cacheCleanupIntervalInMinutes = 1;
+            private const int cacheCleanupIntervalInSeconds = 2;
 
             public SolutionCrawlerAnalysisState(HostAnalyzerManager hostAnalyzerManager)
             {
@@ -55,45 +55,45 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
             private void OnDocumentOrProjectAnalyzed(Guid documentOrProjectGuid, Project project)
             {
-                if (!project.SupportsCompilation)
-                {
-                    return;
-                }
+                //if (!project.SupportsCompilation)
+                //{
+                //    return;
+                //}
 
-                var currentTime = DateTime.UtcNow;
-                var projectAnalysisState = _projectAnalysisStateCache.GetValue(project, CreateProjectAnalysisState);
+                //var currentTime = DateTime.UtcNow;
+                //var projectAnalysisState = _projectAnalysisStateCache.GetValue(project, CreateProjectAnalysisState);
 
-                projectAnalysisState.PendingDocumentsOrProject.Remove(documentOrProjectGuid);
-                projectAnalysisState.LastAccessTime = currentTime;
+                //projectAnalysisState.PendingDocumentsOrProject.Remove(documentOrProjectGuid);
+                //projectAnalysisState.LastAccessTime = currentTime;
 
-                if (projectAnalysisState.PendingDocumentsOrProject.Count == 0)
-                {
-                    // PERF: We have computed and cached all documents and project diagnostics for the given project, so drop the CompilationWithAnalyzers instance that also caches all these diagnostics.
-                    _projectAnalysisStateCache.Remove(project);
-                    _hostAnalyzerManager.DisposeCompilationWithAnalyzers(project);
-                }
+                //if (projectAnalysisState.PendingDocumentsOrProject.Count == 0)
+                //{
+                //    // PERF: We have computed and cached all documents and project diagnostics for the given project, so drop the CompilationWithAnalyzers instance that also caches all these diagnostics.
+                //    _projectAnalysisStateCache.Remove(project);
+                //    _hostAnalyzerManager.DisposeCompilationWithAnalyzers(project);
+                //}
 
-                var minutesSinceCleanup = (currentTime - _lastCacheCleanupTime).TotalMinutes;
-                if (minutesSinceCleanup >= cacheCleanupIntervalInMinutes)
-                {
-                    // PERF: For projects which haven't been analyzed recently, drop the CompilationWithAnalyzers instance to reduce memory pressure.
-                    //       Subsequent diagnostic request with instantiate a new CompilationWithAnalyzers for these projects.
-                    foreach (var p in project.Solution.Projects)
-                    {
-                        ProjectAnalysisState state;
-                        if (_projectAnalysisStateCache.TryGetValue(p, out state))
-                        {
-                            var timeSinceLastAccess = currentTime - state.LastAccessTime;
-                            if (timeSinceLastAccess.TotalMinutes >= cacheCleanupIntervalInMinutes)
-                            {
-                                _hostAnalyzerManager.DisposeCompilationWithAnalyzers(p);
-                                state.LastAccessTime = currentTime;
-                            }
-                        }
-                    }
+                //var timeSinceCleanup = (currentTime - _lastCacheCleanupTime).TotalSeconds;
+                //if (timeSinceCleanup >= cacheCleanupIntervalInSeconds)
+                //{
+                //    // PERF: For projects which haven't been analyzed recently, drop the CompilationWithAnalyzers instance to reduce memory pressure.
+                //    //       Subsequent diagnostic request with instantiate a new CompilationWithAnalyzers for these projects.
+                //    foreach (var p in project.Solution.Projects)
+                //    {
+                //        ProjectAnalysisState state;
+                //        if (_projectAnalysisStateCache.TryGetValue(p, out state))
+                //        {
+                //            var timeSinceLastAccess = currentTime - state.LastAccessTime;
+                //            if (timeSinceLastAccess.TotalSeconds >= cacheCleanupIntervalInSeconds)
+                //            {
+                //                _hostAnalyzerManager.DisposeCompilationWithAnalyzers(p);
+                //                state.LastAccessTime = currentTime;
+                //            }
+                //        }
+                //    }
 
-                    _lastCacheCleanupTime = currentTime;
-                }
+                //    _lastCacheCleanupTime = currentTime;
+                //}
             }
         }
     }

@@ -36,10 +36,21 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 return _document.WithSyntaxRoot(newRoot);
             }
 
-            public override string Title => _title;
-            public override string EquivalenceKey => _title + _diagnostic.Id;
+            public override string Title
+            {
+                get
+                {
+                    return _title;
+                }
+            }
 
-            internal SyntaxNode TargetNode_TestOnly => _targetNode;
+            internal SyntaxNode TargetNode_TestOnly
+            {
+                get
+                {
+                    return _targetNode;
+                }
+            }
         }
     }
 }

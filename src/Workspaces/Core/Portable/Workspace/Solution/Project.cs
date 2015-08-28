@@ -387,6 +387,21 @@ namespace Microsoft.CodeAnalysis
             return _solution.GetCompilationAsync(this, cancellationToken);
         }
 
+        private readonly WeakReference<CompilationWithAnalyzers> _compilationWithAnalyzers = new WeakReference<CompilationWithAnalyzers>(null);
+        internal async Task<CompilationWithAnalyzers> GetCompilationWithAnalyzersAsync(Func<Compilation, CompilationWithAnalyzers> createCompilationWithAnalyzers, CancellationToken cancellationToken = default(CancellationToken))
+        {
+
+            var compilationWithAnalyzers = _compilationWithAnalyzers.GetTarget();
+            if (compilationWithAnalyzers == null)
+            {
+                var compilation = await GetCompilationAsync(cancellationToken).ConfigureAwait(false);
+                compilationWithAnalyzers = createCompilationWithAnalyzers(compilation);
+                _compilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+            }
+
+            return compilationWithAnalyzers;
+        }
+
         /// <summary>
         /// Gets an object that lists the added, changed and removed documents between this project and the specified project.
         /// </summary>

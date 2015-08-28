@@ -79,6 +79,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         private readonly ConditionalWeakTable<Project, CompilationWithAnalyzers> _compilationWithAnalyzersMap;
 
+        private readonly WeakReference<Project> _activeProject = new WeakReference<Project>(null);
+        private readonly WeakReference<CompilationWithAnalyzers> _activeCompilationWithAnalyzers = new WeakReference<CompilationWithAnalyzers>(null);
+
+        /// <summary>
+        /// Cache from <see cref="DiagnosticAnalyzer"/> instance to its supported desciptors.
+        /// </summary>
+        private readonly ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>> _descriptorCache;
+
         /// <summary>
         /// Loader for VSIX-based analyzers.
         /// </summary>
@@ -108,6 +116,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _compilerDiagnosticAnalyzerDescriptorMap = ImmutableDictionary<DiagnosticAnalyzer, HashSet<string>>.Empty;
             _hostDiagnosticAnalyzerPackageNameMap = ImmutableDictionary<DiagnosticAnalyzer, string>.Empty;
             _compilationWithAnalyzersMap = new ConditionalWeakTable<Project, CompilationWithAnalyzers>();
+            _descriptorCache = new ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>>();
 
             DiagnosticAnalyzerLogger.LogWorkspaceAnalyzers(hostAnalyzerReferences);
         }
@@ -137,6 +146,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Return <see cref="DiagnosticAnalyzer.SupportedDiagnostics"/> of given <paramref name="analyzer"/>.
         /// </summary>
         public ImmutableArray<DiagnosticDescriptor> GetDiagnosticDescriptors(DiagnosticAnalyzer analyzer)
+        {
+            return (ImmutableArray<DiagnosticDescriptor>)_descriptorCache.GetValue(analyzer, a => GetDiagnosticDescriptorsCore(a));
+        }
+
+        private ImmutableArray<DiagnosticDescriptor> GetDiagnosticDescriptorsCore(DiagnosticAnalyzer analyzer)
         {
             ImmutableArray<DiagnosticDescriptor> descriptors;
             try
@@ -504,7 +518,30 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         internal CompilationWithAnalyzers GetOrCreateCompilationWithAnalyzers(Project project, ConditionalWeakTable<Project, CompilationWithAnalyzers>.CreateValueCallback createCompilationWithAnalyzers)
         {
             Contract.ThrowIfFalse(project.SupportsCompilation);
-            return _compilationWithAnalyzersMap.GetValue(project, createCompilationWithAnalyzers);
+
+            lock (_activeProject)
+            {
+                CompilationWithAnalyzers compilationWithAnalyzers;
+                if (_activeProject.GetTarget() == project)
+                {
+                    compilationWithAnalyzers = _activeCompilationWithAnalyzers.GetTarget();
+                    if (compilationWithAnalyzers == null)
+                    {
+                        compilationWithAnalyzers = createCompilationWithAnalyzers(project);
+                        _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+                    }
+                }
+                else
+                {
+                    _activeProject.SetTarget(project);
+                    compilationWithAnalyzers = createCompilationWithAnalyzers(project);
+                    _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+                }
+
+                return compilationWithAnalyzers;
+            }
+
+            // return _compilationWithAnalyzersMap.GetValue(project, createCompilationWithAnalyzers);
         }
 
         internal void DisposeCompilationWithAnalyzers(Project project)

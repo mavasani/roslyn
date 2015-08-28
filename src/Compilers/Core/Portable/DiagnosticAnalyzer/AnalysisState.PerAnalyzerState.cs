@@ -142,6 +142,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return TryStartProcessingEntity(decl.GetSyntax(), _pendingDeclarations, _declarationAnalyzerStateDataPool, out state);
             }
 
+            public bool IsDeclarationComplete(SyntaxReference decl)
+            {
+                return IsEntityFullyProcessed(decl.GetSyntax(), _pendingDeclarations);
+            }
+
             public void MarkDeclarationComplete(SyntaxReference decl)
             {
                 MarkEntityProcessed(decl.GetSyntax(), _pendingDeclarations, _declarationAnalyzerStateDataPool);

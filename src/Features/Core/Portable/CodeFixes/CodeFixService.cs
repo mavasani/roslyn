@@ -189,7 +189,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes
                 }
             }
 
-            var diagnostics = await DiagnosticData.ToDiagnosticsAsync(document.Project, diagnosticDataCollection, cancellationToken).ConfigureAwait(false);
+            var tree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
+            var diagnostics = diagnosticDataCollection.Select(data => data.ToDiagnostic(tree)).ToImmutableArray();
             var extensionManager = document.Project.Solution.Workspace.Services.GetService<IExtensionManager>();
 
             foreach (var fixer in allFixers.Distinct())
@@ -236,7 +237,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes
                 return result;
             }
 
-            var diagnostics = await DiagnosticData.ToDiagnosticsAsync(document.Project, diagnosticDataCollection, cancellationToken).ConfigureAwait(false);
+            var tree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
+            var diagnostics = diagnosticDataCollection.Select(data => data.ToDiagnostic(tree));
 
             Func<Diagnostic, bool> hasFix = (d) => lazySuppressionProvider.Value.CanBeSuppressed(d);
             Func<ImmutableArray<Diagnostic>, Task<IEnumerable<CodeFix>>> getFixes = (dxs) => lazySuppressionProvider.Value.GetSuppressionsAsync(document, span, dxs, cancellationToken);
@@ -291,9 +293,10 @@ namespace Microsoft.CodeAnalysis.CodeFixes
         {
             Contract.ThrowIfNull(document);
             var solution = document.Project.Solution;
+            var tree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
             var diagnostics = await _diagnosticService.GetDiagnosticsForIdsAsync(solution, null, document.Id, diagnosticIds, cancellationToken).ConfigureAwait(false);
             Contract.ThrowIfFalse(diagnostics.All(d => d.DocumentId != null));
-            return await DiagnosticData.ToDiagnosticsAsync(document.Project, diagnostics, cancellationToken).ConfigureAwait(false);
+            return diagnostics.Select(d => d.ToDiagnostic(tree));
         }
 
         private async Task<IEnumerable<Diagnostic>> GetProjectDiagnosticsAsync(Project project, bool includeAllDocumentDiagnostics, ImmutableHashSet<string> diagnosticIds, CancellationToken cancellationToken)
@@ -305,14 +308,14 @@ namespace Microsoft.CodeAnalysis.CodeFixes
                 // Get all diagnostics for the entire project, including document diagnostics.
                 var diagnostics = await _diagnosticService.GetDiagnosticsForIdsAsync(project.Solution, project.Id, diagnosticIds: diagnosticIds, cancellationToken: cancellationToken).ConfigureAwait(false);
                 var documentIdsToTreeMap = await GetDocumentIdsToTreeMapAsync(project, cancellationToken).ConfigureAwait(false);
-                return await DiagnosticData.ToDiagnosticsAsync(project, diagnostics, documentIdsToTreeMap, cancellationToken).ConfigureAwait(false);
+                return diagnostics.Select(d => d.DocumentId != null ? d.ToDiagnostic(documentIdsToTreeMap[d.DocumentId]) : d.ToDiagnostic(null));
             }
             else
             {
                 // Get all no-location diagnostics for the project, doesn't include document diagnostics.
                 var diagnostics = await _diagnosticService.GetProjectDiagnosticsForIdsAsync(project.Solution, project.Id, diagnosticIds, cancellationToken: cancellationToken).ConfigureAwait(false);
                 Contract.ThrowIfFalse(diagnostics.All(d => d.DocumentId == null));
-                return await DiagnosticData.ToDiagnosticsAsync(project, diagnostics, cancellationToken).ConfigureAwait(false);
+                return diagnostics.Select(d => d.ToDiagnostic(null));
             }
         }
 
@@ -359,7 +362,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes
                 allFixers = allFixers.AddRange(projectFixers);
             }
 
-            var dx = await diagnostic.ToDiagnosticAsync(document.Project, cancellationToken).ConfigureAwait(false);
+            var tree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
+            var dx = diagnostic.ToDiagnostic(tree);
 
             if (hasSuppressionFixer && lazySuppressionProvider.Value.CanBeSuppressed(dx))
             {

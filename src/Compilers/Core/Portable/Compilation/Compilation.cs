@@ -1805,8 +1805,6 @@ namespace Microsoft.CodeAnalysis
             return new EmitResult(success, diagnostics.ToReadOnlyAndFree());
         }
 
-        internal bool IsEmitDeterministic => this.Feature("deterministic")?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false;
-
         internal bool SerializeToPeStream(
             CommonPEModuleBuilder moduleBeingBuilt,
             EmitStreamProvider peStreamProvider,
@@ -1827,7 +1825,7 @@ namespace Microsoft.CodeAnalysis
             Stream portablePdbTempStream = null;
             Stream peTempStream = null;
 
-            bool deterministic = IsEmitDeterministic;
+            bool deterministic = this.Feature("deterministic")?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false;
             bool emitPortablePdb = moduleBeingBuilt.EmitOptions.DebugInformationFormat == DebugInformationFormat.PortablePdb;
             string pdbPath = (pdbStreamProvider != null) ? (moduleBeingBuilt.EmitOptions.PdbFilePath ?? FileNameUtilities.ChangeExtension(SourceModule.Name, "pdb")) : null;
 
