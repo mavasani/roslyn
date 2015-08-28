@@ -135,6 +135,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     return;
                 }
 
+                _solutionCrawlerAnalysisState.OnDocumentAnalysisStarted(document);
+
                 var textVersion = await document.GetTextVersionAsync(cancellationToken).ConfigureAwait(false);
                 var dataVersion = await document.GetSyntaxVersionAsync(cancellationToken).ConfigureAwait(false);
                 var versions = new VersionArgument(textVersion, dataVersion);
@@ -264,6 +266,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         {
             try
             {
+                _solutionCrawlerAnalysisState.OnDocumentAnalysisStarted(document);
+
                 var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 var fullSpan = root == null ? null : (TextSpan?)root.FullSpan;
 
@@ -321,6 +325,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 {
                     return;
                 }
+
+                _solutionCrawlerAnalysisState.OnProjectAnalysisStarted(project);
 
                 var projectTextVersion = await project.GetLatestDocumentVersionAsync(cancellationToken).ConfigureAwait(false);
                 var semanticVersion = await project.GetDependentSemanticVersionAsync(cancellationToken).ConfigureAwait(false);
@@ -1005,11 +1011,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             return string.Format("project remove: {0}", id.ToString());
         }
 
-        #region unused 
-        public override Task NewSolutionSnapshotAsync(Solution solution, CancellationToken cancellationToken)
+        public override Task NewSolutionSnapshotAsync(Solution newSolution, CancellationToken cancellationToken)
         {
+            HostAnalyzerManager.ResetCompilationWithAnalyzersCache();
             return SpecializedTasks.EmptyTask;
         }
-        #endregion
     }
 }

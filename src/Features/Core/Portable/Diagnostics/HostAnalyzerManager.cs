@@ -77,7 +77,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <summary>
         /// Map from project to <see cref="CompilationWithAnalyzers"/> instance to be used for computing analyzer diagnostics.
         /// </summary>
-        private readonly ConditionalWeakTable<Project, CompilationWithAnalyzers> _compilationWithAnalyzersMap;
+        private ConditionalWeakTable<Project, CompilationWithAnalyzers> _compilationWithAnalyzersMap;
 
         private readonly WeakReference<Project> _activeProject = new WeakReference<Project>(null);
         private readonly WeakReference<CompilationWithAnalyzers> _activeCompilationWithAnalyzers = new WeakReference<CompilationWithAnalyzers>(null);
@@ -519,36 +519,57 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             Contract.ThrowIfFalse(project.SupportsCompilation);
 
-            lock (_activeProject)
+            //lock (_activeProject)
+            //{
+            //    CompilationWithAnalyzers compilationWithAnalyzers;
+            //    if (_activeProject.GetTarget() == project)
+            //    {
+            //        compilationWithAnalyzers = _activeCompilationWithAnalyzers.GetTarget();
+            //        if (compilationWithAnalyzers == null)
+            //        {
+            //            compilationWithAnalyzers = createCompilationWithAnalyzers(project);
+            //            _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+            //        }
+            //    }
+            //    else
+            //    {
+            //        _activeProject.SetTarget(project);
+            //        compilationWithAnalyzers = createCompilationWithAnalyzers(project);
+            //        _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+            //    }
+
+            //    return compilationWithAnalyzers;
+            //}
+            lock (_compilationWithAnalyzersMap)
             {
-                CompilationWithAnalyzers compilationWithAnalyzers;
-                if (_activeProject.GetTarget() == project)
-                {
-                    compilationWithAnalyzers = _activeCompilationWithAnalyzers.GetTarget();
-                    if (compilationWithAnalyzers == null)
-                    {
-                        compilationWithAnalyzers = createCompilationWithAnalyzers(project);
-                        _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
-                    }
-                }
-                else
-                {
-                    _activeProject.SetTarget(project);
-                    compilationWithAnalyzers = createCompilationWithAnalyzers(project);
-                    _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
-                }
-
-                return compilationWithAnalyzers;
+                return _compilationWithAnalyzersMap.GetValue(project, createCompilationWithAnalyzers);
             }
+        }
 
-            // return _compilationWithAnalyzersMap.GetValue(project, createCompilationWithAnalyzers);
+        internal void DisposeCompilationWithAnalyzers(Solution solution)
+        {
+            foreach (var project in solution.Projects)
+            {
+                DisposeCompilationWithAnalyzers(project);
+            }
         }
 
         internal void DisposeCompilationWithAnalyzers(Project project)
         {
             if (project.SupportsCompilation)
             {
-                _compilationWithAnalyzersMap.Remove(project);
+                lock (_compilationWithAnalyzersMap)
+                {
+                    _compilationWithAnalyzersMap.Remove(project);
+                }
+            }
+        }
+
+        internal void ResetCompilationWithAnalyzersCache()
+        {
+            lock (_compilationWithAnalyzersMap)
+            {
+                _compilationWithAnalyzersMap = new ConditionalWeakTable<Project, CompilationWithAnalyzers>();
             }
         }
 
