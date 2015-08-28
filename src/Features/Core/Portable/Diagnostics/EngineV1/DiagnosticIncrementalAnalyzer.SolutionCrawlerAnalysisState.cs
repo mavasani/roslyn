@@ -43,13 +43,23 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 };
             }
 
-            public void OnDocumentAnalyzed(Document document)
+            public void OnDocumentAnalyzed(Document document, DiagnosticAnalyzerDriver driver, bool syntax)
             {
-                OnDocumentOrProjectAnalyzed(document.Id.Id, document.Project);
+                var compilation = document.Project.GetCompilationAsync().WaitAndGetResult(driver.CancellationToken);
+                var compilationWithAnalyzers = driver.GetCompilationWithAnalyzers(compilation);
+                var tree = document.GetSyntaxTreeAsync(driver.CancellationToken).WaitAndGetResult(driver.CancellationToken);
+                // compilationWithAnalyzers.ClearLocalDiagnostics(tree, syntax);
+                
+                if (!syntax)
+                    OnDocumentOrProjectAnalyzed(document.Id.Id, document.Project);
             }
 
-            public void OnProjectAnalyzed(Project project)
+            public void OnProjectAnalyzed(Project project, DiagnosticAnalyzerDriver driver)
             {
+                var compilation = project.GetCompilationAsync().WaitAndGetResult(driver.CancellationToken);
+                var compilationWithAnalyzers = driver.GetCompilationWithAnalyzers(compilation);
+                // compilationWithAnalyzers.ClearNonLocalDiagnostics();
+
                 OnDocumentOrProjectAnalyzed(project.Id.Id, project);
             }
 

@@ -1043,5 +1043,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             return _analysisResult.GetAnalyzerExecutionTime(analyzer);
         }
+
+        public void ClearLocalDiagnostics(SyntaxTree tree, bool syntax)
+        {
+            _analysisResult.ClearLocalDiagnostics(tree, syntax);
+
+        }
+
+        public void ClearNonLocalDiagnostics()
+        {
+            _analysisResult.ClearNonLocalDiagnostics();
+        }
     }
 }

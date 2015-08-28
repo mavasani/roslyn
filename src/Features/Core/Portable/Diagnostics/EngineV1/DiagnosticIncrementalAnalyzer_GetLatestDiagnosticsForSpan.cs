@@ -54,9 +54,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 // Share the diagnostic analyzer driver across all analyzers.
                 var fullSpan = root?.FullSpan;
 
-                _spanBasedDriver = new DiagnosticAnalyzerDriver(_document, _range, root, _owner, _cancellationToken);
-                _documentBasedDriver = new DiagnosticAnalyzerDriver(_document, fullSpan, root, _owner, _cancellationToken);
-                _projectDriver = new DiagnosticAnalyzerDriver(_document.Project, _owner, _cancellationToken);
+                _spanBasedDriver = DiagnosticAnalyzerDriver.CreateAsync(_document, _range, root, _owner, _cancellationToken).WaitAndGetResult(cancellationToken);
+                _documentBasedDriver = DiagnosticAnalyzerDriver.CreateAsync(_document, fullSpan, root, _owner, _cancellationToken).WaitAndGetResult(cancellationToken);
+                _projectDriver = DiagnosticAnalyzerDriver.CreateAsync(_document.Project, _owner, _cancellationToken).WaitAndGetResult(cancellationToken);
             }
 
             public List<DiagnosticData> Diagnostics { get; }

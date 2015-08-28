@@ -124,6 +124,48 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             currentDiagnostics.AddRange(diagnostics);
         }
 
+        public void ClearLocalDiagnostics(SyntaxTree tree, bool syntax)
+        {
+            lock (_gate)
+            {
+                ClearLocalDiagnostics_NoLock(tree, syntax);
+            }
+        }
+
+        private void ClearLocalDiagnostics_NoLock(SyntaxTree tree, bool syntax)
+        {
+            if (syntax)
+            {
+                if (_localSyntaxDiagnosticsOpt != null)
+                {
+                    _localSyntaxDiagnosticsOpt.Remove(tree);
+                }
+            }
+            else
+            {
+                if (_localSemanticDiagnosticsOpt != null)
+                {
+                    _localSemanticDiagnosticsOpt.Remove(tree);
+                }
+            }
+        }
+
+        public void ClearNonLocalDiagnostics()
+        {
+            lock (_gate)
+            {
+                ClearNonLocalDiagnostics_NoLock();
+            }
+        }
+
+        private void ClearNonLocalDiagnostics_NoLock()
+        {
+            if (_nonLocalDiagnosticsOpt != null)
+            {
+                _nonLocalDiagnosticsOpt.Clear();
+            }
+        }
+
         public ImmutableArray<Diagnostic> GetDiagnostics(AnalysisScope analysisScope, bool getLocalDiagnostics, bool getNonLocalDiagnostics)
         {
             lock (_gate)

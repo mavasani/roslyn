@@ -9,6 +9,8 @@ Microsoft.CodeAnalysis.DiagnosticDescriptor.GetEffectiveSeverity(Microsoft.CodeA
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.AnalysisOptions.get -> Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzersOptions
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.Analyzers.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostics.DiagnosticAnalyzer>
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.CancellationToken.get -> System.Threading.CancellationToken
+Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.ClearLocalDiagnostics(Microsoft.CodeAnalysis.SyntaxTree tree, bool syntax) -> void
+Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.ClearNonLocalDiagnostics() -> void
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.CompilationWithAnalyzers(Microsoft.CodeAnalysis.Compilation compilation, System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostics.DiagnosticAnalyzer> analyzers, Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzersOptions analysisOptions) -> void
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAllDiagnosticsAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostic>>
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalyzerCompilationDiagnosticsAsync(System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostics.DiagnosticAnalyzer> analyzers, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostic>>

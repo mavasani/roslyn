@@ -142,7 +142,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 var fullSpan = root == null ? null : (TextSpan?)root.FullSpan;
 
-                var userDiagnosticDriver = new DiagnosticAnalyzerDriver(document, fullSpan, root, this, cancellationToken);
+                var userDiagnosticDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, fullSpan, root, this, cancellationToken).ConfigureAwait(false);
                 var openedDocument = document.IsOpen();
 
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(document.Project))
@@ -168,6 +168,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                         RaiseDocumentDiagnosticsUpdatedIfNeeded(StateType.Syntax, document, stateSet, data.OldItems, data.Items);
                     }
                 }
+
+                _solutionCrawlerAnalysisState.OnDocumentAnalyzed(document, userDiagnosticDriver, syntax: true);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
@@ -219,8 +221,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 var memberId = syntaxFacts.GetMethodLevelMemberId(root, member);
 
-                var spanBasedDriver = new DiagnosticAnalyzerDriver(document, member.FullSpan, root, this, cancellationToken);
-                var documentBasedDriver = new DiagnosticAnalyzerDriver(document, root.FullSpan, root, this, cancellationToken);
+                var spanBasedDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, member.FullSpan, root, this, cancellationToken).ConfigureAwait(false);
+                var documentBasedDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, root.FullSpan, root, this, cancellationToken).ConfigureAwait(false);
 
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(document.Project))
                 {
@@ -267,7 +269,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 var fullSpan = root == null ? null : (TextSpan?)root.FullSpan;
 
-                var userDiagnosticDriver = new DiagnosticAnalyzerDriver(document, fullSpan, root, this, cancellationToken);
+                var userDiagnosticDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, fullSpan, root, this, cancellationToken).ConfigureAwait(false);
                 bool openedDocument = document.IsOpen();
 
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(document.Project))
@@ -299,7 +301,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     }
                 }
 
-                _solutionCrawlerAnalysisState.OnDocumentAnalyzed(document);
+                _solutionCrawlerAnalysisState.OnDocumentAnalyzed(document, userDiagnosticDriver, syntax: false);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
@@ -325,7 +327,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 var projectTextVersion = await project.GetLatestDocumentVersionAsync(cancellationToken).ConfigureAwait(false);
                 var semanticVersion = await project.GetDependentSemanticVersionAsync(cancellationToken).ConfigureAwait(false);
                 var projectVersion = await project.GetDependentVersionAsync(cancellationToken).ConfigureAwait(false);
-                var analyzerDriver = new DiagnosticAnalyzerDriver(project, this, cancellationToken);
+                var analyzerDriver = await DiagnosticAnalyzerDriver.CreateAsync(project, this, cancellationToken).ConfigureAwait(false);
 
                 var versions = new VersionArgument(projectTextVersion, semanticVersion, projectVersion);
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(project))
@@ -353,7 +355,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     }
                 }
 
-                _solutionCrawlerAnalysisState.OnProjectAnalyzed(project);
+                _solutionCrawlerAnalysisState.OnProjectAnalyzed(project, analyzerDriver);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {

@@ -378,14 +378,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 {
                     Contract.Requires(stateType != StateType.Project);
                     var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-                    return new DiagnosticAnalyzerDriver(document, root.FullSpan, root, this.Owner, cancellationToken);
+                    return await DiagnosticAnalyzerDriver.CreateAsync(document, root.FullSpan, root, this.Owner, cancellationToken).ConfigureAwait(false);
                 }
 
                 var project = documentOrProject as Project;
                 if (project != null)
                 {
                     Contract.Requires(stateType == StateType.Project);
-                    return new DiagnosticAnalyzerDriver(project, this.Owner, cancellationToken);
+                    return await DiagnosticAnalyzerDriver.CreateAsync(project, this.Owner, cancellationToken).ConfigureAwait(false);
                 }
 
                 return Contract.FailWithReturn<DiagnosticAnalyzerDriver>("Can't reach here");

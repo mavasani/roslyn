@@ -28,25 +28,46 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         private readonly DiagnosticIncrementalAnalyzer _owner;
         private readonly CancellationToken _cancellationToken;
         private readonly CompilationWithAnalyzersOptions _analysisOptions;
+        private readonly CompilationWithAnalyzers _compilationWithAnalyzers;
 
-        public DiagnosticAnalyzerDriver(
+        public static async Task<DiagnosticAnalyzerDriver> CreateAsync(
             Document document,
             TextSpan? span,
             SyntaxNode root,
             DiagnosticIncrementalAnalyzer owner,
             CancellationToken cancellationToken)
-            : this(document.Project, owner, cancellationToken)
         {
-            _document = document;
-            _span = span;
-            _root = root;
+            var compilation = document.Project.SupportsCompilation ?
+                (await document.Project.GetCompilationAsync(cancellationToken).ConfigureAwait(false)) :
+                null;
+
+            return new DiagnosticAnalyzerDriver(document, span, root, document.Project, compilation, owner, cancellationToken);
         }
 
-        public DiagnosticAnalyzerDriver(
+        public static async Task<DiagnosticAnalyzerDriver> CreateAsync(
             Project project,
             DiagnosticIncrementalAnalyzer owner,
             CancellationToken cancellationToken)
         {
+            var compilation = project.SupportsCompilation ?
+                 (await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false)) :
+                 null;
+
+            return new DiagnosticAnalyzerDriver(null, null, null, project, compilation, owner, cancellationToken);
+        }
+
+        private DiagnosticAnalyzerDriver(
+            Document document,
+            TextSpan? span,
+            SyntaxNode root,
+            Project project,
+            Compilation compilation,
+            DiagnosticIncrementalAnalyzer owner,
+            CancellationToken cancellationToken)
+        {
+            _document = document;
+            _span = span;
+            _root = root;
             _project = project;
             _owner = owner;
             _cancellationToken = cancellationToken;
@@ -55,6 +76,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 owner.GetOnAnalyzerException(project.Id),
                 concurrentAnalysis: false,
                 logAnalyzerExecutionTime: true);
+
+            if (compilation != null)
+            {
+                var analyzers = _owner
+                        .GetAnalyzers(project)
+                        .Where(a => !CompilationWithAnalyzers.IsDiagnosticAnalyzerSuppressed(a, compilation.Options, _analysisOptions.OnAnalyzerException))
+                        .ToImmutableArray()
+                        .Distinct();
+                _compilationWithAnalyzers = new CompilationWithAnalyzers(compilation, analyzers, _analysisOptions);
+            }
         }
 
         public Document Document
@@ -92,9 +123,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             }
         }
 
-        private CompilationWithAnalyzers GetCompilationWithAnalyzers(Compilation compilation)
+        internal CompilationWithAnalyzers GetCompilationWithAnalyzers(Compilation compilation)
         {
             Contract.ThrowIfFalse(_project.SupportsCompilation);
+            //return _compilationWithAnalyzers;
+
             return _owner.HostAnalyzerManager.GetOrCreateCompilationWithAnalyzers(_project, p =>
             {
                 var analyzers = _owner
