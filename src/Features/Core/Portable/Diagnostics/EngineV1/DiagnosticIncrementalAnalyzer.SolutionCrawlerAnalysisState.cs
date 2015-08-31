@@ -53,7 +53,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                                 CompilationWithAnalyzers = new WeakReference<CompilationWithAnalyzers>(compilationWithAnalyzers),
                                 VersionArgument = projectVersions
                             };
-                        _projectAnalysisStateMap.Add(project.Id, projectAnalysisState);
+
+                        _projectAnalysisStateMap[project.Id] = projectAnalysisState;
                     }
 
                     return compilationWithAnalyzers;

@@ -480,6 +480,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             try
             {
+                if (filterSpan.HasValue && filterSpan.Value.Start == 0 && filterSpan.Value.End == 0)
+                {
+                    SkipTreeAnalysis(model.SyntaxTree, analyzers);
+                    return ImmutableArray<Diagnostic>.Empty;
+                }
+
                 var taskToken = Interlocked.Increment(ref _currentToken);
 
                 var analysisScope = new AnalysisScope(analyzers, model.SyntaxTree, filterSpan, syntaxAnalysis: false, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
@@ -507,13 +513,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Indicates that the analyzer host doesn't intend to compute diagnostics for the given <paramref name="analyzer"/> on the given <paramref name="tree"/>.
+        /// Indicates that the analyzer host doesn't intend to compute diagnostics for the given <paramref name="analyzers"/> on the given <paramref name="tree"/>.
         /// </summary>
         /// <param name="tree">Tree to skip analysis.</param>
-        /// <param name="analyzer">Analyzer to skip analysis.</param>
-        public void SkipTreeAnalysis(SyntaxTree tree, DiagnosticAnalyzer analyzer)
+        /// <param name="analyzers">Analyzers to skip analysis.</param>
+        private void SkipTreeAnalysis(SyntaxTree tree, ImmutableArray<DiagnosticAnalyzer> analyzers)
         {
-            _analysisState.MarkTreeComplete(tree, analyzer);
+            _analysisState.MarkTreeComplete(tree, analyzers);
         }
 
         private async Task ComputeAnalyzerDiagnosticsAsync(AnalysisScope analysisScope, Action generateCompilationEventsOpt, Func<AsyncQueue<CompilationEvent>> getEventQueue, int newTaskToken, CancellationToken cancellationToken)

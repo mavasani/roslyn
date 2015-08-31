@@ -178,13 +178,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             projectVersions);
         }
 
-        public void SkipDocumentAnalysis(DiagnosticAnalyzer analyzer)
+        public async Task SkipDocumentAnalysisAsync(DiagnosticAnalyzer analyzer)
         {
             Contract.ThrowIfNull(_document);
 
             if (_root != null)
             {
-                _compilationWithAnalyzers.SkipTreeAnalysis(_root.SyntaxTree, analyzer);
+                var model = await _document.GetSemanticModelAsync(_cancellationToken).ConfigureAwait(false);
+                await _compilationWithAnalyzers.GetAnalyzerSemanticDiagnosticsAsync(model, new TextSpan(0, 0), ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
             }
         }
 

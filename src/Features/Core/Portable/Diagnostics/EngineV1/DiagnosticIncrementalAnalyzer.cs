@@ -155,7 +155,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     {
                         if (!isSuppressed)
                         {
-                            userDiagnosticDriver.SkipDocumentAnalysis(stateSet.Analyzer);
+                            await userDiagnosticDriver.SkipDocumentAnalysisAsync(stateSet.Analyzer).ConfigureAwait(false);
                         }
 
                         await ClearExistingDiagnostics(document, stateSet, StateType.Syntax, cancellationToken).ConfigureAwait(false);
@@ -286,7 +286,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     {
                         if (!isSuppressed)
                         {
-                            userDiagnosticDriver.SkipDocumentAnalysis(stateSet.Analyzer);
+                            await userDiagnosticDriver.SkipDocumentAnalysisAsync(stateSet.Analyzer).ConfigureAwait(false);
                         }
 
                         await ClearExistingDiagnostics(document, stateSet, StateType.Document, cancellationToken).ConfigureAwait(false);

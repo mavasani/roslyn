@@ -505,26 +505,32 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Marks the given event as fully analyzed for the given analyzer.
+        /// Marks the given event as fully analyzed for the given analyzers.
         /// </summary>
-        public void MarkTreeComplete(SyntaxTree tree, DiagnosticAnalyzer analyzer)
+        public void MarkTreeComplete(SyntaxTree tree, ImmutableArray<DiagnosticAnalyzer> analyzers)
         {
-            var analyzerState = _analyzerStateMap[analyzer];
-            analyzerState.MarkSyntaxAnalysisComplete(tree);
+            foreach (var analyzer in analyzers)
+            {
+                var analyzerState = _analyzerStateMap[analyzer];
+                analyzerState.MarkSyntaxAnalysisComplete(tree);
+            }
 
-            var analyzers = ImmutableArray.Create(analyzer);
             var pendingEvents = GetPendingEvents(analyzers, tree);
             foreach (var pendingEvent in pendingEvents)
             {
-                var symbolEvent = pendingEvent as SymbolDeclaredCompilationEvent;
-                if (symbolEvent != null)
+                foreach (var analyzer in analyzers)
                 {
-                    analyzerState.MarkSymbolComplete(symbolEvent.Symbol);
-                    analyzerState.MarkDeclarationsComplete(symbolEvent.Symbol);
-                }
-                else
-                {
-                    analyzerState.MarkEventComplete(pendingEvent);
+                    var analyzerState = _analyzerStateMap[analyzer];
+                    var symbolEvent = pendingEvent as SymbolDeclaredCompilationEvent;
+                    if (symbolEvent != null)
+                    {
+                        analyzerState.MarkSymbolComplete(symbolEvent.Symbol);
+                        analyzerState.MarkDeclarationsComplete(symbolEvent.Symbol);
+                    }
+                    else
+                    {
+                        analyzerState.MarkEventComplete(pendingEvent);
+                    }
                 }
 
                 OnCompilationEventProcessed(pendingEvent, analyzers);
