@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
@@ -13,104 +15,64 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         // PERF: Keep track of the current solution crawler analysis state for each project, so that we can reduce memory pressure by disposing off the per-project CompilationWithAnalyzers instances when appropriate.
         private class SolutionCrawlerAnalysisState
         {
-            private readonly ConditionalWeakTable<Project, ProjectAnalysisState> _projectAnalysisStateCache;
-            private readonly HostAnalyzerManager _hostAnalyzerManager;
-            private DateTime _lastCacheCleanupTime;
-
-            // Only keep hold CompilationWithAnalyzers instances for projects whose documents were analyzed within the last minute.
-            // TODO: Tune this cache cleanup interval based on performance measurements.
-            private const int cacheCleanupIntervalInSeconds = 60;
-
-            public SolutionCrawlerAnalysisState(HostAnalyzerManager hostAnalyzerManager)
+            private readonly Dictionary<ProjectId, ProjectAnalysisState> _projectAnalysisStateMap;
+            
+            public SolutionCrawlerAnalysisState()
             {
-                _projectAnalysisStateCache = new ConditionalWeakTable<Project, ProjectAnalysisState>();
-                _hostAnalyzerManager = hostAnalyzerManager;
-                _lastCacheCleanupTime = DateTime.UtcNow;
+                _projectAnalysisStateMap = new Dictionary<ProjectId, ProjectAnalysisState>();
             }
 
             private class ProjectAnalysisState
             {
-                public HashSet<Guid> PendingDocumentsOrProject { get; set; }
-                public DateTime LastAccessTime { get; set; }
+                public WeakReference<CompilationWithAnalyzers> CompilationWithAnalyzers { get; set; }
+                public VersionArgument VersionArgument { get; set; }
             }
 
-            private ProjectAnalysisState CreateProjectAnalysisState(Project project)
+            internal CompilationWithAnalyzers GetOrCreateCompilationWithAnalyzers(Project project, Func<CompilationWithAnalyzers> createCompilationWithAnalyzers, VersionArgument projectVersions)
             {
-                return new ProjectAnalysisState
+                CompilationWithAnalyzers compilationWithAnalyzers;
+                ProjectAnalysisState projectAnalysisState;
+
+                lock (_projectAnalysisStateMap)
                 {
-                    PendingDocumentsOrProject = new HashSet<Guid>(project.Documents.Select(d => d.Id.Id).Concat(project.Id.Id)),
-                    LastAccessTime = DateTime.UtcNow
-                };
-            }
-
-            private readonly WeakReference<Solution> _activeSolution = new WeakReference<Solution>(null);
-            public void OnDocumentAnalysisStarted(Document document)
-            {
-                OnProjectAnalysisStarted(document.Project);
-            }
-
-            public void OnDocumentAnalyzed(Document document)
-            {
-                OnDocumentOrProjectAnalyzed(document.Id.Id, document.Project);
-            }
-
-            public void OnProjectAnalysisStarted(Project project)
-            {
-                lock (_activeSolution)
-                {
-                    var activeSolution = _activeSolution.GetTarget();
-                    if (activeSolution != null && activeSolution != project.Solution)
+                    if (_projectAnalysisStateMap.TryGetValue(project.Id, out projectAnalysisState) &&
+                        CheckSemanticVersions(project, projectAnalysisState.VersionArgument.TextVersion, projectAnalysisState.VersionArgument.DataVersion, projectVersions))
                     {
-                        _hostAnalyzerManager.ResetCompilationWithAnalyzersCache();
-                    }
-                }
-            }
-
-            public void OnProjectAnalyzed(Project project)
-            {
-                OnDocumentOrProjectAnalyzed(project.Id.Id, project);
-            }
-
-            private void OnDocumentOrProjectAnalyzed(Guid documentOrProjectGuid, Project project)
-            {
-                if (!project.SupportsCompilation)
-                {
-                    return;
-                }
-
-                var currentTime = DateTime.UtcNow;
-                var projectAnalysisState = _projectAnalysisStateCache.GetValue(project, CreateProjectAnalysisState);
-
-                projectAnalysisState.PendingDocumentsOrProject.Remove(documentOrProjectGuid);
-                projectAnalysisState.LastAccessTime = currentTime;
-
-                if (projectAnalysisState.PendingDocumentsOrProject.Count == 0)
-                {
-                    // PERF: We have computed and cached all documents and project diagnostics for the given project, so drop the CompilationWithAnalyzers instance that also caches all these diagnostics.
-                    _projectAnalysisStateCache.Remove(project);
-                    _hostAnalyzerManager.DisposeCompilationWithAnalyzers(project);
-                }
-
-                var timeSinceCleanup = (currentTime - _lastCacheCleanupTime).TotalSeconds;
-                if (timeSinceCleanup >= 20)
-                {
-                    // PERF: For projects which haven't been analyzed recently, drop the CompilationWithAnalyzers instance to reduce memory pressure.
-                    //       Subsequent diagnostic request with instantiate a new CompilationWithAnalyzers for these projects.
-                    foreach (var p in project.Solution.Projects)
-                    {
-                        ProjectAnalysisState state;
-                        if (_projectAnalysisStateCache.TryGetValue(p, out state))
+                        compilationWithAnalyzers = projectAnalysisState.CompilationWithAnalyzers.GetTarget();
+                        if (compilationWithAnalyzers == null)
                         {
-                            var timeSinceLastAccess = currentTime - state.LastAccessTime;
-                            if (timeSinceLastAccess.TotalSeconds >= cacheCleanupIntervalInSeconds)
-                            {
-                                _hostAnalyzerManager.DisposeCompilationWithAnalyzers(p);
-                                state.LastAccessTime = currentTime;
-                            }
+                            compilationWithAnalyzers = createCompilationWithAnalyzers();
+                            projectAnalysisState.CompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
                         }
                     }
+                    else
+                    {
+                        compilationWithAnalyzers = createCompilationWithAnalyzers();
+                        projectAnalysisState = new ProjectAnalysisState
+                            {
+                                CompilationWithAnalyzers = new WeakReference<CompilationWithAnalyzers>(compilationWithAnalyzers),
+                                VersionArgument = projectVersions
+                            };
+                        _projectAnalysisStateMap.Add(project.Id, projectAnalysisState);
+                    }
 
-                    _lastCacheCleanupTime = currentTime;
+                    return compilationWithAnalyzers;
+                }
+            }
+
+            internal void ResetCompilationWithAnalyzersCache()
+            {
+                lock (_projectAnalysisStateMap)
+                {
+                    _projectAnalysisStateMap.Clear();
+                }
+            }
+
+            internal void ClearProjectAnalysisState(Project project)
+            {
+                lock (_projectAnalysisStateMap)
+                {
+                    _projectAnalysisStateMap.Remove(project.Id);
                 }
             }
         }

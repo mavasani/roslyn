@@ -31,14 +31,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             private readonly DiagnosticAnalyzerDriver _documentBasedDriver;
             private readonly DiagnosticAnalyzerDriver _projectDriver;
 
-            public LatestDiagnosticsForSpanGetter(
-                DiagnosticIncrementalAnalyzer owner, Document document, SyntaxNode root, TextSpan range, bool blockForData, CancellationToken cancellationToken) :
-                this(owner, document, root, range, blockForData, new List<DiagnosticData>(), cancellationToken)
+            public static async Task<LatestDiagnosticsForSpanGetter> CreateAsync(
+                DiagnosticIncrementalAnalyzer owner, Document document, SyntaxNode root, TextSpan range, bool blockForData, CancellationToken cancellationToken)
             {
+                return await CreateAsync(owner, document, root, range, blockForData, new List<DiagnosticData>(), cancellationToken).ConfigureAwait(false);
             }
 
-            public LatestDiagnosticsForSpanGetter(
+            public static async Task<LatestDiagnosticsForSpanGetter> CreateAsync(
                 DiagnosticIncrementalAnalyzer owner, Document document, SyntaxNode root, TextSpan range, bool blockForData, List<DiagnosticData> diagnostics, CancellationToken cancellationToken)
+            {
+                // Share the diagnostic analyzer driver across all analyzers.
+                var fullSpan = root?.FullSpan;
+                var spanBasedDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, range, root, owner, cancellationToken).ConfigureAwait(false);
+                var documentBasedDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, fullSpan, root, owner, cancellationToken).ConfigureAwait(false);
+                var projectBasedDriver = await DiagnosticAnalyzerDriver.CreateAsync(document.Project, owner, cancellationToken).ConfigureAwait(false);
+
+                return new LatestDiagnosticsForSpanGetter(owner, document, root, range, blockForData, spanBasedDriver, documentBasedDriver, projectBasedDriver, diagnostics, cancellationToken);
+            }
+
+            private LatestDiagnosticsForSpanGetter(
+                DiagnosticIncrementalAnalyzer owner, Document document, SyntaxNode root, TextSpan range, bool blockForData,
+                DiagnosticAnalyzerDriver spanBasedDriver, DiagnosticAnalyzerDriver documentBasedDriver, DiagnosticAnalyzerDriver projectBasedDriver,
+                List<DiagnosticData> diagnostics, CancellationToken cancellationToken)
             {
                 _owner = owner;
 
@@ -51,12 +65,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
                 Diagnostics = diagnostics;
 
-                // Share the diagnostic analyzer driver across all analyzers.
-                var fullSpan = root?.FullSpan;
-
-                _spanBasedDriver = new DiagnosticAnalyzerDriver(_document, _range, root, _owner, _cancellationToken);
-                _documentBasedDriver = new DiagnosticAnalyzerDriver(_document, fullSpan, root, _owner, _cancellationToken);
-                _projectDriver = new DiagnosticAnalyzerDriver(_document.Project, _owner, _cancellationToken);
+                _spanBasedDriver = spanBasedDriver;
+                _documentBasedDriver = documentBasedDriver;
+                _projectDriver = projectBasedDriver;                
             }
 
             public List<DiagnosticData> Diagnostics { get; }

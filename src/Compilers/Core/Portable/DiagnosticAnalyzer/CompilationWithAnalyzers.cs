@@ -486,7 +486,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 // Below invocation will force GetDiagnostics on the model's tree to generate compilation events.
                 Action generateCompilationEvents = () =>
-                    _analysisState.GetOrCreateCachedSemanticModel(model.SyntaxTree, _compilation, cancellationToken);
+                    AnalyzerDriver.GetOrCreateCachedSemanticModel(model.SyntaxTree, _compilation, cancellationToken);
 
                 Func<AsyncQueue<CompilationEvent>> getEventQueue = () => GetPendingEvents(analyzers, model.SyntaxTree);
 
@@ -504,6 +504,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 throw ExceptionUtilities.Unreachable;
             }
+        }
+
+        /// <summary>
+        /// Indicates that the analyzer host doesn't intend to compute diagnostics for the given <paramref name="analyzer"/> on the given <paramref name="tree"/>.
+        /// </summary>
+        /// <param name="tree">Tree to skip analysis.</param>
+        /// <param name="analyzer">Analyzer to skip analysis.</param>
+        public void SkipTreeAnalysis(SyntaxTree tree, DiagnosticAnalyzer analyzer)
+        {
+            _analysisState.MarkTreeComplete(tree, analyzer);
         }
 
         private async Task ComputeAnalyzerDiagnosticsAsync(AnalysisScope analysisScope, Action generateCompilationEventsOpt, Func<AsyncQueue<CompilationEvent>> getEventQueue, int newTaskToken, CancellationToken cancellationToken)
@@ -961,7 +971,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 throw new ArgumentNullException(nameof(compilation));
             }
 
-            var suppressMessageState = AnalyzerDriver.SuppressMessageStateByCompilation.GetValue(compilation, (c) => new SuppressMessageAttributeState(c));
+            var suppressMessageState = AnalyzerDriver.GetCachedCompilationData(compilation).SuppressMessageAttributeState;
             foreach (var diagnostic in diagnostics.ToImmutableArray())
             {
                 if (diagnostic != null)

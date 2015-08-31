@@ -75,14 +75,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ImmutableDictionary<DiagnosticAnalyzer, HashSet<string>> _compilerDiagnosticAnalyzerDescriptorMap;
 
         /// <summary>
-        /// Map from project to <see cref="CompilationWithAnalyzers"/> instance to be used for computing analyzer diagnostics.
-        /// </summary>
-        private ConditionalWeakTable<Project, CompilationWithAnalyzers> _compilationWithAnalyzersMap;
-
-        private readonly WeakReference<Project> _activeProject = new WeakReference<Project>(null);
-        private readonly WeakReference<CompilationWithAnalyzers> _activeCompilationWithAnalyzers = new WeakReference<CompilationWithAnalyzers>(null);
-
-        /// <summary>
         /// Cache from <see cref="DiagnosticAnalyzer"/> instance to its supported desciptors.
         /// </summary>
         private readonly ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>> _descriptorCache;
@@ -115,7 +107,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _compilerDiagnosticAnalyzerMap = ImmutableDictionary<string, DiagnosticAnalyzer>.Empty;
             _compilerDiagnosticAnalyzerDescriptorMap = ImmutableDictionary<DiagnosticAnalyzer, HashSet<string>>.Empty;
             _hostDiagnosticAnalyzerPackageNameMap = ImmutableDictionary<DiagnosticAnalyzer, string>.Empty;
-            _compilationWithAnalyzersMap = new ConditionalWeakTable<Project, CompilationWithAnalyzers>();
             _descriptorCache = new ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>>();
 
             DiagnosticAnalyzerLogger.LogWorkspaceAnalyzers(hostAnalyzerReferences);
@@ -513,64 +504,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return current;
-        }
-
-        internal CompilationWithAnalyzers GetOrCreateCompilationWithAnalyzers(Project project, ConditionalWeakTable<Project, CompilationWithAnalyzers>.CreateValueCallback createCompilationWithAnalyzers)
-        {
-            Contract.ThrowIfFalse(project.SupportsCompilation);
-
-            //lock (_activeProject)
-            //{
-            //    CompilationWithAnalyzers compilationWithAnalyzers;
-            //    if (_activeProject.GetTarget() == project)
-            //    {
-            //        compilationWithAnalyzers = _activeCompilationWithAnalyzers.GetTarget();
-            //        if (compilationWithAnalyzers == null)
-            //        {
-            //            compilationWithAnalyzers = createCompilationWithAnalyzers(project);
-            //            _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        _activeProject.SetTarget(project);
-            //        compilationWithAnalyzers = createCompilationWithAnalyzers(project);
-            //        _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
-            //    }
-
-            //    return compilationWithAnalyzers;
-            //}
-            lock (_compilationWithAnalyzersMap)
-            {
-                return _compilationWithAnalyzersMap.GetValue(project, createCompilationWithAnalyzers);
-            }
-        }
-
-        internal void DisposeCompilationWithAnalyzers(Solution solution)
-        {
-            foreach (var project in solution.Projects)
-            {
-                DisposeCompilationWithAnalyzers(project);
-            }
-        }
-
-        internal void DisposeCompilationWithAnalyzers(Project project)
-        {
-            if (project.SupportsCompilation)
-            {
-                lock (_compilationWithAnalyzersMap)
-                {
-                    _compilationWithAnalyzersMap.Remove(project);
-                }
-            }
-        }
-
-        internal void ResetCompilationWithAnalyzersCache()
-        {
-            lock (_compilationWithAnalyzersMap)
-            {
-                _compilationWithAnalyzersMap = new ConditionalWeakTable<Project, CompilationWithAnalyzers>();
-            }
         }
 
         private class LoadContextAssemblyLoader : IAnalyzerAssemblyLoader

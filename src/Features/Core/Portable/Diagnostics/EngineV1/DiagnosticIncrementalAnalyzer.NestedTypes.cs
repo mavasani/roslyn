@@ -63,7 +63,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             { }
         }
 
-        public struct VersionArgument
+        public class VersionArgument
         {
             public readonly VersionStamp TextVersion;
             public readonly VersionStamp DataVersion;
