@@ -1134,6 +1134,19 @@ class MyClass
                 .VerifyAnalyzerDiagnostics(analyzers);
         }
 
+        [Fact, WorkItem(4745, "https://github.com/dotnet/roslyn/issues/4745")]
+        public void TestAnalyzerCallbackOnQualifiedNamespaceDeclaration()
+        {
+            var source = @"
+namespace Foo.Bar.FooBar { }
+";
+            var analyzers = new DiagnosticAnalyzer[] { new QualifiedNamespaceAnalyzer() };
+            CreateCompilationWithMscorlib45(source)
+                .VerifyDiagnostics()
+                .VerifyAnalyzerDiagnostics(analyzers, null, null, logAnalyzerExceptionAsDiagnostics: false,
+                    expected: Diagnostic(QualifiedNamespaceAnalyzer.Descriptor.Id, @"Foo.Bar.FooBar").WithLocation(9, 17));
+        }
+
         private static void TestEffectiveSeverity(
             DiagnosticSeverity defaultSeverity,
             ReportDiagnostic expectedEffectiveSeverity,

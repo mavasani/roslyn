@@ -384,5 +384,38 @@ namespace Microsoft.CodeAnalysis
                 }
             }
         }
+
+        [DiagnosticAnalyzer(LanguageNames.CSharp)]
+        public class QualifiedNamespaceAnalyzer : DiagnosticAnalyzer
+        {
+            public static readonly DiagnosticDescriptor Descriptor = new DiagnosticDescriptor(
+                "ID0001",
+                "Title",
+                "Node: '{0}'",
+                "Category",
+                DiagnosticSeverity.Warning,
+                true);
+
+            private static readonly ImmutableArray<DiagnosticDescriptor> supportedDiagnostics =
+                ImmutableArray.Create(Descriptor);
+
+            public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
+            {
+                get
+                {
+                    return supportedDiagnostics;
+                }
+            }
+
+            public override void Initialize(AnalysisContext context)
+            {
+                context.RegisterSyntaxNodeAction(this.HandleNamespaceDeclaration, SyntaxKind.NamespaceDeclaration);
+            }
+
+            private void HandleNamespaceDeclaration(SyntaxNodeAnalysisContext context)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, context.Node.GetLocation(), context.Node.ToString()));
+            }
+        }
     }
 }
