@@ -519,31 +519,31 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             Contract.ThrowIfFalse(project.SupportsCompilation);
 
-            //lock (_activeProject)
-            //{
-            //    CompilationWithAnalyzers compilationWithAnalyzers;
-            //    if (_activeProject.GetTarget() == project)
-            //    {
-            //        compilationWithAnalyzers = _activeCompilationWithAnalyzers.GetTarget();
-            //        if (compilationWithAnalyzers == null)
-            //        {
-            //            compilationWithAnalyzers = createCompilationWithAnalyzers(project);
-            //            _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        _activeProject.SetTarget(project);
-            //        compilationWithAnalyzers = createCompilationWithAnalyzers(project);
-            //        _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
-            //    }
-
-            //    return compilationWithAnalyzers;
-            //}
-            lock (_compilationWithAnalyzersMap)
+            lock (_activeProject)
             {
-                return _compilationWithAnalyzersMap.GetValue(project, createCompilationWithAnalyzers);
+                CompilationWithAnalyzers compilationWithAnalyzers;
+                if (_activeProject.GetTarget() == project)
+                {
+                    compilationWithAnalyzers = _activeCompilationWithAnalyzers.GetTarget();
+                    if (compilationWithAnalyzers == null)
+                    {
+                        compilationWithAnalyzers = createCompilationWithAnalyzers(project);
+                        _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+                    }
+                }
+                else
+                {
+                    _activeProject.SetTarget(project);
+                    compilationWithAnalyzers = createCompilationWithAnalyzers(project);
+                    _activeCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+                }
+
+                return compilationWithAnalyzers;
             }
+            //lock (_compilationWithAnalyzersMap)
+            //{
+            //    return _compilationWithAnalyzersMap.GetValue(project, createCompilationWithAnalyzers);
+            //}
         }
 
         internal void DisposeCompilationWithAnalyzers(Solution solution)
