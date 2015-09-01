@@ -366,6 +366,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                         RaiseProjectDiagnosticsUpdatedIfNeeded(project, stateSet, data.OldItems, data.Items);
                     }
                 }
+
+                // PERF: Clear cached project analysis state.
+                _solutionCrawlerAnalysisState.ClearProjectAnalysisState(project);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
@@ -1032,7 +1035,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
         public override Task NewSolutionSnapshotAsync(Solution newSolution, CancellationToken cancellationToken)
         {
-            _solutionCrawlerAnalysisState.ResetCompilationWithAnalyzersCache();
             return SpecializedTasks.EmptyTask;
         }
     }

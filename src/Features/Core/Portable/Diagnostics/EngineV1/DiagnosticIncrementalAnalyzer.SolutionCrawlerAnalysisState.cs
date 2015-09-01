@@ -15,65 +15,86 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         // PERF: Keep track of the current solution crawler analysis state for each project, so that we can reduce memory pressure by disposing off the per-project CompilationWithAnalyzers instances when appropriate.
         private class SolutionCrawlerAnalysisState
         {
-            private readonly Dictionary<ProjectId, ProjectAnalysisState> _projectAnalysisStateMap;
+            private readonly object _gate = new object();
+            private ProjectAnalysisState _activeProjectState;
+            // private readonly Dictionary<ProjectId, ProjectAnalysisState> _projectAnalysisStateMap;
             
             public SolutionCrawlerAnalysisState()
             {
-                _projectAnalysisStateMap = new Dictionary<ProjectId, ProjectAnalysisState>();
+                //_projectAnalysisStateMap = new Dictionary<ProjectId, ProjectAnalysisState>();
+                _activeProjectState = null;
             }
 
             private class ProjectAnalysisState
             {
                 public WeakReference<CompilationWithAnalyzers> CompilationWithAnalyzers { get; set; }
                 public VersionArgument VersionArgument { get; set; }
+                public ProjectId ProjectId { get; set; }
             }
 
             internal CompilationWithAnalyzers GetOrCreateCompilationWithAnalyzers(Project project, Func<CompilationWithAnalyzers> createCompilationWithAnalyzers, VersionArgument projectVersions)
             {
                 CompilationWithAnalyzers compilationWithAnalyzers;
-                ProjectAnalysisState projectAnalysisState;
 
-                lock (_projectAnalysisStateMap)
+                lock (_gate)
                 {
-                    if (_projectAnalysisStateMap.TryGetValue(project.Id, out projectAnalysisState) &&
-                        CheckSemanticVersions(project, projectAnalysisState.VersionArgument.TextVersion, projectAnalysisState.VersionArgument.DataVersion, projectVersions))
+                    if (_activeProjectState?.ProjectId == project.Id &&
+                        CheckSemanticVersions(project, _activeProjectState.VersionArgument.TextVersion, _activeProjectState.VersionArgument.DataVersion, projectVersions))
                     {
-                        compilationWithAnalyzers = projectAnalysisState.CompilationWithAnalyzers.GetTarget();
+                        compilationWithAnalyzers = _activeProjectState.CompilationWithAnalyzers.GetTarget();
                         if (compilationWithAnalyzers == null)
                         {
                             compilationWithAnalyzers = createCompilationWithAnalyzers();
-                            projectAnalysisState.CompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+                            _activeProjectState.CompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
                         }
                     }
                     else
                     {
                         compilationWithAnalyzers = createCompilationWithAnalyzers();
-                        projectAnalysisState = new ProjectAnalysisState
+                        _activeProjectState = new ProjectAnalysisState
                             {
                                 CompilationWithAnalyzers = new WeakReference<CompilationWithAnalyzers>(compilationWithAnalyzers),
-                                VersionArgument = projectVersions
+                                VersionArgument = projectVersions,
+                                ProjectId = project.Id
                             };
-
-                        _projectAnalysisStateMap[project.Id] = projectAnalysisState;
                     }
 
                     return compilationWithAnalyzers;
                 }
-            }
 
-            internal void ResetCompilationWithAnalyzersCache()
-            {
-                lock (_projectAnalysisStateMap)
-                {
-                    _projectAnalysisStateMap.Clear();
-                }
+                //lock (_projectAnalysisStateMap)
+                //{
+                //    if (_projectAnalysisStateMap.TryGetValue(project.Id, out projectAnalysisState) &&
+                //        CheckSemanticVersions(project, projectAnalysisState.VersionArgument.TextVersion, projectAnalysisState.VersionArgument.DataVersion, projectVersions))
+                //    {
+                //        compilationWithAnalyzers = projectAnalysisState.CompilationWithAnalyzers; //.GetTarget();
+                //        //if (compilationWithAnalyzers == null)
+                //        //{
+                //        //    compilationWithAnalyzers = createCompilationWithAnalyzers();
+                //        //    projectAnalysisState.CompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+                //        //}
+                //    }
+                //    else
+                //    {
+                //        compilationWithAnalyzers = createCompilationWithAnalyzers();
+                //        projectAnalysisState = new ProjectAnalysisState
+                //            {
+                //                CompilationWithAnalyzers = compilationWithAnalyzers, // new WeakReference<CompilationWithAnalyzers>(compilationWithAnalyzers),
+                //                VersionArgument = projectVersions
+                //            };
+
+                //        _projectAnalysisStateMap[project.Id] = projectAnalysisState;
+                //    }
+
+                //    return compilationWithAnalyzers;
+                //}
             }
 
             internal void ClearProjectAnalysisState(Project project)
             {
-                lock (_projectAnalysisStateMap)
+                lock (_gate)
                 {
-                    _projectAnalysisStateMap.Remove(project.Id);
+                    _activeProjectState = null;
                 }
             }
         }
