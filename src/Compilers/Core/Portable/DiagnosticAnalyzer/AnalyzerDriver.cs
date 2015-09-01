@@ -887,7 +887,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<CodeBlockAnalyzerAction>> _lazyCodeBlockEndActionsByAnalyzer;
         private ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<CodeBlockAnalyzerAction>> _lazyCodeBlockActionsByAnalyzer;
 
-        /// <summary>
+            /// <summary>
         /// Create an analyzer driver.
         /// </summary>
         /// <param name="analyzers">The set of analyzers to include in the analysis</param>
@@ -1059,14 +1059,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     }
                 }
             }
-            else
+            else if (analysisStateOpt != null)
             {
-                analysisStateOpt?.MarkDeclarationsComplete(symbol, analysisScope.Analyzers);
+                analysisStateOpt.MarkDeclarationsComplete(symbol, analysisScope.Analyzers);
+
                 foreach (var decl in symbol.DeclaringSyntaxReferences)
                 {
-                    ClearCachedAnalysisDataIfAnalyzed(decl, symbolEvent.Compilation, analysisStateOpt);
-                }
+                    ClearCachedAnalysisDataIfAnalyzed(decl, decl.GetSyntax(), symbolEvent.Compilation, analysisStateOpt);
             }
+        }
         }
 
         private DeclarationAnalysisData GetOrComputeDeclarationAnalysisData(
@@ -1237,7 +1238,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 if (cacheAnalysisData)
                 {
-                    ClearCachedAnalysisDataIfAnalyzed(decl, symbolEvent.Compilation, analysisStateOpt);
+                    ClearCachedAnalysisDataIfAnalyzed(decl, declarationAnalysisData.DeclaringReferenceSyntax, symbolEvent.Compilation, analysisStateOpt);
                 }
             }
         }

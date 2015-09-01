@@ -510,6 +510,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 return true;
             }
 
+            // PERF: Don't query descriptors for compiler analyzer, always execute it.
+            if (analyzer.IsCompilerAnalyzer())
+            {
+                return true;
+            }
+
             return Owner.GetDiagnosticDescriptors(analyzer).Any(d => GetEffectiveSeverity(d, options) != ReportDiagnostic.Hidden);
         }
 
@@ -545,7 +551,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         private static bool ShouldRunAnalyzerForStateType(DiagnosticAnalyzer analyzer, StateType stateTypeId,
             ImmutableHashSet<string> diagnosticIds = null, Func<DiagnosticAnalyzer, ImmutableArray<DiagnosticDescriptor>> getDescriptors = null)
         {
-            // PERF: Don't query descriptors for compiler analyzer, always execute it for all state types.  
+            // PERF: Don't query descriptors for compiler analyzer, always execute it for all state types.
             if (analyzer.IsCompilerAnalyzer())
             {
                 return true;
@@ -787,11 +793,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 mappedStartColumn: mappedLineInfo.StartLinePosition.Character,
                 mappedEndLine: mappedLineInfo.EndLinePosition.Line,
                 mappedEndColumn: mappedLineInfo.EndLinePosition.Character,
-                originalFilePath: originalLineInfo.Path,
-                originalStartLine: originalLineInfo.StartLinePosition.Line,
-                originalStartColumn: originalLineInfo.StartLinePosition.Character,
-                originalEndLine: originalLineInfo.EndLinePosition.Line,
-                originalEndColumn: originalLineInfo.EndLinePosition.Character,
+                    originalFilePath: originalLineInfo.Path,
+                    originalStartLine: originalLineInfo.StartLinePosition.Line,
+                    originalStartColumn: originalLineInfo.StartLinePosition.Character,
+                    originalEndLine: originalLineInfo.EndLinePosition.Line,
+                    originalEndColumn: originalLineInfo.EndLinePosition.Character,
                 description: diagnostic.Description,
                 helpLink: diagnostic.HelpLink);
         }

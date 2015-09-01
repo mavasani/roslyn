@@ -88,6 +88,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>> _descriptorCache;
 
         /// <summary>
+        /// Cache from <see cref="DiagnosticAnalyzer"/> instance to its supported desciptors.
+        /// </summary>
+        private readonly ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>> _descriptorCache;
+
+        /// <summary>
         /// Loader for VSIX-based analyzers.
         /// </summary>
         private static readonly IAnalyzerAssemblyLoader s_assemblyLoader = new LoadContextAssemblyLoader();
@@ -177,7 +182,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public bool IsAnalyzerSuppressed(DiagnosticAnalyzer analyzer, Project project)
         {
             var options = project.CompilationOptions;
-            if (options == null)
+            if (options == null || analyzer.IsCompilerAnalyzer())
             {
                 return false;
             }

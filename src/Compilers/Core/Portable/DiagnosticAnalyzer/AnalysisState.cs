@@ -60,7 +60,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _pendingNonSourceEvents = new HashSet<CompilationEvent>();
             _lazyAnalyzerActionCountsMap = null;
             _semanticModelsMap = new ConditionalWeakTable<SyntaxTree, SemanticModel>();
-            _compilationEventsPool = new ObjectPool<HashSet<CompilationEvent>>(() => new HashSet<CompilationEvent>());
+            _compilationEventsPool = new ObjectPool<HashSet<CompilationEvent>>(() => new HashSet<CompilationEvent>());            
             _pooledEventsWithAnyActionsSet = new HashSet<CompilationEvent>();
             _compilationEndAnalyzed = false;
         }
@@ -95,7 +95,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             // Add the events to our global pending events map.
             AddToEventsMap_NoLock(compilationEvents);
-
+            
             // Mark the events for analysis for each analyzer.
             Debug.Assert(_pooledEventsWithAnyActionsSet.Count == 0);
             foreach (var kvp in _analyzerStateMap)
@@ -120,7 +120,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     // Event has no relevant actions to execute, so mark it as complete.  
                     UpdateEventsMap_NoLock(compilationEvent, add: false);
-                }
+        }
             }
         }
 
@@ -580,7 +580,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <summary>
         /// True if the given symbol declaration is fully analyzed.
         /// </summary>
-        public bool IsDeclarationComplete(SyntaxReference decl)
+        public bool IsDeclarationComplete(SyntaxNode decl)
         {
             foreach (var analyzerState in _analyzerStateMap.Values)
             {
@@ -592,7 +592,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             return true;
         }
-        
+
         /// <summary>
         /// Marks the given symbol declaration as fully analyzed for the given analyzer.
         /// </summary>
