@@ -56,14 +56,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
             public void OnProjectAnalysisStarted(Project project)
             {
-                lock (_activeSolution)
-                {
-                    var activeSolution = _activeSolution.GetTarget();
-                    if (activeSolution != null && activeSolution != project.Solution)
-                    {
-                        _hostAnalyzerManager.ResetCompilationWithAnalyzersCache();
-                    }
-                }
+                //lock (_activeSolution)
+                //{
+                //    var activeSolution = _activeSolution.GetTarget();
+                //    if (activeSolution != null && activeSolution != project.Solution)
+                //    {
+                //        _hostAnalyzerManager.ResetCompilationWithAnalyzersCache();
+                //    }
+                //}
             }
 
             public void OnProjectAnalyzed(Project project)
@@ -105,7 +105,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                             if (timeSinceLastAccess.TotalSeconds >= cacheCleanupIntervalInSeconds)
                             {
                                 _hostAnalyzerManager.DisposeCompilationWithAnalyzers(p);
-                                state.LastAccessTime = currentTime;
                             }
                         }
                     }

@@ -20,8 +20,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     /// </summary>
     internal abstract partial class AnalyzerDriver : IDisposable
     {
-        internal static readonly ConditionalWeakTable<Compilation, SuppressMessageAttributeState> SuppressMessageStateByCompilation = new ConditionalWeakTable<Compilation, SuppressMessageAttributeState>();
-
         // Protect against vicious analyzers that provide large values for SymbolKind.
         private const int MaxSymbolKind = 100;
 
@@ -698,7 +696,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             // to get information about unnecessary usings.
 
             var semanticModel = analysisStateOpt != null ?
-                analysisStateOpt.GetOrCreateCachedSemanticModel(completedEvent.CompilationUnit, completedEvent.Compilation, cancellationToken) :
+                GetOrCreateCachedSemanticModel(completedEvent.CompilationUnit, completedEvent.Compilation, cancellationToken) :
                 completedEvent.SemanticModel;
 
             if (!analysisScope.ShouldAnalyze(semanticModel.SyntaxTree))
@@ -809,7 +807,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var filteredDiagnostic = compilation.Options.FilterDiagnostic(diagnostic);
             if (filteredDiagnostic != null)
             {
-                var suppressMessageState = SuppressMessageStateByCompilation.GetValue(compilation, (c) => new SuppressMessageAttributeState(c));
+                var suppressMessageState = GetCachedCompilationData(compilation).SuppressMessageAttributeState;
                 if (suppressMessageState.IsDiagnosticSuppressed(filteredDiagnostic, symbolOpt: symbolOpt))
                 {
                     return null;
@@ -889,35 +887,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<CodeBlockAnalyzerAction>> _lazyCodeBlockEndActionsByAnalyzer;
         private ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<CodeBlockAnalyzerAction>> _lazyCodeBlockActionsByAnalyzer;
 
-        private readonly ConditionalWeakTable<Compilation, Dictionary<SyntaxReference, DeclarationAnalysisData>> _declarationAnalysisDataCache;
-        private class DeclarationAnalysisData
-        {
-            /// <summary>
-            /// GetSyntax() for the given SyntaxReference.
-            /// </summary>
-            public SyntaxNode DeclaringReferenceSyntax { get; set; }
-
-            /// <summary>
-            /// Topmost declaration node for analysis.
-            /// </summary>
-            public SyntaxNode TopmostNodeForAnalysis { get; set; }
-
-            /// <summary>
-            /// All member declarations within the declaration.
-            /// </summary>
-            public ImmutableArray<DeclarationInfo> DeclarationsInNode { get; set; }
-
-            /// <summary>
-            /// All descendant nodes for syntax node actions.
-            /// </summary>
-            public ImmutableArray<SyntaxNode> DescendantNodesToAnalyze { get; set; } 
-
-            /// <summary>
-            /// Flag indicating if this is a partial analysis.
-            /// </summary>
-            public bool IsPartialAnalysis { get; set; }
-        }
-
         /// <summary>
         /// Create an analyzer driver.
         /// </summary>
@@ -927,7 +896,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         internal AnalyzerDriver(ImmutableArray<DiagnosticAnalyzer> analyzers, Func<SyntaxNode, TLanguageKindEnum> getKind, AnalyzerManager analyzerManager) : base(analyzers, analyzerManager)
         {
             _getKind = getKind;
-            _declarationAnalysisDataCache = new ConditionalWeakTable<Compilation, Dictionary<SyntaxReference, DeclarationAnalysisData>>();
         }
 
         private ImmutableDictionary<DiagnosticAnalyzer, ImmutableDictionary<TLanguageKindEnum, ImmutableArray<SyntaxNodeAnalyzerAction<TLanguageKindEnum>>>> NodeActionsByAnalyzerAndKind
@@ -1115,7 +1083,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             // NOTE: The driver guarantees that only a single thread will be performing analysis on individual declaration.
             // However, there might be multiple threads analyzing different trees at the same time, so we need to lock the map for read/write.
 
-            var map = _declarationAnalysisDataCache.GetValue(compilation, _ => new Dictionary<SyntaxReference, DeclarationAnalysisData>());
+            var map = GetCachedCompilationData(compilation).DeclarationAnalysisDataMap;
             
             DeclarationAnalysisData data;
             lock (map)
@@ -1140,13 +1108,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             Debug.Assert(analysisState != null);
 
-            Dictionary<SyntaxReference, DeclarationAnalysisData> map;
-            if (!_declarationAnalysisDataCache.TryGetValue(compilation, out map) ||
+            CompilationData compilationData;
+            if (!s_compilationDataCache.TryGetValue(compilation, out compilationData) ||
                 !analysisState.IsDeclarationComplete(decl))
             {
                 return;
             }
 
+            var map = compilationData.DeclarationAnalysisDataMap;
             lock (map)
             {
                 map.Remove(decl);
@@ -1200,7 +1169,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             var symbol = symbolEvent.Symbol;
             SemanticModel semanticModel = analysisStateOpt != null ?
-                analysisStateOpt.GetOrCreateCachedSemanticModel(decl.SyntaxTree, symbolEvent.Compilation, cancellationToken) :
+                GetOrCreateCachedSemanticModel(decl.SyntaxTree, symbolEvent.Compilation, cancellationToken) :
                 symbolEvent.SemanticModel(decl);
             
             var cacheAnalysisData = analysisScope.Analyzers.Length < analyzers.Length &&

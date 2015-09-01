@@ -149,8 +149,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(document.Project))
                 {
-                    if (SkipRunningAnalyzer(document.Project.CompilationOptions, userDiagnosticDriver, openedDocument, skipClosedFileChecks, stateSet))
+                    bool isSuppressed;
+                    if (SkipRunningAnalyzer(document.Project.CompilationOptions, userDiagnosticDriver, openedDocument, skipClosedFileChecks, stateSet, out isSuppressed))
                     {
+                        if (!isSuppressed)
+                        {
+                            await userDiagnosticDriver.SkipDocumentAnalysisAsync(stateSet.Analyzer).ConfigureAwait(false);
+                        }
+
                         await ClearExistingDiagnostics(document, stateSet, StateType.Syntax, cancellationToken).ConfigureAwait(false);
                         continue;
                     }
@@ -276,8 +282,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(document.Project))
                 {
-                    if (SkipRunningAnalyzer(document.Project.CompilationOptions, userDiagnosticDriver, openedDocument, skipClosedFileChecks, stateSet))
+                    bool isSuppressed;
+                    if (SkipRunningAnalyzer(document.Project.CompilationOptions, userDiagnosticDriver, openedDocument, skipClosedFileChecks, stateSet, out isSuppressed))
                     {
+                        if (!isSuppressed)
+                        {
+                            await userDiagnosticDriver.SkipDocumentAnalysisAsync(stateSet.Analyzer).ConfigureAwait(false);
+                        }
+
                         await ClearExistingDiagnostics(document, stateSet, StateType.Document, cancellationToken).ConfigureAwait(false);
                         continue;
                     }
@@ -337,7 +349,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(project))
                 {
                     // Compilation actions can report diagnostics on open files, so we skipClosedFileChecks.
-                    if (SkipRunningAnalyzer(project.CompilationOptions, analyzerDriver, openedDocument: true, skipClosedFileChecks: true, stateSet: stateSet))
+                    bool isSuppressed;
+                    if (SkipRunningAnalyzer(project.CompilationOptions, analyzerDriver, openedDocument: true, skipClosedFileChecks: true, stateSet: stateSet, isSuppressed: out isSuppressed))
                     {
                         await ClearExistingDiagnostics(project, stateSet, cancellationToken).ConfigureAwait(false);
                         continue;
@@ -372,13 +385,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             DiagnosticAnalyzerDriver userDiagnosticDriver,
             bool openedDocument,
             bool skipClosedFileChecks,
-            StateSet stateSet)
+            StateSet stateSet,
+            out bool isSuppressed)
         {
             if (Owner.IsAnalyzerSuppressed(stateSet.Analyzer, userDiagnosticDriver.Project))
             {
+                isSuppressed = true;
                 return true;
             }
 
+            isSuppressed = false;
             if (skipClosedFileChecks)
             {
                 return false;

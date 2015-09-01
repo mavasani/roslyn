@@ -106,6 +106,19 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             });
         }
 
+        public async Task SkipDocumentAnalysisAsync(DiagnosticAnalyzer analyzer)
+        {
+            Contract.ThrowIfNull(_document);
+
+            if (_root != null && _document.SupportsSemanticModel)
+            {
+                var model = await _document.GetSemanticModelAsync(_cancellationToken).ConfigureAwait(false);
+                var compilationWithAnalyzers = GetCompilationWithAnalyzers(model.Compilation);
+                await compilationWithAnalyzers.GetAnalyzerSemanticDiagnosticsAsync(model, new TextSpan(0, 0), ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+
         public async Task<ActionCounts> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer)
         {
             try
