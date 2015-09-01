@@ -1105,13 +1105,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return data;
         }
 
-        private void ClearCachedAnalysisDataIfAnalyzed(SyntaxReference decl, Compilation compilation, AnalysisState analysisState)
+        private void ClearCachedAnalysisDataIfAnalyzed(SyntaxReference declaration, SyntaxNode node, Compilation compilation, AnalysisState analysisState)
         {
             Debug.Assert(analysisState != null);
 
             CompilationData compilationData;
             if (!s_compilationDataCache.TryGetValue(compilation, out compilationData) ||
-                !analysisState.IsDeclarationComplete(decl))
+                !analysisState.IsDeclarationComplete(node))
             {
                 return;
             }
@@ -1119,7 +1119,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var map = compilationData.DeclarationAnalysisDataMap;
             lock (map)
             {
-                map.Remove(decl);
+                map.Remove(declaration);
             }
         }
 
