@@ -12,6 +12,7 @@ using Microsoft.CodeAnalysis.Collections;
 using Microsoft.CodeAnalysis.CSharp.Emit;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 
@@ -1254,7 +1255,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             get
             {
-                return this.DeclaringSyntaxReferences;
+                // Declaring references are cached for compilations with event queue.
+                return this.DeclaringCompilation.EventQueue != null ? AnalyzerDriver.GetCachedDeclaringReferences(this, this.DeclaringCompilation) : this.DeclaringSyntaxReferences;
             }
         }
 

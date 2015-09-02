@@ -27,7 +27,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         private readonly AnalyzerExecutor _executor;
         private readonly StateManager _stateManager;
         private readonly SimpleTaskQueue _eventQueue;
-        private readonly SolutionCrawlerAnalysisState _solutionCrawlerAnalysisState;
 
         public DiagnosticIncrementalAnalyzer(
             DiagnosticAnalyzerService owner,
@@ -43,7 +42,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             _eventQueue = new SimpleTaskQueue(TaskScheduler.Default);
             _stateManager = new StateManager(analyzerManager);
             _stateManager.ProjectAnalyzerReferenceChanged += OnProjectAnalyzerReferenceChanged;
-            _solutionCrawlerAnalysisState = new SolutionCrawlerAnalysisState();
         }
 
         private void OnProjectAnalyzerReferenceChanged(object sender, ProjectAnalyzerReferenceChangedEventArgs e)
@@ -97,9 +95,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             // so we can't use cached information.
             ClearDocumentStates(document, _stateManager.GetStateSets(document.Project), raiseEvent, includeProjectState: false, cancellationToken: cancellationToken);
 
-            // We also need to clear project analysis state, so that we re-calculate the diagnostics.
-            _solutionCrawlerAnalysisState.ClearProjectAnalysisState(document.Project);
-
             return SpecializedTasks.EmptyTask;
         }
 
@@ -145,7 +140,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 var fullSpan = root == null ? null : (TextSpan?)root.FullSpan;
 
-                var userDiagnosticDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, fullSpan, root, this, cancellationToken).ConfigureAwait(false);
+                var userDiagnosticDriver = new DiagnosticAnalyzerDriver(document, fullSpan, root, this, cancellationToken);
                 var openedDocument = document.IsOpen();
 
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(document.Project))
@@ -228,8 +223,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 var memberId = syntaxFacts.GetMethodLevelMemberId(root, member);
 
-                var spanBasedDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, member.FullSpan, root, this, cancellationToken).ConfigureAwait(false);
-                var documentBasedDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, root.FullSpan, root, this, cancellationToken).ConfigureAwait(false);
+                var spanBasedDriver = new DiagnosticAnalyzerDriver(document, member.FullSpan, root, this, cancellationToken);
+                var documentBasedDriver = new DiagnosticAnalyzerDriver(document, root.FullSpan, root, this, cancellationToken);
 
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(document.Project))
                 {
@@ -276,7 +271,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 var fullSpan = root == null ? null : (TextSpan?)root.FullSpan;
 
-                var userDiagnosticDriver = await DiagnosticAnalyzerDriver.CreateAsync(document, fullSpan, root, this, cancellationToken).ConfigureAwait(false);
+                var userDiagnosticDriver = new DiagnosticAnalyzerDriver(document, fullSpan, root, this, cancellationToken);
                 bool openedDocument = document.IsOpen();
 
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(document.Project))
@@ -338,9 +333,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 var projectTextVersion = await project.GetLatestDocumentVersionAsync(cancellationToken).ConfigureAwait(false);
                 var semanticVersion = await project.GetDependentSemanticVersionAsync(cancellationToken).ConfigureAwait(false);
                 var projectVersion = await project.GetDependentVersionAsync(cancellationToken).ConfigureAwait(false);
-                var versions = new VersionArgument(projectTextVersion, semanticVersion, projectVersion);
-                var analyzerDriver = await DiagnosticAnalyzerDriver.CreateAsync(project, versions, this, cancellationToken).ConfigureAwait(false);
+                var analyzerDriver = new DiagnosticAnalyzerDriver(project, this, cancellationToken);
 
+                var versions = new VersionArgument(projectTextVersion, semanticVersion, projectVersion);
                 foreach (var stateSet in _stateManager.GetOrUpdateStateSets(project))
                 {
                     // Compilation actions can report diagnostics on open files, so we skipClosedFileChecks.
@@ -366,9 +361,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                         RaiseProjectDiagnosticsUpdatedIfNeeded(project, stateSet, data.OldItems, data.Items);
                     }
                 }
-
-                // PERF: Clear cached project analysis state.
-                _solutionCrawlerAnalysisState.ClearProjectAnalysisState(project);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
@@ -483,14 +475,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         public override async Task<bool> TryAppendDiagnosticsForSpanAsync(Document document, TextSpan range, List<DiagnosticData> diagnostics, CancellationToken cancellationToken)
         {
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-            var getter = await LatestDiagnosticsForSpanGetter.CreateAsync(this, document, root, range, blockForData: false, diagnostics: diagnostics, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var getter = new LatestDiagnosticsForSpanGetter(this, document, root, range, blockForData: false, diagnostics: diagnostics, cancellationToken: cancellationToken);
             return await getter.TryGetAsync().ConfigureAwait(false);
         }
 
         public override async Task<IEnumerable<DiagnosticData>> GetDiagnosticsForSpanAsync(Document document, TextSpan range, CancellationToken cancellationToken)
         {
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-            var getter = await LatestDiagnosticsForSpanGetter.CreateAsync(this, document, root, range, blockForData: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var getter = new LatestDiagnosticsForSpanGetter(this, document, root, range, blockForData: true, cancellationToken: cancellationToken);
 
             var result = await getter.TryGetAsync().ConfigureAwait(false);
             Contract.Requires(result);
@@ -502,6 +494,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         {
             // we have opened document, doesnt matter
             if (openedDocument || analyzer.IsCompilerAnalyzer())
+            {
+                return true;
+            }
+
+            // PERF: Don't query descriptors for compiler analyzer, always execute it.
+            if (analyzer.IsCompilerAnalyzer())
             {
                 return true;
             }
@@ -541,7 +539,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         private static bool ShouldRunAnalyzerForStateType(DiagnosticAnalyzer analyzer, StateType stateTypeId,
             ImmutableHashSet<string> diagnosticIds = null, Func<DiagnosticAnalyzer, ImmutableArray<DiagnosticDescriptor>> getDescriptors = null)
         {
-            // PERF: Don't query descriptors for compiler analyzer, always execute it for all state types.  
+            // PERF: Don't query descriptors for compiler analyzer, always execute it for all state types.
             if (analyzer.IsCompilerAnalyzer())
             {
                 return true;
@@ -599,27 +597,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                    document.Project.CanReusePersistedDependentSemanticVersion(versions.ProjectVersion, versions.DataVersion, existingData.DataVersion);
         }
 
-        private static bool CheckSemanticVersions(Project project, AnalysisData existingData, VersionArgument newProjectVersions)
+        private static bool CheckSemanticVersions(Project project, AnalysisData existingData, VersionArgument versions)
         {
             if (existingData == null)
             {
                 return false;
             }
 
-            return CheckSemanticVersions(project, existingData.TextVersion, existingData.DataVersion, newProjectVersions);
+            return VersionStamp.CanReusePersistedVersion(versions.TextVersion, existingData.TextVersion) &&
+                   project.CanReusePersistedDependentSemanticVersion(versions.ProjectVersion, versions.DataVersion, existingData.DataVersion);
         }
 
-        internal static bool CheckSemanticVersions(Project project, VersionStamp existingTextVersion, VersionStamp existingDataVersion, VersionArgument newProjectVersions)
-        {
-            return VersionStamp.CanReusePersistedVersion(newProjectVersions.TextVersion, existingTextVersion) &&
-                   project.CanReusePersistedDependentSemanticVersion(newProjectVersions.ProjectVersion, newProjectVersions.DataVersion, existingDataVersion);
-        }
-
-        internal CompilationWithAnalyzers GetOrCreateCompilationWithAnalyzers(Project project, Func<CompilationWithAnalyzers> createCompilationWithAnalyzers, VersionArgument projectVersions)
-        {
-            return _solutionCrawlerAnalysisState.GetOrCreateCompilationWithAnalyzers(project, createCompilationWithAnalyzers, projectVersions);
-        }
-            
         private void RaiseDocumentDiagnosticsUpdatedIfNeeded(
             StateType type, Document document, StateSet stateSet, ImmutableArray<DiagnosticData> existingItems, ImmutableArray<DiagnosticData> newItems)
         {
@@ -786,18 +774,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 diagnostic.Properties,
                 diagnostic.Workspace,
                 diagnostic.ProjectId,
-                diagnostic.DocumentId,
-                newSpan,
-                mappedFilePath: mappedLineInfo.GetMappedFilePathIfExist(),
-                mappedStartLine: mappedLineInfo.StartLinePosition.Line,
-                mappedStartColumn: mappedLineInfo.StartLinePosition.Character,
-                mappedEndLine: mappedLineInfo.EndLinePosition.Line,
-                mappedEndColumn: mappedLineInfo.EndLinePosition.Character,
-                originalFilePath: originalLineInfo.Path,
-                originalStartLine: originalLineInfo.StartLinePosition.Line,
-                originalStartColumn: originalLineInfo.StartLinePosition.Character,
-                originalEndLine: originalLineInfo.EndLinePosition.Line,
-                originalEndColumn: originalLineInfo.EndLinePosition.Character,
+                new DiagnosticDataLocation(diagnostic.DocumentId, newSpan,
+                    originalFilePath: originalLineInfo.Path,
+                    originalStartLine: originalLineInfo.StartLinePosition.Line,
+                    originalStartColumn: originalLineInfo.StartLinePosition.Character,
+                    originalEndLine: originalLineInfo.EndLinePosition.Line,
+                    originalEndColumn: originalLineInfo.EndLinePosition.Character,
+                    mappedFilePath: mappedLineInfo.GetMappedFilePathIfExist(),
+                    mappedStartLine: mappedLineInfo.StartLinePosition.Line,
+                    mappedStartColumn: mappedLineInfo.StartLinePosition.Character,
+                    mappedEndLine: mappedLineInfo.EndLinePosition.Line,
+                    mappedEndColumn: mappedLineInfo.EndLinePosition.Character),
                 description: diagnostic.Description,
                 helpLink: diagnostic.HelpLink);
         }

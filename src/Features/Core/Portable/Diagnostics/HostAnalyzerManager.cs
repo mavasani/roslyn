@@ -75,6 +75,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ImmutableDictionary<DiagnosticAnalyzer, HashSet<string>> _compilerDiagnosticAnalyzerDescriptorMap;
 
         /// <summary>
+        /// Weak reference to the current project being analyzed.
+        /// </summary>
+        private readonly WeakReference<Project> _currentAnalyzedProject;
+
+        /// <summary>
+        /// Weak reference to the <see cref="CompilationWithAnalyzers"/> for the current project being analyzed.
+        /// </summary>
+        private readonly WeakReference<CompilationWithAnalyzers> _currentCompilationWithAnalyzers;
+
+        /// <summary>
         /// Cache from <see cref="DiagnosticAnalyzer"/> instance to its supported desciptors.
         /// </summary>
         private readonly ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>> _descriptorCache;
@@ -107,6 +117,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _compilerDiagnosticAnalyzerMap = ImmutableDictionary<string, DiagnosticAnalyzer>.Empty;
             _compilerDiagnosticAnalyzerDescriptorMap = ImmutableDictionary<DiagnosticAnalyzer, HashSet<string>>.Empty;
             _hostDiagnosticAnalyzerPackageNameMap = ImmutableDictionary<DiagnosticAnalyzer, string>.Empty;
+            _currentAnalyzedProject = new WeakReference<Project>(null);
+            _currentCompilationWithAnalyzers = new WeakReference<CompilationWithAnalyzers>(null);
             _descriptorCache = new ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>>();
 
             DiagnosticAnalyzerLogger.LogWorkspaceAnalyzers(hostAnalyzerReferences);
@@ -168,7 +180,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public bool IsAnalyzerSuppressed(DiagnosticAnalyzer analyzer, Project project)
         {
             var options = project.CompilationOptions;
-            if (options == null)
+            if (options == null || analyzer.IsCompilerAnalyzer())
             {
                 return false;
             }
@@ -504,6 +516,33 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return current;
+        }
+
+        internal CompilationWithAnalyzers GetOrCreateCompilationWithAnalyzers(Project project, ConditionalWeakTable<Project, CompilationWithAnalyzers>.CreateValueCallback createCompilationWithAnalyzers)
+        {
+            Contract.ThrowIfFalse(project.SupportsCompilation);
+
+            lock (_currentAnalyzedProject)
+            {
+                CompilationWithAnalyzers compilationWithAnalyzers;
+                if (_currentAnalyzedProject.GetTarget() == project)
+                {
+                    compilationWithAnalyzers = _currentCompilationWithAnalyzers.GetTarget();
+                    if (compilationWithAnalyzers == null)
+                    {
+                        compilationWithAnalyzers = createCompilationWithAnalyzers(project);
+                        _currentCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+                    }
+                }
+                else
+                {
+                    _currentAnalyzedProject.SetTarget(project);
+                    compilationWithAnalyzers = createCompilationWithAnalyzers(project);
+                    _currentCompilationWithAnalyzers.SetTarget(compilationWithAnalyzers);
+                }
+
+                return compilationWithAnalyzers;
+            }
         }
 
         private class LoadContextAssemblyLoader : IAnalyzerAssemblyLoader

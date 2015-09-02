@@ -9,10 +9,8 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Diagnostics.Log;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
-using Microsoft.CodeAnalysis.ErrorReporting;
 using static Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetry;
-using VersionArgument = Microsoft.CodeAnalysis.Diagnostics.EngineV1.DiagnosticIncrementalAnalyzer.VersionArgument;
-using System.Runtime.CompilerServices;
+using Microsoft.CodeAnalysis.ErrorReporting;
 
 namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 {
@@ -29,98 +27,37 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         private readonly Project _project;
         private readonly DiagnosticIncrementalAnalyzer _owner;
         private readonly CancellationToken _cancellationToken;
-        private readonly CompilationWithAnalyzers _compilationWithAnalyzers;
         private readonly CompilationWithAnalyzersOptions _analysisOptions;
 
-        public static async Task<DiagnosticAnalyzerDriver> CreateAsync(
+        private CompilationWithAnalyzers _lazyCompilationWithAnalyzers;
+
+        public DiagnosticAnalyzerDriver(
             Document document,
             TextSpan? span,
             SyntaxNode root,
             DiagnosticIncrementalAnalyzer owner,
             CancellationToken cancellationToken)
+            : this(document.Project, owner, cancellationToken)
         {
-            var projectVersions = await GetProjectVersionsArgumentAsync(document.Project, cancellationToken).ConfigureAwait(false);
-            return await CreateAsync(document.Project, document, span, root, projectVersions, owner, cancellationToken).ConfigureAwait(false);
+            _document = document;
+            _span = span;
+            _root = root;
         }
 
-        public static async Task<DiagnosticAnalyzerDriver> CreateAsync(
+        public DiagnosticAnalyzerDriver(
             Project project,
             DiagnosticIncrementalAnalyzer owner,
             CancellationToken cancellationToken)
         {
-            var projectVersions = await GetProjectVersionsArgumentAsync(project, cancellationToken).ConfigureAwait(false);
-            return await CreateAsync(project, null, null, null, projectVersions, owner, cancellationToken).ConfigureAwait(false);
-        }
-
-        public static async Task<DiagnosticAnalyzerDriver> CreateAsync(
-            Project project,
-            VersionArgument projectVersions,
-            DiagnosticIncrementalAnalyzer owner,
-            CancellationToken cancellationToken)
-        {
-            return await CreateAsync(project, null, null, null, projectVersions, owner, cancellationToken).ConfigureAwait(false);
-        }
-
-        private static async Task<DiagnosticAnalyzerDriver> CreateAsync(
-            Project project,
-            Document documentOpt,
-            TextSpan? spanOpt,
-            SyntaxNode rootOpt,
-            VersionArgument projectVersions,
-            DiagnosticIncrementalAnalyzer owner,
-            CancellationToken cancellationToken)
-        {
-            var analysisOptions = new CompilationWithAnalyzersOptions(
+            _project = project;
+            _owner = owner;
+            _cancellationToken = cancellationToken;
+            _analysisOptions = new CompilationWithAnalyzersOptions(
                 new WorkspaceAnalyzerOptions(project.AnalyzerOptions, project.Solution.Workspace),
                 owner.GetOnAnalyzerException(project.Id),
                 concurrentAnalysis: false,
                 logAnalyzerExecutionTime: true);
-
-            var compilationWithAnalyzers = await GetOrCreateCompilationWithAnalyzersAsync(project, owner, projectVersions, analysisOptions, cancellationToken).ConfigureAwait(false);
-            return new DiagnosticAnalyzerDriver(project, documentOpt, spanOpt, rootOpt, owner, compilationWithAnalyzers, analysisOptions, cancellationToken);
-        }
-
-        private DiagnosticAnalyzerDriver(
-            Project project,
-            Document documentOpt,
-            TextSpan? spanOpt,
-            SyntaxNode rootOpt,
-            DiagnosticIncrementalAnalyzer owner,
-            CompilationWithAnalyzers compilationWithAnalyzers,
-            CompilationWithAnalyzersOptions analysisOptions,
-            CancellationToken cancellationToken)
-        {
-            _document = documentOpt;
-            _span = spanOpt;
-            _root = rootOpt;
-            _project = project;
-            _owner = owner;
-            _compilationWithAnalyzers = compilationWithAnalyzers;
-            _analysisOptions = analysisOptions;
-            _cancellationToken = cancellationToken;
-        }
-
-        private static readonly ConditionalWeakTable<Project, VersionArgument> s_projectVersionsArgumentCache =
-            new ConditionalWeakTable<Project, VersionArgument>();
-
-        private static async Task<VersionArgument> GetOrCreateProjectVersionsArgumentAsync(Project project, CancellationToken cancellationToken)
-        {
-            VersionArgument projectVersions;
-            if (!s_projectVersionsArgumentCache.TryGetValue(project, out projectVersions))
-            {
-                projectVersions = await GetProjectVersionsArgumentAsync(project, cancellationToken).ConfigureAwait(false);
-                s_projectVersionsArgumentCache.Add(project, projectVersions);
-            }
-
-            return projectVersions;
-        }
-
-        private static async Task<VersionArgument> GetProjectVersionsArgumentAsync(Project project, CancellationToken cancellationToken)
-        {
-            var projectTextVersion = await project.GetLatestDocumentVersionAsync(cancellationToken).ConfigureAwait(false);
-            var semanticVersion = await project.GetDependentSemanticVersionAsync(cancellationToken).ConfigureAwait(false);
-            var projectVersion = await project.GetDependentVersionAsync(cancellationToken).ConfigureAwait(false);
-            return new VersionArgument(projectTextVersion, semanticVersion, projectVersion);
+            _lazyCompilationWithAnalyzers = null;
         }
 
         public Document Document
@@ -158,42 +95,47 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             }
         }
 
-        private static async Task<CompilationWithAnalyzers> GetOrCreateCompilationWithAnalyzersAsync(Project project, DiagnosticIncrementalAnalyzer owner, VersionArgument projectVersions, CompilationWithAnalyzersOptions analysisOptions, CancellationToken cancellationToken)
+        private CompilationWithAnalyzers GetCompilationWithAnalyzers(Compilation compilation)
         {
-            if (!project.SupportsCompilation)
+            if (_lazyCompilationWithAnalyzers == null)
             {
-                return null;
+                Contract.ThrowIfFalse(_project.SupportsCompilation);
+                var compilationWithAnalyzers = _owner.HostAnalyzerManager.GetOrCreateCompilationWithAnalyzers(_project, p =>
+                {
+                    var analyzers = _owner
+                        .GetAnalyzers(p)
+                        .Where(a => !CompilationWithAnalyzers.IsDiagnosticAnalyzerSuppressed(a, compilation.Options, _analysisOptions.OnAnalyzerException))
+                        .ToImmutableArray()
+                        .Distinct();
+                    return new CompilationWithAnalyzers(compilation, analyzers, _analysisOptions);
+                });
+
+                Interlocked.CompareExchange(ref _lazyCompilationWithAnalyzers, compilationWithAnalyzers, null);
             }
 
-            var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
-            //return owner.GetOrCreateCompilationWithAnalyzers(project, () =>
-            //{
-                var analyzers = owner
-                    .GetAnalyzers(project)
-                    .Where(a => !CompilationWithAnalyzers.IsDiagnosticAnalyzerSuppressed(a, compilation.Options, analysisOptions.OnAnalyzerException))
-                    .ToImmutableArray()
-                    .Distinct();
-                return new CompilationWithAnalyzers(compilation, analyzers, analysisOptions);
-            //},
-            //projectVersions);
+            return _lazyCompilationWithAnalyzers;
         }
 
-        public Task SkipDocumentAnalysisAsync(DiagnosticAnalyzer analyzer)
+        public async Task SkipDocumentAnalysisAsync(DiagnosticAnalyzer analyzer)
         {
             Contract.ThrowIfNull(_document);
-            return SpecializedTasks.EmptyTask;
-            //if (_root != null)
-            //{
-            //    var model = await _document.GetSemanticModelAsync(_cancellationToken).ConfigureAwait(false);
-            //    await _compilationWithAnalyzers.GetAnalyzerSemanticDiagnosticsAsync(model, new TextSpan(0, 0), ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
-            //}
+
+            if (_root != null && _document.SupportsSemanticModel)
+            {
+                var model = await _document.GetSemanticModelAsync(_cancellationToken).ConfigureAwait(false);
+                var compilationWithAnalyzers = GetCompilationWithAnalyzers(model.Compilation);
+                await compilationWithAnalyzers.GetAnalyzerSemanticDiagnosticsAsync(model, new TextSpan(0, 0), ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
+            }
         }
+
 
         public async Task<ActionCounts> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer)
         {
             try
             {
-                return await _compilationWithAnalyzers.GetAnalyzerActionCountsAsync(analyzer, _cancellationToken).ConfigureAwait(false);
+                var compilation = await _project.GetCompilationAsync(_cancellationToken).ConfigureAwait(false);
+                var compWithAnalyzers = this.GetCompilationWithAnalyzers(compilation);
+                return await compWithAnalyzers.GetAnalyzerActionCountsAsync(analyzer, _cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e) when(FatalError.ReportUnlessCanceled(e))
             {
@@ -235,8 +177,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     return ImmutableArray<Diagnostic>.Empty;
                 }
 
-                var syntaxDiagnostics = await _compilationWithAnalyzers.GetAnalyzerSyntaxDiagnosticsAsync(_root.SyntaxTree, ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
-                await UpdateAnalyzerTelemetryDataAsync(analyzer, _compilationWithAnalyzers).ConfigureAwait(false);
+                var compilationWithAnalyzers = GetCompilationWithAnalyzers(compilation);
+                var syntaxDiagnostics = await compilationWithAnalyzers.GetAnalyzerSyntaxDiagnosticsAsync(_root.SyntaxTree, ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
+                await UpdateAnalyzerTelemetryDataAsync(analyzer, compilationWithAnalyzers).ConfigureAwait(false);
                 return GetFilteredDocumentDiagnostics(syntaxDiagnostics, compilation, onlyLocationFiltering: true).ToImmutableArray();
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
@@ -314,8 +257,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     return ImmutableArray<Diagnostic>.Empty;
                 }
 
-                var semanticDiagnostics = await _compilationWithAnalyzers.GetAnalyzerSemanticDiagnosticsAsync(model, _span, ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
-                await UpdateAnalyzerTelemetryDataAsync(analyzer, _compilationWithAnalyzers).ConfigureAwait(false);
+                var compilationWithAnalyzers = GetCompilationWithAnalyzers(compilation);
+                var semanticDiagnostics = await compilationWithAnalyzers.GetAnalyzerSemanticDiagnosticsAsync(model, _span, ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
+                await UpdateAnalyzerTelemetryDataAsync(analyzer, compilationWithAnalyzers).ConfigureAwait(false);
                 return semanticDiagnostics;
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
@@ -382,8 +326,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 Contract.ThrowIfFalse(_project.SupportsCompilation);
 
                 var compilation = await _project.GetCompilationAsync(_cancellationToken).ConfigureAwait(false);
-                var compilationDiagnostics = await _compilationWithAnalyzers.GetAnalyzerCompilationDiagnosticsAsync(ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
-                await UpdateAnalyzerTelemetryDataAsync(analyzer, _compilationWithAnalyzers).ConfigureAwait(false);
+                var compilationWithAnalyzers = GetCompilationWithAnalyzers(compilation);
+                var compilationDiagnostics = await compilationWithAnalyzers.GetAnalyzerCompilationDiagnosticsAsync(ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
+                await UpdateAnalyzerTelemetryDataAsync(analyzer, compilationWithAnalyzers).ConfigureAwait(false);
                 diagnostics.AddRange(compilationDiagnostics);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))

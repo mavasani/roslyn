@@ -1,7 +1,9 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using Roslyn.Utilities;
 using static Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetry;
 
@@ -142,9 +144,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return TryStartProcessingEntity(decl.GetSyntax(), _pendingDeclarations, _declarationAnalyzerStateDataPool, out state);
             }
 
-            public bool IsDeclarationComplete(SyntaxReference decl)
+            public bool IsDeclarationComplete(SyntaxNode decl)
             {
-                return IsEntityFullyProcessed(decl.GetSyntax(), _pendingDeclarations);
+                return IsEntityFullyProcessed(decl, _pendingDeclarations);
             }
 
             public void MarkDeclarationComplete(SyntaxReference decl)
@@ -166,11 +168,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 }
             }
 
-            public void MarkDeclarationsComplete(ISymbol symbol)
+            public void MarkDeclarationsComplete(ImmutableArray<SyntaxReference> declarations)
             {
                 lock (_gate)
                 {
-                    foreach (var syntaxRef in symbol.DeclaringSyntaxReferences)
+                    foreach (var syntaxRef in declarations)
                     {
                         MarkEntityProcessed_NoLock(syntaxRef.GetSyntax(), _pendingDeclarations, _declarationAnalyzerStateDataPool);
                     }
@@ -184,7 +186,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     var needsAnalysis = false;
                     var symbol = symbolEvent.Symbol;
-                    if (!AnalysisScope.ShouldSkipSymbolAnalysis(symbol) && actionCounts.SymbolActionsCount > 0)
+                    if (!AnalysisScope.ShouldSkipSymbolAnalysis(symbolEvent) && actionCounts.SymbolActionsCount > 0)
                     {
                         needsAnalysis = true;
                         _pendingSymbols[symbol] = null;
@@ -195,7 +197,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                         actionCounts.CodeBlockActionsCount > 0 ||
                         actionCounts.CodeBlockStartActionsCount > 0))
                     {
-                        foreach (var syntaxRef in symbol.DeclaringSyntaxReferences)
+                        foreach (var syntaxRef in symbolEvent.DeclaringSyntaxReferences)
                         {
                             needsAnalysis = true;
                             _pendingDeclarations[syntaxRef.GetSyntax()]= null;
@@ -211,8 +213,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     if (actionCounts.SyntaxTreeActionsCount > 0)
                     {
-                        var map = new Dictionary<SyntaxTree, AnalyzerStateData>();
-                        foreach (var tree in compilationEvent.Compilation.SyntaxTrees)
+                        var trees = compilationEvent.Compilation.SyntaxTrees;
+                        var map = new Dictionary<SyntaxTree, AnalyzerStateData>(trees.Count());
+                        foreach (var tree in trees)
                         {
                             map[tree] = null;
                         }
@@ -253,7 +256,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 }
 
                 // Have the node/code block actions executed for all symbol declarations?
-                foreach (var syntaxRef in symbolDeclaredEvent.Symbol.DeclaringSyntaxReferences)
+                foreach (var syntaxRef in symbolDeclaredEvent.DeclaringSyntaxReferences)
                 {
                     if (!IsEntityFullyProcessed_NoLock(syntaxRef.GetSyntax(), _pendingDeclarations))
                     {
