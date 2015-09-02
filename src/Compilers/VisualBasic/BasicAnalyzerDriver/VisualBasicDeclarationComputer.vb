@@ -9,13 +9,13 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
     Friend Class VisualBasicDeclarationComputer
         Inherits DeclarationComputer
 
-        Public Shared Sub ComputeDeclarationsInSpan(model As SemanticModel, span As TextSpan, getSymbol As Boolean, builder As List(Of DeclarationInfo), cancellationToken As CancellationToken) As ImmutableArray(Of DeclarationInfo)
+        Public Shared Sub ComputeDeclarationsInSpan(model As SemanticModel, span As TextSpan, getSymbol As Boolean, builder As List(Of DeclarationInfo), cancellationToken As CancellationToken)
             ComputeDeclarationsCore(model, model.SyntaxTree.GetRoot(),
                                     Function(node, level) Not node.Span.OverlapsWith(span) OrElse InvalidLevel(level),
                                     getSymbol, builder, Nothing, cancellationToken)
         End Sub
 
-        Public Shared Sub ComputeDeclarationsInNode(model As SemanticModel, node As SyntaxNode, getSymbol As Boolean, builder As List(Of DeclarationInfo), cancellationToken As CancellationToken, Optional levelsToCompute As Integer? = Nothing) As ImmutableArray(Of DeclarationInfo)
+        Public Shared Sub ComputeDeclarationsInNode(model As SemanticModel, node As SyntaxNode, getSymbol As Boolean, builder As List(Of DeclarationInfo), cancellationToken As CancellationToken, Optional levelsToCompute As Integer? = Nothing)
             ComputeDeclarationsCore(model, node, Function(n, level) InvalidLevel(level), getSymbol, builder, levelsToCompute, cancellationToken)
         End Sub
 
