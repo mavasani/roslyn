@@ -27,7 +27,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         private readonly AnalyzerExecutor _executor;
         private readonly StateManager _stateManager;
         private readonly SimpleTaskQueue _eventQueue;
-        private readonly SolutionCrawlerAnalysisState _solutionCrawlerAnalysisState;
 
         public DiagnosticIncrementalAnalyzer(
             DiagnosticAnalyzerService owner,
@@ -43,7 +42,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             _eventQueue = new SimpleTaskQueue(TaskScheduler.Default);
             _stateManager = new StateManager(analyzerManager);
             _stateManager.ProjectAnalyzerReferenceChanged += OnProjectAnalyzerReferenceChanged;
-            _solutionCrawlerAnalysisState = new SolutionCrawlerAnalysisState(analyzerManager);
         }
 
         private void OnProjectAnalyzerReferenceChanged(object sender, ProjectAnalyzerReferenceChangedEventArgs e)
@@ -134,8 +132,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 {
                     return;
                 }
-
-                _solutionCrawlerAnalysisState.OnDocumentAnalysisStarted(document);
 
                 var textVersion = await document.GetTextVersionAsync(cancellationToken).ConfigureAwait(false);
                 var dataVersion = await document.GetSyntaxVersionAsync(cancellationToken).ConfigureAwait(false);
@@ -272,8 +268,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         {
             try
             {
-                _solutionCrawlerAnalysisState.OnDocumentAnalysisStarted(document);
-
                 var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 var fullSpan = root == null ? null : (TextSpan?)root.FullSpan;
 
@@ -314,8 +308,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                         RaiseDocumentDiagnosticsUpdatedIfNeeded(StateType.Document, document, stateSet, data.OldItems, data.Items);
                     }
                 }
-
-                _solutionCrawlerAnalysisState.OnDocumentAnalyzed(document);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
@@ -337,8 +329,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 {
                     return;
                 }
-
-                _solutionCrawlerAnalysisState.OnProjectAnalysisStarted(project);
 
                 var projectTextVersion = await project.GetLatestDocumentVersionAsync(cancellationToken).ConfigureAwait(false);
                 var semanticVersion = await project.GetDependentSemanticVersionAsync(cancellationToken).ConfigureAwait(false);
@@ -371,8 +361,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                         RaiseProjectDiagnosticsUpdatedIfNeeded(project, stateSet, data.OldItems, data.Items);
                     }
                 }
-
-                _solutionCrawlerAnalysisState.OnProjectAnalyzed(project);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
@@ -1035,7 +1023,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
         public override Task NewSolutionSnapshotAsync(Solution newSolution, CancellationToken cancellationToken)
         {
-            HostAnalyzerManager.ResetCompilationWithAnalyzersCache();
             return SpecializedTasks.EmptyTask;
         }
     }

@@ -29,6 +29,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
         private readonly CancellationToken _cancellationToken;
         private readonly CompilationWithAnalyzersOptions _analysisOptions;
 
+        private CompilationWithAnalyzers _lazyCompilationWithAnalyzers;
+
         public DiagnosticAnalyzerDriver(
             Document document,
             TextSpan? span,
@@ -55,6 +57,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                 owner.GetOnAnalyzerException(project.Id),
                 concurrentAnalysis: false,
                 logAnalyzerExecutionTime: true);
+            _lazyCompilationWithAnalyzers = null;
         }
 
         public Document Document
@@ -94,16 +97,23 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
 
         private CompilationWithAnalyzers GetCompilationWithAnalyzers(Compilation compilation)
         {
-            Contract.ThrowIfFalse(_project.SupportsCompilation);
-            return _owner.HostAnalyzerManager.GetOrCreateCompilationWithAnalyzers(_project, p =>
+            if (_lazyCompilationWithAnalyzers == null)
             {
-                var analyzers = _owner
-                    .GetAnalyzers(p)
-                    .Where(a => !CompilationWithAnalyzers.IsDiagnosticAnalyzerSuppressed(a, compilation.Options, _analysisOptions.OnAnalyzerException))
-                    .ToImmutableArray()
-                    .Distinct();
-                return new CompilationWithAnalyzers(compilation, analyzers, _analysisOptions);
-            });
+                Contract.ThrowIfFalse(_project.SupportsCompilation);
+                var compilationWithAnalyzers = _owner.HostAnalyzerManager.GetOrCreateCompilationWithAnalyzers(_project, p =>
+                {
+                    var analyzers = _owner
+                        .GetAnalyzers(p)
+                        .Where(a => !CompilationWithAnalyzers.IsDiagnosticAnalyzerSuppressed(a, compilation.Options, _analysisOptions.OnAnalyzerException))
+                        .ToImmutableArray()
+                        .Distinct();
+                    return new CompilationWithAnalyzers(compilation, analyzers, _analysisOptions);
+                });
+
+                Interlocked.CompareExchange(ref _lazyCompilationWithAnalyzers, compilationWithAnalyzers, null);
+            }
+
+            return _lazyCompilationWithAnalyzers;
         }
 
         public async Task SkipDocumentAnalysisAsync(DiagnosticAnalyzer analyzer)

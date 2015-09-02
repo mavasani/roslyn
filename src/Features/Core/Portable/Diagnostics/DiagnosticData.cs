@@ -207,15 +207,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         public Diagnostic ToDiagnostic(SyntaxTree tree)
-                {
+        {
             var location = Location.None;
             if (tree != null)
-                    {
+            {
                 var span = _textSpan.HasValue ? _textSpan.Value : GetTextSpan(tree.GetText());
                 location = tree.GetLocation(span);
-                    }
+            }
             else if (OriginalFilePath != null && _textSpan != null)
-                    {
+            {
                 var span = _textSpan.Value;
                 location = Location.Create(OriginalFilePath, span, new LinePositionSpan(
                     new LinePosition(OriginalStartLine, OriginalStartColumn),
@@ -356,8 +356,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var originalEndColumn = originalLineInfo.EndLinePosition.Character;
 
             return new DiagnosticDataLocation(document.Id, sourceSpan,
-                originalLineInfo.Path, originalStartLine, originalStartColumn, originalEndLine, originalEndColumn,
-                mappedLineInfo.GetMappedFilePathIfExist(), mappedStartLine, mappedStartColumn, mappedEndLine, mappedEndColumn);
+                            originalLineInfo.Path, originalStartLine, originalStartColumn, originalEndLine, originalEndColumn,
+                            mappedLineInfo.GetMappedFilePathIfExist(), mappedStartLine, mappedStartColumn, mappedEndLine, mappedEndColumn);
         }
 
         public static DiagnosticData Create(Document document, Diagnostic diagnostic)
