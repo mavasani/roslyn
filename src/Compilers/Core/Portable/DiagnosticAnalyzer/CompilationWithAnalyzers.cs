@@ -501,7 +501,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 do
                 {
                     await ComputeAnalyzerDiagnosticsAsync(analysisScope, generateCompilationEvents, getEventQueue, taskToken, cancellationToken).ConfigureAwait(false);
-                } while (_analysisState.HasPendingSymbolAnalysis(analysisScope));
+                } while (_analysisOptions.ConcurrentAnalysis && _analysisState.HasPendingSymbolAnalysis(analysisScope));
 
                 // Return computed analyzer diagnostics for the given analysis scope.
                 return _analysisResult.GetDiagnostics(analysisScope, getLocalDiagnostics: true, getNonLocalDiagnostics: false);

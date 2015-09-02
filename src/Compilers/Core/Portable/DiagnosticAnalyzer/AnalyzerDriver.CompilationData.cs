@@ -14,28 +14,33 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         internal class CompilationData
         {
-            private readonly object _gate = new object();
-
             /// <summary>
             /// Cached semantic model for the compilation trees.
             /// PERF: This cache enables us to re-use semantic model's bound node cache across analyzer execution and diagnostic queries.
             /// </summary>
             private readonly Dictionary<SyntaxTree, SemanticModel> _semanticModelsMap;
 
+            /// <summary>
+            /// Cached syntax references for a symbol for the lifetime of symbol declared event.
+            /// PERF: This cache reduces allocations for computing declaring syntax references for a symbol.
+            /// </summary>
+            private readonly ConditionalWeakTable<ISymbol, IReadOnlyCollection<SyntaxReference>> _symbolDeclarationsCache;
+
             public CompilationData(Compilation comp)
             {
                 _semanticModelsMap = new Dictionary<SyntaxTree, SemanticModel>();
+                _symbolDeclarationsCache = new ConditionalWeakTable<ISymbol, IReadOnlyCollection<SyntaxReference>>();
                 this.SuppressMessageAttributeState = new SuppressMessageAttributeState(comp);
                 this.DeclarationAnalysisDataMap = new Dictionary<SyntaxReference, DeclarationAnalysisData>();
             }
 
             public SuppressMessageAttributeState SuppressMessageAttributeState { get; }
             public Dictionary<SyntaxReference, DeclarationAnalysisData> DeclarationAnalysisDataMap { get; }
-
+            
             public SemanticModel GetOrCreateCachedSemanticModel(SyntaxTree tree, Compilation compilation, CancellationToken cancellationToken)
             {
                 SemanticModel model;
-                lock (_gate)
+                lock (_semanticModelsMap)
                 {
                     if (_semanticModelsMap.TryGetValue(tree, out model))
                     {
@@ -49,7 +54,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 // Invoke GetDiagnostics to populate the compilation's CompilationEvent queue.
                 model.GetDiagnostics(null, cancellationToken);
 
-                lock (_gate)
+                lock (_semanticModelsMap)
                 {
                     _semanticModelsMap[tree] = model;
                 }
@@ -59,10 +64,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             public bool RemoveCachedSemanticModel(SyntaxTree tree)
             {
-                lock (_gate)
+                lock (_semanticModelsMap)
                 {
                     return _semanticModelsMap.Remove(tree);
                 }
+            }
+
+            public ImmutableArray<SyntaxReference> GetCachedDeclaringReferences(ISymbol symbol)
+            {
+                return (ImmutableArray<SyntaxReference>)_symbolDeclarationsCache.GetValue(symbol, s => (IReadOnlyCollection<SyntaxReference>)s.DeclaringSyntaxReferences);
             }
         }
 
@@ -81,17 +91,32 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             /// <summary>
             /// All member declarations within the declaration.
             /// </summary>
-            public ImmutableArray<DeclarationInfo> DeclarationsInNode { get; set; }
+            public List<DeclarationInfo> DeclarationsInNode { get; }
 
             /// <summary>
             /// All descendant nodes for syntax node actions.
             /// </summary>
-            public ImmutableArray<SyntaxNode> DescendantNodesToAnalyze { get; set; }
+            public List<SyntaxNode> DescendantNodesToAnalyze { get; }
 
             /// <summary>
             /// Flag indicating if this is a partial analysis.
             /// </summary>
             public bool IsPartialAnalysis { get; set; }
+
+            public DeclarationAnalysisData()
+            {
+                this.DeclarationsInNode = new List<DeclarationInfo>();
+                this.DescendantNodesToAnalyze = new List<SyntaxNode>();
+            }
+
+            public void Free()
+            {
+                DeclaringReferenceSyntax = null;
+                TopmostNodeForAnalysis = null;
+                DeclarationsInNode.Clear();
+                DescendantNodesToAnalyze.Clear();
+                IsPartialAnalysis = false;
+            }
         }
 
         internal static CompilationData GetCachedCompilationData(Compilation compilation)
@@ -115,6 +140,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             CompilationData compilationData;
             return s_compilationDataCache.TryGetValue(compilation, out compilationData) &&
                 compilationData.RemoveCachedSemanticModel(tree);
+        }
+
+        public static ImmutableArray<SyntaxReference> GetCachedDeclaringReferences(ISymbol symbol, Compilation compilation)
+        {
+            var compilationData = GetCachedCompilationData(compilation);
+            return compilationData.GetCachedDeclaringReferences(symbol);
         }
     }
 }
