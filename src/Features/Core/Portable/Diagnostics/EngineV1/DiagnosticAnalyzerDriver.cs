@@ -166,29 +166,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             }
 
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
-            return owner.GetOrCreateCompilationWithAnalyzers(project, () =>
-            {
+            //return owner.GetOrCreateCompilationWithAnalyzers(project, () =>
+            //{
                 var analyzers = owner
                     .GetAnalyzers(project)
                     .Where(a => !CompilationWithAnalyzers.IsDiagnosticAnalyzerSuppressed(a, compilation.Options, analysisOptions.OnAnalyzerException))
                     .ToImmutableArray()
                     .Distinct();
                 return new CompilationWithAnalyzers(compilation, analyzers, analysisOptions);
-            },
-            projectVersions);
+            //},
+            //projectVersions);
         }
 
-        public async Task SkipDocumentAnalysisAsync(DiagnosticAnalyzer analyzer)
+        public Task SkipDocumentAnalysisAsync(DiagnosticAnalyzer analyzer)
         {
             Contract.ThrowIfNull(_document);
-
-            if (_root != null)
-            {
-                var model = await _document.GetSemanticModelAsync(_cancellationToken).ConfigureAwait(false);
-                await _compilationWithAnalyzers.GetAnalyzerSemanticDiagnosticsAsync(model, new TextSpan(0, 0), ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
-            }
+            return SpecializedTasks.EmptyTask;
+            //if (_root != null)
+            //{
+            //    var model = await _document.GetSemanticModelAsync(_cancellationToken).ConfigureAwait(false);
+            //    await _compilationWithAnalyzers.GetAnalyzerSemanticDiagnosticsAsync(model, new TextSpan(0, 0), ImmutableArray.Create(analyzer), _cancellationToken).ConfigureAwait(false);
+            //}
         }
-
 
         public async Task<ActionCounts> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer)
         {
