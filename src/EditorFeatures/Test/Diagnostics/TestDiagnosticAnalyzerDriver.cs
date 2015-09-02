@@ -21,7 +21,7 @@ namespace Microsoft.CodeAnalysis.UnitTests.Diagnostics
         private readonly Action<Exception, DiagnosticAnalyzer, Diagnostic> _onAnalyzerException;
 
         public TestDiagnosticAnalyzerDriver(Project project, DiagnosticAnalyzer workspaceAnalyzerOpt = null, Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException = null, bool logAnalyzerExceptionAsDiagnostics = false)
-            : this (project, ImmutableArray.Create(workspaceAnalyzerOpt ?? DiagnosticExtensions.GetCompilerDiagnosticAnalyzer(project.Language)), onAnalyzerException, logAnalyzerExceptionAsDiagnostics)
+            : this(project, ImmutableArray.Create(workspaceAnalyzerOpt ?? DiagnosticExtensions.GetCompilerDiagnosticAnalyzer(project.Language)), onAnalyzerException, logAnalyzerExceptionAsDiagnostics)
         { }
 
         public TestDiagnosticAnalyzerDriver(Project project, ImmutableArray<DiagnosticAnalyzer> workspaceAnalyzers, Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException = null, bool logAnalyzerExceptionAsDiagnostics = false)
@@ -47,19 +47,17 @@ namespace Microsoft.CodeAnalysis.UnitTests.Diagnostics
 
             if (getDocumentDiagnostics)
             {
-                var tree = document.GetSyntaxTreeAsync().Result;
-                var root = tree.GetRoot();
                 var dxs = _diagnosticAnalyzerService.GetDiagnosticsAsync(project.Solution, project.Id, document.Id).WaitAndGetResult(CancellationToken.None);
-                documentDiagnostics = dxs.Where(d => d.HasTextSpan && d.TextSpan.IntersectsWith(span)).Select(d => d.ToDiagnostic(tree));
+                documentDiagnostics = DiagnosticData.ToDiagnosticsAsync(project, dxs.Where(d => d.HasTextSpan && d.TextSpan.IntersectsWith(span)), CancellationToken.None).WaitAndGetResult(CancellationToken.None);
             }
 
             if (getProjectDiagnostics)
             {
                 var dxs = _diagnosticAnalyzerService.GetDiagnosticsAsync(project.Solution, project.Id).WaitAndGetResult(CancellationToken.None);
-                projectDiagnostics = dxs.Where(d => !d.HasTextSpan).Select(d => d.ToDiagnostic(tree: null));
+                projectDiagnostics = DiagnosticData.ToDiagnosticsAsync(project, dxs.Where(d => !d.HasTextSpan), CancellationToken.None).WaitAndGetResult(CancellationToken.None);
             }
 
-            var exceptionDiagnostics = _exceptionDiagnosticsSource.TestOnly_GetReportedDiagnostics().Select(d => d.ToDiagnostic(tree: null));
+            var exceptionDiagnostics = DiagnosticData.ToDiagnosticsAsync(project, _exceptionDiagnosticsSource.TestOnly_GetReportedDiagnostics(), CancellationToken.None).WaitAndGetResult(CancellationToken.None);
 
             return documentDiagnostics.Concat(projectDiagnostics).Concat(exceptionDiagnostics);
         }

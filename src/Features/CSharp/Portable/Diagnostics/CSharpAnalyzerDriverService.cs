@@ -14,7 +14,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Diagnostics
     {
         public void ComputeDeclarationsInSpan(SemanticModel model, TextSpan span, bool getSymbol, List<DeclarationInfo> builder, CancellationToken cancellationToken)
         {
-            return CSharpDeclarationComputer.ComputeDeclarationsInNode(model, span, getSymbol, builder, cancellationToken);
+            CSharpDeclarationComputer.ComputeDeclarationsInSpan(model, span, getSymbol, builder, cancellationToken);
         }
     }
 }
