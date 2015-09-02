@@ -207,15 +207,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         public Diagnostic ToDiagnostic(SyntaxTree tree)
-        {
+                {
             var location = Location.None;
             if (tree != null)
-            {
+                    {
                 var span = _textSpan.HasValue ? _textSpan.Value : GetTextSpan(tree.GetText());
                 location = tree.GetLocation(span);
-            }
+                    }
             else if (OriginalFilePath != null && _textSpan != null)
-            {
+                    {
                 var span = _textSpan.Value;
                 location = Location.Create(OriginalFilePath, span, new LinePositionSpan(
                     new LinePosition(OriginalStartLine, OriginalStartColumn),
@@ -335,7 +335,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         public static DiagnosticData Create(Document document, Diagnostic diagnostic)
         {
-            var location = diagnostic.Location;
+            if (document == null)
+            {
+                return null;
+            }
 
             TextSpan sourceSpan;
             FileLinePositionSpan mappedLineInfo;
@@ -351,6 +354,22 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var originalStartColumn = originalLineInfo.StartLinePosition.Character;
             var originalEndLine = originalLineInfo.EndLinePosition.Line;
             var originalEndColumn = originalLineInfo.EndLinePosition.Character;
+
+            return new DiagnosticDataLocation(document.Id, sourceSpan,
+                originalLineInfo.Path, originalStartLine, originalStartColumn, originalEndLine, originalEndColumn,
+                mappedLineInfo.GetMappedFilePathIfExist(), mappedStartLine, mappedStartColumn, mappedEndLine, mappedEndColumn);
+        }
+
+        public static DiagnosticData Create(Document document, Diagnostic diagnostic)
+        {
+            var location = CreateLocation(document, diagnostic.Location);
+
+            var additionalLocations = diagnostic.AdditionalLocations.Count == 0
+                ? (IReadOnlyCollection<DiagnosticDataLocation>)SpecializedCollections.EmptyArray<DiagnosticDataLocation>()
+                : diagnostic.AdditionalLocations.Where(loc => loc.IsInSource)
+                                                .Select(loc => CreateLocation(document.Project.GetDocument(loc.SourceTree), loc))
+                                                .WhereNotNull()
+                                                .ToReadOnlyCollection();
 
             return new DiagnosticData(
                 diagnostic.Id,
