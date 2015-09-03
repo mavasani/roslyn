@@ -44,6 +44,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             int? levelsToCompute,
             CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (shouldSkip(node, levelsToCompute))
             {
                 return;

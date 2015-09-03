@@ -29,6 +29,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Function
 
         Private Shared Sub ComputeDeclarationsCore(model As SemanticModel, node As SyntaxNode, shouldSkip As Func(Of SyntaxNode, Integer?, Boolean), getSymbol As Boolean, builder As List(Of DeclarationInfo), levelsToCompute As Integer?, cancellationToken As CancellationToken)
+            cancellationToken.ThrowIfCancellationRequested()
+
             If shouldSkip(node, levelsToCompute) Then
                 Return
             End If

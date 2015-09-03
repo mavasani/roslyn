@@ -126,7 +126,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     if (HasActionsForEvent(compilationEvent, actionCounts))
                     {
                         _pooledEventsWithAnyActionsSet.Add(compilationEvent);
-                        analyzerState.OnCompilationEventGenerated_NoLock(compilationEvent, actionCounts);
+                        analyzerState.OnCompilationEventGenerated(compilationEvent, actionCounts);
                     }
                 }
             }
@@ -324,6 +324,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             lock (_gate)
             {
                 UpdateEventsMap_NoLock(compilationEvent, add: false);
+            }
+
+            if (symbolDeclaredEvent != null)
+            {
+                AnalyzerDriver.RemoveCachedDeclaringReferences(symbolDeclaredEvent.Symbol, symbolDeclaredEvent.Compilation);
             }
         }
 

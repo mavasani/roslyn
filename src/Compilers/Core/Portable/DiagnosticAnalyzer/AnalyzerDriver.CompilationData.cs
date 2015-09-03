@@ -24,19 +24,19 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             /// Cached syntax references for a symbol for the lifetime of symbol declared event.
             /// PERF: This cache reduces allocations for computing declaring syntax references for a symbol.
             /// </summary>
-            private readonly ConditionalWeakTable<ISymbol, IReadOnlyCollection<SyntaxReference>> _symbolDeclarationsCache;
+            private readonly Dictionary<ISymbol, ImmutableArray<SyntaxReference>> _symbolDeclarationsMap;
 
             public CompilationData(Compilation comp)
             {
                 _semanticModelsMap = new Dictionary<SyntaxTree, SemanticModel>();
-                _symbolDeclarationsCache = new ConditionalWeakTable<ISymbol, IReadOnlyCollection<SyntaxReference>>();
+                _symbolDeclarationsMap = new Dictionary<ISymbol, ImmutableArray<SyntaxReference>>();
                 this.SuppressMessageAttributeState = new SuppressMessageAttributeState(comp);
                 this.DeclarationAnalysisDataMap = new Dictionary<SyntaxReference, DeclarationAnalysisData>();
             }
 
             public SuppressMessageAttributeState SuppressMessageAttributeState { get; }
             public Dictionary<SyntaxReference, DeclarationAnalysisData> DeclarationAnalysisDataMap { get; }
-            
+
             public SemanticModel GetOrCreateCachedSemanticModel(SyntaxTree tree, Compilation compilation, CancellationToken cancellationToken)
             {
                 SemanticModel model;
@@ -72,7 +72,25 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             public ImmutableArray<SyntaxReference> GetOrCreateCachedDeclaringReferences(ISymbol symbol, Func<ImmutableArray<SyntaxReference>> computeSyntaxReferences)
             {
-                return (ImmutableArray<SyntaxReference>)_symbolDeclarationsCache.GetValue(symbol, _ => computeSyntaxReferences());
+                lock (_symbolDeclarationsMap)
+                {
+                    ImmutableArray<SyntaxReference> declaringReferences;
+                    if (!_symbolDeclarationsMap.TryGetValue(symbol, out declaringReferences))
+                    {
+                        declaringReferences = computeSyntaxReferences();
+                        _symbolDeclarationsMap.Add(symbol, declaringReferences);
+                    }
+
+                    return declaringReferences;
+                }                
+            }
+
+            public bool RemoveCachedDeclaringReferences(ISymbol symbol)
+            {
+                lock (_symbolDeclarationsMap)
+                {
+                    return _symbolDeclarationsMap.Remove(symbol);
+                }
             }
         }
 
@@ -146,6 +164,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             var compilationData = GetCachedCompilationData(compilation);
             return compilationData.GetOrCreateCachedDeclaringReferences(symbol, computeSyntaxReferences);
+        }
+
+        public static bool RemoveCachedDeclaringReferences(ISymbol symbol, Compilation compilation)
+        {
+            CompilationData compilationData;
+            return s_compilationDataCache.TryGetValue(compilation, out compilationData) &&
+                compilationData.RemoveCachedDeclaringReferences(symbol);
         }
     }
 }

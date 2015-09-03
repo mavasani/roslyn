@@ -286,7 +286,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             analyzerExecutor.OnAnalyzerException(innerException, analyzer, diagnostic);
         }
 
-        private void ExecuteSyntaxTreeActions(AnalysisScope analysisScope, AnalysisState analysisStateOpt)
+        private void ExecuteSyntaxTreeActions(AnalysisScope analysisScope, AnalysisState analysisStateOpt, CancellationToken cancellationToken)
         {
             if (analysisScope.IsTreeAnalysis && !analysisScope.IsSyntaxOnlyTreeAnalysis)
             {
@@ -298,6 +298,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 foreach (var analyzer in analysisScope.Analyzers)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     ImmutableArray<SyntaxTreeAnalyzerAction> syntaxTreeActions;
                     if (_syntaxTreeActionsMap.TryGetValue(analyzer, out syntaxTreeActions))
                     {
@@ -504,7 +506,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     cancellationToken.ThrowIfCancellationRequested();
 
                     // Kick off tasks to execute syntax tree actions.
-                    var syntaxTreeActionsTask = Task.Run(() => ExecuteSyntaxTreeActions(analysisScope, analysisStateOpt));
+                    var syntaxTreeActionsTask = Task.Run(() => ExecuteSyntaxTreeActions(analysisScope, analysisStateOpt, cancellationToken));
 
                     // Wait for all worker threads to complete processing events.
                     await Task.WhenAll(workerTasks.Concat(syntaxTreeActionsTask)).ConfigureAwait(false);
@@ -522,7 +524,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     completedEvent = await ProcessCompilationEventsCoreAsync(analysisScope, analysisStateOpt, prePopulatedEventQueue, cancellationToken).ConfigureAwait(false);
 
-                    ExecuteSyntaxTreeActions(analysisScope, analysisStateOpt);
+                    ExecuteSyntaxTreeActions(analysisScope, analysisStateOpt, cancellationToken);
                 }
 
                 // Finally process the compilation completed event, if any.
@@ -545,6 +547,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 while (true)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     if (CompilationEventQueue.Count == 0 &&
                         (prePopulatedEventQueue || CompilationEventQueue.IsCompleted))
                     {
@@ -600,6 +604,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private void ProcessEventCore(CompilationEvent e, AnalysisScope analysisScope, AnalysisState analysisStateOpt, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var symbolEvent = e as SymbolDeclaredCompilationEvent;
             if (symbolEvent != null)
             {
@@ -1056,6 +1062,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 foreach (var decl in symbolEvent.DeclaringSyntaxReferences)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     if (analysisScope.FilterTreeOpt == null || analysisScope.FilterTreeOpt == decl.SyntaxTree)
                     {
                         ExecuteDeclaringReferenceActions(decl, symbolEvent, analysisScope, analysisStateOpt, executeSyntaxNodeActions, executeCodeBlockActions, cancellationToken);
@@ -1064,6 +1072,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
             else if (analysisStateOpt != null)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 analysisStateOpt.MarkDeclarationsComplete(symbolEvent.DeclaringSyntaxReferences, analysisScope.Analyzers);
 
                 foreach (var decl in symbolEvent.DeclaringSyntaxReferences)
@@ -1143,6 +1152,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             AnalysisScope analysisScope,
             CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var declarationAnalysisData = s_declarationAnalysisDataPool.Allocate();
             var builder = declarationAnalysisData.DeclarationsInNode;
 
@@ -1316,6 +1327,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             bool first = true;
             foreach (var declInNode in declarationsInNode)
             {
+                analyzerExecutor.CancellationToken.ThrowIfCancellationRequested();
+
                 if (declInNode.DeclaredNode != declaredNode)
                 {
                     // Might be a field declaration statement with multiple fields declared.

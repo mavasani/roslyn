@@ -128,7 +128,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
             }
         }
 
-
         public async Task<ActionCounts> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer)
         {
             try

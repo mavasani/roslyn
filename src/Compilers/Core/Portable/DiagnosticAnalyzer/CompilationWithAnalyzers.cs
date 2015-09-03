@@ -600,15 +600,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                                 await computeTask.ConfigureAwait(false);
                             }
-                            catch (OperationCanceledException)
+                            catch (OperationCanceledException ex)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                suspendend = cts.IsCancellationRequested;
+                                if (!cts.IsCancellationRequested)
+                                {
+                                    throw ex;
+                                }
+
+                                suspendend = true;
                             }
                             finally
                             {
-                                cts.Dispose();
                                 ClearExecutingTask(computeTask, analysisScope.FilterTreeOpt);
+                                cts.Dispose();
                                 computeTask = null;
                             }
                         }
@@ -841,9 +846,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 // Suspend analysis.
                 cts.Cancel();
-
-                // Wait for cancelled task to cleanup.
-                computeTask.Wait(cts.Token);
             }
         }
 
