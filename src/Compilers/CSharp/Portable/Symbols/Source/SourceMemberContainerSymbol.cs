@@ -802,20 +802,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        public ImmutableArray<SyntaxReference> SyntaxReferences
-        {
-            get
-            {
-                return this.declaration.SyntaxReferences;
-            }
-        }
-
         public override ImmutableArray<SyntaxReference> DeclaringSyntaxReferences
         {
             get
             {
-                return SyntaxReferences;
+                // PERF: Declaring references are cached for compilations with event queue.
+                return this.DeclaringCompilation?.EventQueue != null ?
+                    Diagnostics.AnalyzerDriver.GetOrCreateCachedDeclaringReferences(this, this.DeclaringCompilation, ComputeDeclaringReferencesCore) :
+                    ComputeDeclaringReferencesCore();
             }
+        }
+
+        private ImmutableArray<SyntaxReference> ComputeDeclaringReferencesCore()
+        {
+            return this.declaration.SyntaxReferences;
         }
 
         #endregion
@@ -2014,13 +2014,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return;
             }
 
+            var declaringReferences = this.DeclaringSyntaxReferences;
             SyntaxReference whereFoundField = null;
-            if (this.SyntaxReferences.Length <= 1)
+            if (declaringReferences.Length <= 1)
             {
                 return;
             }
 
-            foreach (var syntaxRef in this.SyntaxReferences)
+            foreach (var syntaxRef in declaringReferences)
             {
                 var syntax = syntaxRef.GetSyntax() as TypeDeclarationSyntax;
                 if (syntax == null)

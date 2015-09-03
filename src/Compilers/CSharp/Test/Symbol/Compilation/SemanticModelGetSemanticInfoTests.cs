@@ -9974,7 +9974,7 @@ namespace N
 
             Assert.False(semanticInfo.IsCompileTimeConstant);
 
-            Assert.False(SyntaxFacts.IsAttributeName(((SourceNamedTypeSymbol)semanticInfo.Symbol).SyntaxReferences.First().GetSyntax()),
+            Assert.False(SyntaxFacts.IsAttributeName(((SourceNamedTypeSymbol)semanticInfo.Symbol).DeclaringSyntaxReferences.First().GetSyntax()),
                 "IsAttributeName can be true only for alias name being qualified");
         }
 
@@ -10011,7 +10011,7 @@ namespace N
 
             Assert.False(semanticInfo.IsCompileTimeConstant);
 
-            Assert.False(SyntaxFacts.IsAttributeName(((SourceNamedTypeSymbol)semanticInfo.Symbol).SyntaxReferences.First().GetSyntax()),
+            Assert.False(SyntaxFacts.IsAttributeName(((SourceNamedTypeSymbol)semanticInfo.Symbol).DeclaringSyntaxReferences.First().GetSyntax()),
                 "IsAttributeName can be true only for alias name being qualified");
         }
 

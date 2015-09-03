@@ -1397,9 +1397,16 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.Symbols
 
         Public NotOverridable Overrides ReadOnly Property DeclaringSyntaxReferences As ImmutableArray(Of SyntaxReference)
             Get
-                Return GetDeclaringSyntaxReferenceHelper(SyntaxReferences)
+                ' PERF: Declaring references are cached for compilations with event queue.
+                Return If(Me.DeclaringCompilation?.EventQueue IsNot Nothing,
+                    Diagnostics.AnalyzerDriver.GetOrCreateCachedDeclaringReferences(Me, Me.DeclaringCompilation, AddressOf ComputeDeclaringReferencesCore),
+                    ComputeDeclaringReferencesCore())
             End Get
         End Property
+
+        Private Function ComputeDeclaringReferencesCore() As ImmutableArray(Of SyntaxReference)
+            Return GetDeclaringSyntaxReferenceHelper(SyntaxReferences)
+        End Function
 #End Region
 
 #Region "Member from Syntax"

@@ -637,7 +637,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 // Execute all analyzer actions.
                 var symbol = symbolEvent.Symbol;
-                var references = GetCachedDeclaringReferences(symbol, symbolEvent.Compilation);
+                var references = symbolEvent.DeclaringSyntaxReferences;
                 if (!AnalysisScope.ShouldSkipSymbolAnalysis(symbolEvent))
                 {
                     ExecuteSymbolActions(symbolEvent, analysisScope, analysisStateOpt, cancellationToken);

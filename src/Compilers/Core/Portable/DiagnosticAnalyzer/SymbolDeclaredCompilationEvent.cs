@@ -15,8 +15,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public SymbolDeclaredCompilationEvent(Compilation compilation, ISymbol symbol) : base(compilation)
         {
             this.Symbol = symbol;
-            this.DeclaringSyntaxReferences = AnalyzerDriver.GetCachedDeclaringReferences(symbol, compilation);
+            this.DeclaringSyntaxReferences = symbol.DeclaringSyntaxReferences;
         }
+
         public SymbolDeclaredCompilationEvent(Compilation compilation, ISymbol symbol, Lazy<SemanticModel> lazySemanticModel) : this(compilation, symbol)
         {
             _lazySemanticModel = lazySemanticModel;

@@ -1147,8 +1147,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
         Private ReadOnly Property ISymbol_DeclaringSyntaxReferences As ImmutableArray(Of SyntaxReference) Implements ISymbol.DeclaringSyntaxReferences
             Get
-                ' Declaring references are cached for compilations with event queue.
-                Return If(Me.DeclaringCompilation.EventQueue IsNot Nothing, AnalyzerDriver.GetCachedDeclaringReferences(Me, Me.DeclaringCompilation), Me.DeclaringSyntaxReferences)
+                Return Me.DeclaringSyntaxReferences
             End Get
         End Property
 

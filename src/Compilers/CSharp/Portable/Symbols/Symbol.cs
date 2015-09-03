@@ -1255,8 +1255,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             get
             {
-                // Declaring references are cached for compilations with event queue.
-                return this.DeclaringCompilation.EventQueue != null ? AnalyzerDriver.GetCachedDeclaringReferences(this, this.DeclaringCompilation) : this.DeclaringSyntaxReferences;
+                return this.DeclaringSyntaxReferences;
             }
         }
 

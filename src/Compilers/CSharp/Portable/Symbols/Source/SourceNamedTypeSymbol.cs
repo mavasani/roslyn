@@ -36,7 +36,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             Location backupLocation = null;
             var unusedDiagnostics = DiagnosticBag.GetInstance();
 
-            foreach (SyntaxReference part in SyntaxReferences)
+            foreach (SyntaxReference part in DeclaringSyntaxReferences)
             {
                 TypeDeclarationSyntax typeBlock = (TypeDeclarationSyntax)part.GetSyntax();
                 BaseListSyntax bases = typeBlock.BaseList;
@@ -126,7 +126,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var typeParameterVarianceKeywords = new string[declaration.Arity];
             var parameterBuilders1 = new List<List<TypeParameterBuilder>>();
 
-            foreach (var syntaxRef in this.SyntaxReferences)
+            foreach (var syntaxRef in this.DeclaringSyntaxReferences)
             {
                 var typeDecl = (CSharpSyntaxNode)syntaxRef.GetSyntax();
                 var syntaxTree = syntaxRef.SyntaxTree;

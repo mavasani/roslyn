@@ -70,9 +70,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 }
             }
 
-            public ImmutableArray<SyntaxReference> GetCachedDeclaringReferences(ISymbol symbol)
+            public ImmutableArray<SyntaxReference> GetOrCreateCachedDeclaringReferences(ISymbol symbol, Func<ImmutableArray<SyntaxReference>> computeSyntaxReferences)
             {
-                return (ImmutableArray<SyntaxReference>)_symbolDeclarationsCache.GetValue(symbol, s => (IReadOnlyCollection<SyntaxReference>)s.DeclaringSyntaxReferences);
+                return (ImmutableArray<SyntaxReference>)_symbolDeclarationsCache.GetValue(symbol, _ => computeSyntaxReferences());
             }
         }
 
@@ -142,10 +142,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 compilationData.RemoveCachedSemanticModel(tree);
         }
 
-        public static ImmutableArray<SyntaxReference> GetCachedDeclaringReferences(ISymbol symbol, Compilation compilation)
+        public static ImmutableArray<SyntaxReference> GetOrCreateCachedDeclaringReferences(ISymbol symbol, Compilation compilation, Func<ImmutableArray<SyntaxReference>> computeSyntaxReferences)
         {
             var compilationData = GetCachedCompilationData(compilation);
-            return compilationData.GetCachedDeclaringReferences(symbol);
+            return compilationData.GetOrCreateCachedDeclaringReferences(symbol, computeSyntaxReferences);
         }
     }
 }
