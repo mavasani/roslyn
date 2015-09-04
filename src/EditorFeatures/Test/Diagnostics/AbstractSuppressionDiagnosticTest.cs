@@ -52,7 +52,7 @@ namespace Microsoft.CodeAnalysis.Editor.UnitTests.Diagnostics
             var fixer = providerAndFixer.Item2;
             foreach (var diagnostic in diagnostics)
             {
-                if (fixer.CanBeSuppressedOrTriaged(diagnostic))
+                if (fixer.CanBeSuppressed(diagnostic))
                 {
                     var fixes = fixer.GetSuppressionsAsync(document, diagnostic.Location.SourceSpan, SpecializedCollections.SingletonEnumerable(diagnostic), CancellationToken.None).Result;
                     if (fixes != null && fixes.Any())

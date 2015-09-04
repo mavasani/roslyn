@@ -73,7 +73,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End If
 
             If hasDisableDirectiveSuppression Then
-                diagnostic = diagnostic.WithWorkflowState(WellKnownWorkflowStates.SuppressedWontFix)
+                diagnostic = diagnostic.WithSuppressionInfo(New DiagnosticSuppressionInfo(DiagnosticSuppressionMode.SourceDirective))
             End If
 
             Return diagnostic.WithReportDiagnostic(report)

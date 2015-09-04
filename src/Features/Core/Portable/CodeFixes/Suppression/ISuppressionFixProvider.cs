@@ -13,7 +13,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
         /// <summary>
         /// Returns true if the given diagnostic can be suppressed or triaged.
         /// </summary>
-        bool CanBeSuppressedOrTriaged(Diagnostic diagnostic);
+        bool CanBeSuppressed(Diagnostic diagnostic);
 
         /// <summary>
         /// Gets one or more suppression or triage fixes for the specified diagnostics represented as a list of <see cref="CodeAction"/>'s.

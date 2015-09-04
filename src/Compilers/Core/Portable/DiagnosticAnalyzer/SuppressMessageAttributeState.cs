@@ -82,13 +82,21 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _localSuppressionsBySymbol = new ConcurrentDictionary<ISymbol, ImmutableDictionary<string, SuppressMessageInfo>>();
         }
 
-        public static bool IsDiagnosticTriaged(Diagnostic diagnostic, Compilation compilation, out SuppressMessageInfo info, ISymbol symbolOpt = null)
+        public static Diagnostic ApplySourceSuppressions(Diagnostic diagnostic, Compilation compilation, ISymbol symbolOpt = null)
         {
             var suppressMessageState = SuppressMessageStateByCompilation.GetValue(compilation, (c) => new SuppressMessageAttributeState(c));
-            return suppressMessageState.IsDiagnosticTriaged(diagnostic, out info, symbolOpt);
+
+            SuppressMessageInfo info;
+            if (suppressMessageState.IsDiagnosticSuppressed(diagnostic, out info))
+            {
+                // Attach the suppression info to the diagnostic.
+                diagnostic = diagnostic.WithSuppressionInfo(new DiagnosticSuppressionInfo(info.SuppressionMode));
+            }
+
+            return diagnostic;
         }
 
-        private bool IsDiagnosticTriaged(Diagnostic diagnostic, out SuppressMessageInfo info, ISymbol symbolOpt = null)
+        private bool IsDiagnosticSuppressed(Diagnostic diagnostic, out SuppressMessageInfo info, ISymbol symbolOpt = null)
         {
             if (symbolOpt != null && IsDiagnosticSuppressed(diagnostic.Id, symbolOpt, out info))
             {
@@ -187,7 +195,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private bool IsDiagnosticLocallySuppressed(string id, ISymbol symbol, out SuppressMessageInfo info)
         {
-            var suppressions = _localSuppressionsBySymbol.GetOrAdd(symbol, this.DecodeSuppressMessageAttributes);
+            var suppressions = _localSuppressionsBySymbol.GetOrAdd(symbol, this.DecodeLocalSuppressMessageAttributes);
             return suppressions.TryGetValue(id, out info);
         }
 
@@ -220,19 +228,19 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private ImmutableDictionary<string, SuppressMessageInfo> DecodeSuppressMessageAttributes(ISymbol symbol)
+        private ImmutableDictionary<string, SuppressMessageInfo> DecodeLocalSuppressMessageAttributes(ISymbol symbol)
         {
             var attributes = symbol.GetAttributes().Where(a => a.AttributeClass == this.SuppressMessageAttribute);
-            return DecodeSuppressMessageAttributes(symbol, attributes);
+            return DecodeLocalSuppressMessageAttributes(symbol, attributes);
         }
 
-        private static ImmutableDictionary<string, SuppressMessageInfo> DecodeSuppressMessageAttributes(ISymbol symbol, IEnumerable<AttributeData> attributes)
+        private static ImmutableDictionary<string, SuppressMessageInfo> DecodeLocalSuppressMessageAttributes(ISymbol symbol, IEnumerable<AttributeData> attributes)
         {
             var builder = ImmutableDictionary.CreateBuilder<string, SuppressMessageInfo>();
             foreach (var attribute in attributes)
             {
                 SuppressMessageInfo info;
-                if (!TryDecodeSuppressMessageAttributeData(attribute, out info))
+                if (!TryDecodeSuppressMessageAttributeData(attribute, out info, isGlobalAttribute: false))
                 {
                     continue;
                 }
@@ -245,10 +253,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private static void AddOrUpdate(SuppressMessageInfo info, IDictionary<string, SuppressMessageInfo> builder)
         {
-            // TODO: How should we deal with multiple SuppressMessage attributes, with different workflow states?
-            // For now, we just pick the last triage attribute, if not suppressed.
+            // TODO: How should we deal with multiple SuppressMessage attributes, with different suppression info/states?
+            // For now, we just pick the last attribute, if not suppressed.
             SuppressMessageInfo currentInfo;
-            if (!builder.TryGetValue(info.Id, out currentInfo) || !currentInfo.IsSuppressed)
+            if (!builder.TryGetValue(info.Id, out currentInfo))
             {
                 builder[info.Id] = info;
             }
@@ -267,7 +275,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             foreach (var instance in attributes)
             {
                 SuppressMessageInfo info;
-                if (!TryDecodeSuppressMessageAttributeData(instance, out info))
+                if (!TryDecodeSuppressMessageAttributeData(instance, out info, isGlobalAttribute: true))
                 {
                     continue;
                 }
@@ -320,7 +328,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private static bool TryDecodeSuppressMessageAttributeData(AttributeData attribute, out SuppressMessageInfo info)
+        private static bool TryDecodeSuppressMessageAttributeData(AttributeData attribute, out SuppressMessageInfo info, bool isGlobalAttribute)
         {
             info = default(SuppressMessageInfo);
 
@@ -350,7 +358,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             info.Scope = attribute.DecodeNamedArgument<string>("Scope", SpecialType.System_String);
             info.Target = attribute.DecodeNamedArgument<string>("Target", SpecialType.System_String);
             info.MessageId = attribute.DecodeNamedArgument<string>("MessageId", SpecialType.System_String);
-            info.WorkflowState = attribute.DecodeNamedArgument<string>("WorkflowState", SpecialType.System_String);
+            info.SuppressionMode = isGlobalAttribute ? DiagnosticSuppressionMode.GlobalSuppressMessageAttribute : DiagnosticSuppressionMode.LocalSuppressMessageAttribute;
 
             return true;
         }

@@ -82,7 +82,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (hasPragmaSuppression)
             {
-                d = d.WithWorkflowState(WellKnownWorkflowStates.SuppressedWontFix);
+                d = d.WithSuppressionInfo(new DiagnosticSuppressionInfo(DiagnosticSuppressionMode.SourceDirective));
             }
 
             return d.WithReportDiagnostic(reportAction);

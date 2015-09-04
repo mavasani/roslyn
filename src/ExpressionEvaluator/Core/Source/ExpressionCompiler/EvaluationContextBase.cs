@@ -124,7 +124,7 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
                 get { throw new NotImplementedException(); }
             }
 
-            public override string WorkflowState
+            public override DiagnosticSuppressionInfo SuppressionInfo
             {
                 get { return null; }
             }
@@ -159,7 +159,7 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
                 throw new NotImplementedException();
             }
 
-            internal override Diagnostic WithWorkflowState(string workflowState)
+            internal override Diagnostic WithSuppressionInfo(DiagnosticSuppressionInfo suppressionInfo)
             {
                 throw new NotImplementedException();
             }

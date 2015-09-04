@@ -71,7 +71,7 @@ namespace Microsoft.CodeAnalysis.Editor.UnitTests.Diagnostics
 
                 foreach (var diagnostic in diagnostics)
                 {
-                    if (!fixer.CanBeSuppressedOrTriaged(diagnostic))
+                    if (!fixer.CanBeSuppressed(diagnostic))
                     {
                         continue;
                     }
@@ -116,7 +116,7 @@ namespace Microsoft.CodeAnalysis.Editor.UnitTests.Diagnostics
                 return fixes.FirstOrDefault(f => f is AbstractSuppressionCodeFixProvider.PragmaWarningCodeAction);
             }
 
-            return fixes.OfType<AbstractSuppressionCodeFixProvider.GlobalSuppressMessageCodeAction>().FirstOrDefault(f => f.IsSuppressionFix_TestOnly);
+            return fixes.OfType<AbstractSuppressionCodeFixProvider.GlobalSuppressMessageCodeAction>().FirstOrDefault();
         }
 
         public bool Equals(Diagnostic x, Diagnostic y)

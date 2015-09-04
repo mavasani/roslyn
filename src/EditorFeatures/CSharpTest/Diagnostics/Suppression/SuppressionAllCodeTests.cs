@@ -40,7 +40,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.Diagnostics.Suppression
                 TestResource.AllInOneCSharpCode,
                 CSharpParseOptions.Default,
                 digInto: n => !(n is StatementSyntax) || n is BlockSyntax,
-                verifier: t => t.IndexOf(AbstractSuppressionCodeFixProvider.DiagnosticTriageAttributeName, StringComparison.Ordinal) >= 0);
+                verifier: t => t.IndexOf("SuppressMessage", StringComparison.Ordinal) >= 0);
         }
     }
 }

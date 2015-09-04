@@ -697,8 +697,8 @@ Do you want to continue?</value>
   <data name="UseTheNavigationBarToSwitchContext" xml:space="preserve">
     <value>You can use the navigation bar to switch context.</value>
   </data>
-  <data name="TriageDiagnostic" xml:space="preserve">
-    <value>as '{0}'</value>
+  <data name="SuppressWithGlobalSuppressMessage" xml:space="preserve">
+    <value>with SuppressMessageAttribute (separate file)</value>
   </data>
   <data name="SuppressionPendingJustification" xml:space="preserve">
     <value>&lt;Pending&gt;</value>

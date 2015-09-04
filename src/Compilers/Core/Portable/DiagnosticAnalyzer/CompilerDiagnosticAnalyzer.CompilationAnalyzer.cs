@@ -88,7 +88,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 public override string Id => _original.Id;
                 public override DiagnosticSeverity Severity => _original.Severity;
-                public override string WorkflowState => _original.WorkflowState;
+                public override DiagnosticSuppressionInfo SuppressionInfo => _original.SuppressionInfo;
                 public override int WarningLevel => _original.WarningLevel;
                 public override Location Location => _original.Location;
                 public override IReadOnlyList<Location> AdditionalLocations => _original.AdditionalLocations;
@@ -124,9 +124,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     return new CompilerDiagnostic(_original.WithSeverity(severity), _properties);
                 }
 
-                internal override Diagnostic WithWorkflowState(string workflowState)
+                internal override Diagnostic WithSuppressionInfo(DiagnosticSuppressionInfo suppressionInfo)
                 {
-                    return new CompilerDiagnostic(_original.WithWorkflowState(workflowState), _properties);
+                    return new CompilerDiagnostic(_original.WithSuppressionInfo(suppressionInfo), _properties);
                 }
             }
         }

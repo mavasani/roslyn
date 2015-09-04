@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using Roslyn.Utilities;
 using System.Globalization;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Microsoft.CodeAnalysis
 {
@@ -18,15 +19,15 @@ namespace Microsoft.CodeAnalysis
     {
         private readonly DiagnosticInfo _info;
         private readonly Location _location;
-        private readonly string _workflowState;
+        private readonly DiagnosticSuppressionInfo _suppressionInfo;
 
-        internal DiagnosticWithInfo(DiagnosticInfo info, Location location, string workflowState = null)
+        internal DiagnosticWithInfo(DiagnosticInfo info, Location location, DiagnosticSuppressionInfo suppressionInfo = null)
         {
             Debug.Assert(info != null);
             Debug.Assert(location != null);
             _info = info;
             _location = location;
-            _workflowState = workflowState;
+            _suppressionInfo = suppressionInfo;
         }
 
         public override Location Location
@@ -81,9 +82,9 @@ namespace Microsoft.CodeAnalysis
             get { return this.Info.DefaultSeverity; }
         }
 
-        public sealed override string WorkflowState
+        public sealed override DiagnosticSuppressionInfo SuppressionInfo
         {
-            get { return this._workflowState; }
+            get { return this._suppressionInfo; }
         }
 
         internal sealed override bool IsEnabledByDefault
@@ -195,7 +196,7 @@ namespace Microsoft.CodeAnalysis
 
             if (location != _location)
             {
-                return new DiagnosticWithInfo(_info, location, _workflowState);
+                return new DiagnosticWithInfo(_info, location, _suppressionInfo);
             }
 
             return this;
@@ -205,17 +206,17 @@ namespace Microsoft.CodeAnalysis
         {
             if (this.Severity != severity)
             {
-                return new DiagnosticWithInfo(this.Info.GetInstanceWithSeverity(severity), _location, _workflowState);
+                return new DiagnosticWithInfo(this.Info.GetInstanceWithSeverity(severity), _location, _suppressionInfo);
             }
 
             return this;
         }
 
-        internal override Diagnostic WithWorkflowState(string workflowState)
+        internal override Diagnostic WithSuppressionInfo(DiagnosticSuppressionInfo suppressioninfo)
         {
-            if (this.WorkflowState != workflowState)
+            if (this.SuppressionInfo != suppressioninfo)
             {
-                return new DiagnosticWithInfo(this.Info, _location, workflowState);
+                return new DiagnosticWithInfo(this.Info, _location, suppressioninfo);
             }
 
             return this;

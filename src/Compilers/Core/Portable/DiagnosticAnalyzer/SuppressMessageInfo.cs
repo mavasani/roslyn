@@ -8,8 +8,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public string Scope;
         public string Target;
         public string MessageId;
-        public string WorkflowState;
-        public bool IsSuppressed => WorkflowState == WellKnownWorkflowStates.SuppressedFalsePositive ||
-            WorkflowState == WellKnownWorkflowStates.SuppressedWontFix;
+        public DiagnosticSuppressionMode SuppressionMode;
     }
 }

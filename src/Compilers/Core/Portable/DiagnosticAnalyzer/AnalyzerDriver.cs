@@ -807,13 +807,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var filteredDiagnostic = compilation.Options.FilterDiagnostic(diagnostic);
             if (filteredDiagnostic != null)
             {
-                SuppressMessageInfo info;
-                if (SuppressMessageAttributeState.IsDiagnosticTriaged(filteredDiagnostic, compilation, out info, symbolOpt: symbolOpt))
-                {
-                    // Attach the workflow state to the diagnostic.
-                    Debug.Assert(info.WorkflowState != null);
-                    filteredDiagnostic = filteredDiagnostic.WithWorkflowState(info.WorkflowState);
-                }
+                filteredDiagnostic = SuppressMessageAttributeState.ApplySourceSuppressions(filteredDiagnostic, compilation, symbolOpt);
             }
 
             return filteredDiagnostic;

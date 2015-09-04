@@ -154,7 +154,7 @@ namespace Microsoft.CodeAnalysis
             IEnumerable<string> customTags = null,
             ImmutableDictionary<string, string> properties = null)
         {
-            return Create(id, category, message, severity, defaultSeverity, isEnabledByDefault, null, warningLevel,
+            return Create(id, category, message, severity, defaultSeverity, isEnabledByDefault, warningLevel, null,
                 title, description, helpLink, location, additionalLocations, customTags, properties);
         }
 
@@ -167,8 +167,8 @@ namespace Microsoft.CodeAnalysis
         /// <param name="severity">The diagnostic's effective severity.</param>
         /// <param name="defaultSeverity">The diagnostic's default severity.</param>
         /// <param name="isEnabledByDefault">True if the diagnostic is enabled by default</param>
-        /// <param name="workflowState">An optional <see cref="WorkflowState"/> associated with the diagnostic.</param>
         /// <param name="warningLevel">The warning level, between 1 and 4 if severity is <see cref="DiagnosticSeverity.Warning"/>; otherwise 0.</param>
+        /// <param name="suppressionInfo">An optional <see cref="DiagnosticSuppressionInfo"/> associated with the diagnostic.</param>
         /// <param name="title">An optional short localizable title describing the diagnostic.</param>
         /// <param name="description">An optional longer localizable description for the diagnostic.</param>
         /// <param name="helpLink">An optional hyperlink that provides more detailed information regarding the diagnostic.</param>
@@ -191,8 +191,8 @@ namespace Microsoft.CodeAnalysis
             DiagnosticSeverity severity,
             DiagnosticSeverity defaultSeverity,
             bool isEnabledByDefault,
-            string workflowState,
             int warningLevel,
+            DiagnosticSuppressionInfo suppressionInfo,
             LocalizableString title = null,
             LocalizableString description = null,
             string helpLink = null,
@@ -217,7 +217,7 @@ namespace Microsoft.CodeAnalysis
             }
 
             return SimpleDiagnostic.Create(id, title ?? string.Empty, category, message, description ?? string.Empty, helpLink ?? string.Empty,
-                severity, defaultSeverity, isEnabledByDefault, warningLevel, location ?? Location.None, additionalLocations, customTags, properties, workflowState);
+                severity, defaultSeverity, isEnabledByDefault, warningLevel, location ?? Location.None, additionalLocations, customTags, properties, suppressionInfo);
         }
 
         internal static Diagnostic Create(CommonMessageProvider messageProvider, int errorCode)
@@ -280,15 +280,14 @@ namespace Microsoft.CodeAnalysis
 
 
         /// <summary>
-        /// Gets an optional WorkflowState associated with the diagnostic.
+        /// Gets an optional <see cref="DiagnosticSuppressionInfo"/> associated with the diagnostics suppressed with source suppressions, i.e <see cref="HasSourceSuppression"/> = 'true'.
         /// </summary>
-        public abstract string WorkflowState { get; }
+        public abstract DiagnosticSuppressionInfo SuppressionInfo { get; }
 
         /// <summary>
         /// Returns true if the diagnostic has a source suppression, i.e. an attribute or a pragma suppression.
         /// </summary>
-        public bool HasSourceSuppression => this.WorkflowState == WellKnownWorkflowStates.SuppressedWontFix ||
-            this.WorkflowState == WellKnownWorkflowStates.SuppressedFalsePositive;
+        public bool HasSourceSuppression => this.SuppressionInfo != null;
 
         /// <summary>
         /// Returns true if this diagnostic is enabled by default by the author of the diagnostic.
@@ -380,9 +379,9 @@ namespace Microsoft.CodeAnalysis
         internal abstract Diagnostic WithSeverity(DiagnosticSeverity severity);
 
         /// <summary>
-        /// Create a new instance of this diagnostic with the WorkflowState changed.
+        /// Create a new instance of this diagnostic with the suppression info changed.
         /// </summary>
-        internal abstract Diagnostic WithWorkflowState(string workflowState);
+        internal abstract Diagnostic WithSuppressionInfo(DiagnosticSuppressionInfo suppressionInfo);
 
         // compatibility
         internal virtual int Code { get { return 0; } }

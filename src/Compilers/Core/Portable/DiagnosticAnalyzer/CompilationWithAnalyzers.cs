@@ -968,12 +968,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     var effectiveDiagnostic = compilation.Options.FilterDiagnostic(diagnostic);
                     if (effectiveDiagnostic != null)
                     {
-                        SuppressMessageInfo info;
-                        if (SuppressMessageAttributeState.IsDiagnosticTriaged(effectiveDiagnostic, compilation, out info))
+                        if (!effectiveDiagnostic.HasSourceSuppression)
                         {
-                            // Attach the workflow state to the diagnostic.
-                            Debug.Assert(info.WorkflowState != null);
-                            effectiveDiagnostic = effectiveDiagnostic.WithWorkflowState(info.WorkflowState);
+                            effectiveDiagnostic = SuppressMessageAttributeState.ApplySourceSuppressions(effectiveDiagnostic, compilation);
                         }
 
                         yield return effectiveDiagnostic;

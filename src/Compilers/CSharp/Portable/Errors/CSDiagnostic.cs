@@ -9,8 +9,8 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// </summary>
     internal sealed class CSDiagnostic : DiagnosticWithInfo
     {
-        internal CSDiagnostic(DiagnosticInfo info, Location location, string workflowState = null)
-            : base(info, location, workflowState)
+        internal CSDiagnostic(DiagnosticInfo info, Location location, DiagnosticSuppressionInfo suppressionInfo = null)
+            : base(info, location, suppressionInfo)
         {
         }
 
@@ -28,7 +28,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (location != this.Location)
             {
-                return new CSDiagnostic(this.Info, location, this.WorkflowState);
+                return new CSDiagnostic(this.Info, location, this.SuppressionInfo);
             }
 
             return this;
@@ -38,17 +38,17 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (this.Severity != severity)
             {
-                return new CSDiagnostic(this.Info.GetInstanceWithSeverity(severity), this.Location, this.WorkflowState);
+                return new CSDiagnostic(this.Info.GetInstanceWithSeverity(severity), this.Location, this.SuppressionInfo);
             }
 
             return this;
         }
 
-        internal override Diagnostic WithWorkflowState(string workflowState)
+        internal override Diagnostic WithSuppressionInfo(DiagnosticSuppressionInfo suppressionInfo)
         {
-            if (this.WorkflowState != workflowState)
+            if (this.SuppressionInfo != suppressionInfo)
             {
-                return new CSDiagnostic(this.Info, this.Location, workflowState);
+                return new CSDiagnostic(this.Info, this.Location, suppressionInfo);
             }
 
             return this;

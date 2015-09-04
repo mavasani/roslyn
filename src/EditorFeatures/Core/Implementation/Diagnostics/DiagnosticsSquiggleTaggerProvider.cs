@@ -101,9 +101,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Diagnostics
 
         private string GetErrorTypeFromDiagnostic(DiagnosticData diagnostic)
         {
-            if (diagnostic.HasSourceSuppression ||
-                diagnostic.WorkflowState == WellKnownWorkflowStates.DeferredTriage ||
-                diagnostic.WorkflowState == WellKnownWorkflowStates.DeferredFix)
+            if (diagnostic.HasSourceSuppression)
             {
                 // Don't squiggle suppressed diagnostics.
                 return null;

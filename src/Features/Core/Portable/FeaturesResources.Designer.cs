@@ -1763,6 +1763,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to with SuppressMessageAttribute (separate file).
+        /// </summary>
+        internal static string SuppressWithGlobalSuppressMessage {
+            get {
+                return ResourceManager.GetString("SuppressWithGlobalSuppressMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to no value..
         /// </summary>
         internal static string TextForSystemVoid {
@@ -1842,15 +1851,6 @@ namespace Microsoft.CodeAnalysis {
         internal static string TriageCodeActionTitleForTriagedDiagnostic {
             get {
                 return ResourceManager.GetString("TriageCodeActionTitleForTriagedDiagnostic", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to as &apos;{0}&apos;.
-        /// </summary>
-        internal static string TriageDiagnostic {
-            get {
-                return ResourceManager.GetString("TriageDiagnostic", resourceCulture);
             }
         }
         
