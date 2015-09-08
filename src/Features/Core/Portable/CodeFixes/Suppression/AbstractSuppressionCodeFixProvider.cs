@@ -141,7 +141,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 nestedActions.Add(new PragmaWarningCodeAction(this, suppressionTargetInfo.StartToken, suppressionTargetInfo.EndToken, suppressionTargetInfo.NodeWithTokens, document, diagnostic));
 
                 if (!onlyPragmaSuppressions)
-                {
+        {
                     // global assembly-level suppress message attribute.
                     nestedActions.Add(new GlobalSuppressMessageCodeAction(this, suppressionTargetInfo.TargetSymbol, document.Project, diagnostic));
                 }
@@ -153,12 +153,12 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
         }
 
         private class SuppressionTargetInfo
-        {
+            {
             public ISymbol TargetSymbol { get; set; }
             public SyntaxToken StartToken { get; set; }
             public SyntaxToken EndToken { get; set; }
             public SyntaxNode NodeWithTokens { get; set; }
-        }
+            }
 
         private async Task<SuppressionTargetInfo> GetSuppressionTargetInfoAsync(Document document, TextSpan span, CancellationToken cancellationToken)
         {
@@ -208,50 +208,51 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
             ISymbol targetSymbol = null;
             var targetMemberNode = syntaxFacts.GetContainingMemberDeclaration(root, startToken.SpanStart);
-            if (targetMemberNode != null)
-            {
-                targetSymbol = semanticModel.GetDeclaredSymbol(targetMemberNode, cancellationToken);
-
-                if (targetSymbol == null)
+                if (targetMemberNode != null)
                 {
-                    var analyzerDriverService = document.GetLanguageService<IAnalyzerDriverService>();
+                    targetSymbol = semanticModel.GetDeclaredSymbol(targetMemberNode, cancellationToken);
 
-                    // targetMemberNode could be a declaration node with multiple decls (e.g. field declaration defining multiple variables).
-                    // Let us compute all the declarations intersecting the span.
-                    var decls = analyzerDriverService.GetDeclarationsInSpan(semanticModel, span, true, cancellationToken);
-                    if (decls.Any())
+                    if (targetSymbol == null)
                     {
-                        var containedDecls = decls.Where(d => span.Contains(d.DeclaredNode.Span));
-                        if (containedDecls.Count() == 1)
+                        var analyzerDriverService = document.GetLanguageService<IAnalyzerDriverService>();
+
+                        // targetMemberNode could be a declaration node with multiple decls (e.g. field declaration defining multiple variables).
+                        // Let us compute all the declarations intersecting the span.
+                        var decls = new List<DeclarationInfo>();
+                        analyzerDriverService.ComputeDeclarationsInSpan(semanticModel, span, true, decls, cancellationToken);
+                        if (decls.Any())
                         {
-                            // Single containing declaration, use this symbol.
-                            var decl = containedDecls.Single();
-                            targetSymbol = decl.DeclaredSymbol;
-                        }
-                        else
-                        {
-                            // Otherwise, use the most enclosing declaration.
-                            TextSpan? minContainingSpan = null;
-                            foreach (var decl in decls)
+                            var containedDecls = decls.Where(d => span.Contains(d.DeclaredNode.Span));
+                            if (containedDecls.Count() == 1)
                             {
-                                var declSpan = decl.DeclaredNode.Span;
-                                if (declSpan.Contains(span) &&
-                                    (!minContainingSpan.HasValue || minContainingSpan.Value.Contains(declSpan)))
+                                // Single containing declaration, use this symbol.
+                                var decl = containedDecls.Single();
+                                targetSymbol = decl.DeclaredSymbol;
+                            }
+                            else
+                            {
+                                // Otherwise, use the most enclosing declaration.
+                                TextSpan? minContainingSpan = null;
+                                foreach (var decl in decls)
                                 {
-                                    minContainingSpan = declSpan;
-                                    targetSymbol = decl.DeclaredSymbol;
+                                    var declSpan = decl.DeclaredNode.Span;
+                                    if (declSpan.Contains(span) &&
+                                        (!minContainingSpan.HasValue || minContainingSpan.Value.Contains(declSpan)))
+                                    {
+                                        minContainingSpan = declSpan;
+                                        targetSymbol = decl.DeclaredSymbol;
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            if (targetSymbol == null)
-            {
-                // Outside of a member declaration, suppress diagnostic for the entire assembly.
-                targetSymbol = semanticModel.Compilation.Assembly;
-            }
+                if (targetSymbol == null)
+                {
+                    // Outside of a member declaration, suppress diagnostic for the entire assembly.
+                    targetSymbol = semanticModel.Compilation.Assembly;
+                }
 
             return new SuppressionTargetInfo() { TargetSymbol = targetSymbol, NodeWithTokens = nodeWithTokens, StartToken = startToken, EndToken = endToken };
         }

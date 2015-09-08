@@ -84,7 +84,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         public static Diagnostic ApplySourceSuppressions(Diagnostic diagnostic, Compilation compilation, ISymbol symbolOpt = null)
         {
-            var suppressMessageState = SuppressMessageStateByCompilation.GetValue(compilation, (c) => new SuppressMessageAttributeState(c));
+            if (diagnostic.HasSourceSuppression)
+            {
+                // Diagnostic already has a source suppression.
+                return diagnostic;
+            }
+
+            var suppressMessageState = AnalyzerDriver.GetCachedCompilationData(compilation).SuppressMessageAttributeState;
 
             SuppressMessageInfo info;
             if (suppressMessageState.IsDiagnosticSuppressed(diagnostic, out info))

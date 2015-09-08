@@ -111,7 +111,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="analyzers">The set of analyzers to include in future analyses.</param>
         /// <param name="analysisOptions">Options to configure analyzer execution.</param>
         public CompilationWithAnalyzers(Compilation compilation, ImmutableArray<DiagnosticAnalyzer> analyzers, CompilationWithAnalyzersOptions analysisOptions)
-            : this (compilation, analyzers, analysisOptions, cancellationToken: CancellationToken.None)
+            : this(compilation, analyzers, analysisOptions, cancellationToken: CancellationToken.None)
         {
         }
 
@@ -486,7 +486,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 // Below invocation will force GetDiagnostics on the model's tree to generate compilation events.
                 Action generateCompilationEvents = () =>
-                    _analysisState.GetOrCreateCachedSemanticModel(model.SyntaxTree, _compilation, cancellationToken);
+                    AnalyzerDriver.GetOrCreateCachedSemanticModel(model.SyntaxTree, _compilation, cancellationToken);
 
                 Func<AsyncQueue<CompilationEvent>> getEventQueue = () => GetPendingEvents(analyzers, model.SyntaxTree);
 
@@ -495,7 +495,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 do
                 {
                     await ComputeAnalyzerDiagnosticsAsync(analysisScope, generateCompilationEvents, getEventQueue, taskToken, cancellationToken).ConfigureAwait(false);
-                } while (_analysisState.HasPendingSymbolAnalysis(analysisScope));
+                } while (_analysisOptions.ConcurrentAnalysis && _analysisState.HasPendingSymbolAnalysis(analysisScope));
 
                 // Return computed analyzer diagnostics for the given analysis scope.
                 return _analysisResult.GetDiagnostics(analysisScope, getLocalDiagnostics: true, getNonLocalDiagnostics: false);
@@ -584,15 +584,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                                 await computeTask.ConfigureAwait(false);
                             }
-                            catch (OperationCanceledException)
+                            catch (OperationCanceledException ex)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                suspendend = cts.IsCancellationRequested;
+                                if (!cts.IsCancellationRequested)
+                                {
+                                    throw ex;
+                                }
+
+                                suspendend = true;
                             }
                             finally
                             {
-                                cts.Dispose();
                                 ClearExecutingTask(computeTask, analysisScope.FilterTreeOpt);
+                                cts.Dispose();
                                 computeTask = null;
                             }
                         }
@@ -687,7 +692,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     }
                 }
             }
-            catch (Exception e) when(FatalError.ReportUnlessCanceled(e))
+            catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
                 throw ExceptionUtilities.Unreachable;
             }
@@ -813,7 +818,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     await executingTreeTask.Item1.ConfigureAwait(false);
                 }
             }
-            catch (Exception e) when(FatalError.ReportUnlessCanceled(e))
+            catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
                 throw ExceptionUtilities.Unreachable;
             }
@@ -825,9 +830,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 // Suspend analysis.
                 cts.Cancel();
-
-                // Wait for cancelled task to cleanup.
-                computeTask.Wait(cts.Token);
             }
         }
 
@@ -968,11 +970,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     var effectiveDiagnostic = compilation.Options.FilterDiagnostic(diagnostic);
                     if (effectiveDiagnostic != null)
                     {
-                        if (!effectiveDiagnostic.HasSourceSuppression)
-                        {
-                            effectiveDiagnostic = SuppressMessageAttributeState.ApplySourceSuppressions(effectiveDiagnostic, compilation);
-                        }
-
+                        effectiveDiagnostic = SuppressMessageAttributeState.ApplySourceSuppressions(effectiveDiagnostic, compilation);
                         yield return effectiveDiagnostic;
                     }
                 }
