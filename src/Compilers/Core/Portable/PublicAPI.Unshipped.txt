@@ -5,7 +5,6 @@ Microsoft.CodeAnalysis.Compilation.GetSubmissionResultType(out bool hasValue) ->
 Microsoft.CodeAnalysis.Compilation.PreviousSubmission.get -> Microsoft.CodeAnalysis.Compilation
 Microsoft.CodeAnalysis.Compilation.ScriptClass.get -> Microsoft.CodeAnalysis.INamedTypeSymbol
 Microsoft.CodeAnalysis.Compilation.WithPreviousSubmission(Microsoft.CodeAnalysis.Compilation newPreviousSubmission) -> Microsoft.CodeAnalysis.Compilation
-Microsoft.CodeAnalysis.Diagnostic.HasSourceSuppression.get -> bool
 Microsoft.CodeAnalysis.DiagnosticDescriptor.GetEffectiveSeverity(Microsoft.CodeAnalysis.CompilationOptions compilationOptions) -> Microsoft.CodeAnalysis.ReportDiagnostic
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.AnalysisOptions.get -> Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzersOptions
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.Analyzers.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostics.DiagnosticAnalyzer>

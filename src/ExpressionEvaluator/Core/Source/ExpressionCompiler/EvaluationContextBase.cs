@@ -119,6 +119,11 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
                 get { return DiagnosticSeverity.Error; }
             }
 
+            public override bool HasSourceSuppression
+            {
+                get { return false; }
+            }
+
             public override int WarningLevel
             {
                 get { throw new NotImplementedException(); }
