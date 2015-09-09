@@ -100,10 +100,11 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.Suppression
         protected override SyntaxNode AddGlobalSuppressMessageAttribute(SyntaxNode newRoot, ISymbol targetSymbol, Diagnostic diagnostic)
         {
             var compilationRoot = (CompilationUnitSyntax)newRoot;
-            var leadingTriviaForAttributeList = !compilationRoot.AttributeLists.Any() ?
+            var isFirst = !compilationRoot.AttributeLists.Any();
+            var leadingTriviaForAttributeList = isFirst ?
                 SyntaxFactory.TriviaList(SyntaxFactory.Comment(GlobalSuppressionsFileHeaderComment)) :
                 default(SyntaxTriviaList);
-            var attributeList = CreateAttributeList(targetSymbol, diagnostic, leadingTrivia: leadingTriviaForAttributeList, needsLeadingEndOfLine: false);
+            var attributeList = CreateAttributeList(targetSymbol, diagnostic, leadingTrivia: leadingTriviaForAttributeList, needsLeadingEndOfLine: !isFirst);
             return compilationRoot.AddAttributeLists(attributeList);
         }
 

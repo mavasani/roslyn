@@ -19,11 +19,10 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
     {
         private class SuppressionFixAllProvider : FixAllProvider
         {
-            private readonly AbstractSuppressionCodeFixProvider _suppressionFixProvider;
+            public static readonly SuppressionFixAllProvider Instance = new SuppressionFixAllProvider();
 
-            internal SuppressionFixAllProvider(AbstractSuppressionCodeFixProvider suppressionFixProvider)
+            private SuppressionFixAllProvider()
             {
-                _suppressionFixProvider = suppressionFixProvider;
             }
 
             public async override Task<CodeAction> GetFixAsync(FixAllContext fixAllContext)

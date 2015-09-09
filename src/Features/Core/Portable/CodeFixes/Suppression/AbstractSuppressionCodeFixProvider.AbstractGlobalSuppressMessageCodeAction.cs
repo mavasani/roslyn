@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -33,16 +34,12 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
             }
 
             protected abstract Task<Document> GetChangedSuppressionDocumentAsync(CancellationToken cancellationToken);
+            public override bool SupportsFixAllOccurrences => true;
 
             protected async Task<Document> GetOrCreateSuppressionsDocumentAsync(CancellationToken c)
             {
                 int index = 1;
                 var suppressionsFileName = s_globalSuppressionsFileName + Fixer.DefaultFileExtension;
-                if (_project.Documents.Any(d => d.Name == suppressionsFileName))
-                {
-                    index++;
-                    suppressionsFileName = s_globalSuppressionsFileName + index.ToString() + Fixer.DefaultFileExtension;
-                }
 
                 Document suppressionsDoc = null;
                 while (suppressionsDoc == null)

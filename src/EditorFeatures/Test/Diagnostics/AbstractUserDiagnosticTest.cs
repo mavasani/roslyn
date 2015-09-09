@@ -367,7 +367,7 @@ namespace Microsoft.CodeAnalysis.Editor.UnitTests.Diagnostics
                 var suppressionAction = actions.Single() as SuppressionCodeAction;
                 if (suppressionAction != null)
                 {
-                    actions = suppressionAction.NestedActions.ToList();
+                    actions = suppressionAction.NestedActions.ToList<CodeAction>();
                 }
             }
 

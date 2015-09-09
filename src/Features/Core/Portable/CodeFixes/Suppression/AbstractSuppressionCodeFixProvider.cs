@@ -17,8 +17,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 {
     internal abstract partial class AbstractSuppressionCodeFixProvider : ISuppressionFixProvider
     {
-        public const string SuppressMessageAttributeFullName = "System.Diagnostics.CodeAnalysis.SuppressMessageAttribute";
-        public const string SuppressMessageAttributeName = "SuppressMessageAttribute";
+        public const string SuppressMessageAttributeName = "System.Diagnostics.CodeAnalysis.SuppressMessageAttribute";
         private static readonly string s_globalSuppressionsFileName = "GlobalSuppressions";
         private static readonly string s_suppressionsFileCommentTemplate =
 @"
@@ -28,11 +27,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 {0} a specific target and scoped to a namespace, type, member, etc.
 
 ";
-        private readonly SuppressionFixAllProvider _fixAllProvider;
-
         protected AbstractSuppressionCodeFixProvider()
         {
-            _fixAllProvider = new SuppressionFixAllProvider(this);
         }
 
         private static bool IsNotConfigurableDiagnostic(Diagnostic diagnostic)
@@ -47,7 +43,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
         public FixAllProvider GetFixAllProvider()
         {
-            return _fixAllProvider;
+            return SuppressionFixAllProvider.Instance;
         }
 
         public bool CanBeSuppressed(Diagnostic diagnostic)
@@ -108,16 +104,16 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
         public Task<IEnumerable<CodeFix>> GetSuppressionsAsync(Document document, TextSpan span, IEnumerable<Diagnostic> diagnostics, CancellationToken cancellationToken)
         {
-            return GetSuppressionsAsync(document, span, diagnostics, onlyPragmaSuppressions: false, cancellationToken: cancellationToken);
+            return GetSuppressionsAsync(document, span, diagnostics, skipSuppressMessage: false, cancellationToken: cancellationToken);
         }
 
         internal async Task<IEnumerable<PragmaWarningCodeAction>> GetPragmaSuppressionsAsync(Document document, TextSpan span, IEnumerable<Diagnostic> diagnostics, CancellationToken cancellationToken)
         {
-            var codeFixes = await GetSuppressionsAsync(document, span, diagnostics, onlyPragmaSuppressions: true, cancellationToken: cancellationToken).ConfigureAwait(false);
-            return codeFixes.Select(fix => (PragmaWarningCodeAction)fix.Action);
+            var codeFixes = await GetSuppressionsAsync(document, span, diagnostics, skipSuppressMessage: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return codeFixes.SelectMany(fix => ((SuppressionCodeAction)fix.Action).NestedActions).Cast<PragmaWarningCodeAction>();
         }
 
-        private async Task<IEnumerable<CodeFix>> GetSuppressionsAsync(Document document, TextSpan span, IEnumerable<Diagnostic> diagnostics, bool onlyPragmaSuppressions, CancellationToken cancellationToken)
+        private async Task<IEnumerable<CodeFix>> GetSuppressionsAsync(Document document, TextSpan span, IEnumerable<Diagnostic> diagnostics, bool skipSuppressMessage, CancellationToken cancellationToken)
         {
             // We only care about diagnostics that can be suppressed.
             diagnostics = diagnostics.Where(CanBeSuppressed);
@@ -132,16 +128,24 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 return SpecializedCollections.EmptyEnumerable<CodeFix>();
             }
 
+            if (!skipSuppressMessage)
+            {
+                var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+                var suppressMessageAttribute = semanticModel.Compilation.SuppressMessageAttributeType();
+                skipSuppressMessage = suppressMessageAttribute == null || !suppressMessageAttribute.IsAttribute();
+            }
+
             var result = new List<CodeFix>();
             foreach (var diagnostic in diagnostics)
             {
-                var nestedActions = new List<CodeAction>();
+                var nestedActions = new List<NestedSuppressionCodeAction>();
 
                 // pragma warning disable.
                 nestedActions.Add(new PragmaWarningCodeAction(this, suppressionTargetInfo.StartToken, suppressionTargetInfo.EndToken, suppressionTargetInfo.NodeWithTokens, document, diagnostic));
 
-                if (!onlyPragmaSuppressions)
-        {
+                // SuppressMessageAttribute suppression is not supported for compiler diagnostics.
+                if (!skipSuppressMessage && !IsCompilerDiagnostic(diagnostic))
+                {
                     // global assembly-level suppress message attribute.
                     nestedActions.Add(new GlobalSuppressMessageCodeAction(this, suppressionTargetInfo.TargetSymbol, document.Project, diagnostic));
                 }
@@ -153,12 +157,12 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
         }
 
         private class SuppressionTargetInfo
-            {
+        {
             public ISymbol TargetSymbol { get; set; }
             public SyntaxToken StartToken { get; set; }
             public SyntaxToken EndToken { get; set; }
             public SyntaxNode NodeWithTokens { get; set; }
-            }
+        }
 
         private async Task<SuppressionTargetInfo> GetSuppressionTargetInfoAsync(Document document, TextSpan span, CancellationToken cancellationToken)
         {
@@ -208,51 +212,51 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
             ISymbol targetSymbol = null;
             var targetMemberNode = syntaxFacts.GetContainingMemberDeclaration(root, startToken.SpanStart);
-                if (targetMemberNode != null)
+            if (targetMemberNode != null)
+            {
+                targetSymbol = semanticModel.GetDeclaredSymbol(targetMemberNode, cancellationToken);
+
+                if (targetSymbol == null)
                 {
-                    targetSymbol = semanticModel.GetDeclaredSymbol(targetMemberNode, cancellationToken);
+                    var analyzerDriverService = document.GetLanguageService<IAnalyzerDriverService>();
 
-                    if (targetSymbol == null)
+                    // targetMemberNode could be a declaration node with multiple decls (e.g. field declaration defining multiple variables).
+                    // Let us compute all the declarations intersecting the span.
+                    var decls = new List<DeclarationInfo>();
+                    analyzerDriverService.ComputeDeclarationsInSpan(semanticModel, span, true, decls, cancellationToken);
+                    if (decls.Any())
                     {
-                        var analyzerDriverService = document.GetLanguageService<IAnalyzerDriverService>();
-
-                        // targetMemberNode could be a declaration node with multiple decls (e.g. field declaration defining multiple variables).
-                        // Let us compute all the declarations intersecting the span.
-                        var decls = new List<DeclarationInfo>();
-                        analyzerDriverService.ComputeDeclarationsInSpan(semanticModel, span, true, decls, cancellationToken);
-                        if (decls.Any())
+                        var containedDecls = decls.Where(d => span.Contains(d.DeclaredNode.Span));
+                        if (containedDecls.Count() == 1)
                         {
-                            var containedDecls = decls.Where(d => span.Contains(d.DeclaredNode.Span));
-                            if (containedDecls.Count() == 1)
+                            // Single containing declaration, use this symbol.
+                            var decl = containedDecls.Single();
+                            targetSymbol = decl.DeclaredSymbol;
+                        }
+                        else
+                        {
+                            // Otherwise, use the most enclosing declaration.
+                            TextSpan? minContainingSpan = null;
+                            foreach (var decl in decls)
                             {
-                                // Single containing declaration, use this symbol.
-                                var decl = containedDecls.Single();
-                                targetSymbol = decl.DeclaredSymbol;
-                            }
-                            else
-                            {
-                                // Otherwise, use the most enclosing declaration.
-                                TextSpan? minContainingSpan = null;
-                                foreach (var decl in decls)
+                                var declSpan = decl.DeclaredNode.Span;
+                                if (declSpan.Contains(span) &&
+                                    (!minContainingSpan.HasValue || minContainingSpan.Value.Contains(declSpan)))
                                 {
-                                    var declSpan = decl.DeclaredNode.Span;
-                                    if (declSpan.Contains(span) &&
-                                        (!minContainingSpan.HasValue || minContainingSpan.Value.Contains(declSpan)))
-                                    {
-                                        minContainingSpan = declSpan;
-                                        targetSymbol = decl.DeclaredSymbol;
-                                    }
+                                    minContainingSpan = declSpan;
+                                    targetSymbol = decl.DeclaredSymbol;
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                if (targetSymbol == null)
-                {
-                    // Outside of a member declaration, suppress diagnostic for the entire assembly.
-                    targetSymbol = semanticModel.Compilation.Assembly;
-                }
+            if (targetSymbol == null)
+            {
+                // Outside of a member declaration, suppress diagnostic for the entire assembly.
+                targetSymbol = semanticModel.Compilation.Assembly;
+            }
 
             return new SuppressionTargetInfo() { TargetSymbol = targetSymbol, NodeWithTokens = nodeWithTokens, StartToken = startToken, EndToken = endToken };
         }

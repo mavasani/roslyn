@@ -27,17 +27,11 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 foreach (var grouping in diagnosticsByDocument.GroupBy(d => d.Key.Project))
                 {
                     var oldProject = grouping.Key;
-                    var diagnosticsMap = await CreateDiagnosticsMapAsync(fixer, triggerDocument, diagnosticsByDocument, cancellationToken).ConfigureAwait(false);
-                    var projectCodeAction = new GlobalSuppressMessageFixAllCodeAction(fixer, diagnosticsMap, oldProject);
-                    var newDocument = await projectCodeAction.GetChangedSuppressionDocumentAsync(cancellationToken).ConfigureAwait(false);
-                    var newText = await newDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
-
                     var currentProject = currentSolution.GetProject(oldProject.Id);
-                    var newProject = currentProject.ContainsDocument(newDocument.Id) ?
-                        currentProject.GetDocument(newDocument.Id).WithText(newText).Project :
-                        currentProject.AddDocument(newDocument.Name, newText, newDocument.Folders, newDocument.FilePath).Project;
-
-                    currentSolution = newProject.Solution;
+                    var diagnosticsMap = await CreateDiagnosticsMapAsync(fixer, grouping, cancellationToken).ConfigureAwait(false);
+                    var projectCodeAction = new GlobalSuppressMessageFixAllCodeAction(fixer, diagnosticsMap, currentProject);
+                    var newDocument = await projectCodeAction.GetChangedSuppressionDocumentAsync(cancellationToken).ConfigureAwait(false);
+                    currentSolution = newDocument.Project.Solution;
                 }
 
                 return currentSolution;
@@ -49,17 +43,11 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 foreach (var kvp in diagnosticsByProject)
                 {
                     var oldProject = kvp.Key;
-                    var diagnosticsMap = await CreateDiagnosticsMapAsync(fixer, oldProject, kvp.Value, cancellationToken).ConfigureAwait(false);
-                    var projectCodeAction = new GlobalSuppressMessageFixAllCodeAction(fixer, diagnosticsMap, oldProject);
-                    var newDocument = await projectCodeAction.GetChangedSuppressionDocumentAsync(cancellationToken).ConfigureAwait(false);
-                    var newText = await newDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
-
                     var currentProject = currentSolution.GetProject(oldProject.Id);
-                    var newProject = currentProject.ContainsDocument(newDocument.Id) ?
-                        currentProject.GetDocument(newDocument.Id).WithText(newText).Project :
-                        currentProject.AddDocument(newDocument.Name, newText, newDocument.Folders, newDocument.FilePath).Project;
-
-                    currentSolution = newProject.Solution;
+                    var diagnosticsMap = await CreateDiagnosticsMapAsync(fixer, oldProject, kvp.Value, cancellationToken).ConfigureAwait(false);
+                    var projectCodeAction = new GlobalSuppressMessageFixAllCodeAction(fixer, diagnosticsMap, currentProject);
+                    var newDocument = await projectCodeAction.GetChangedSuppressionDocumentAsync(cancellationToken).ConfigureAwait(false);
+                    currentSolution = newDocument.Project.Solution;
                 }
 
                 return currentSolution;
@@ -72,8 +60,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
             {
                 var suppressionsDoc = await GetOrCreateSuppressionsDocumentAsync(cancellationToken).ConfigureAwait(false);
                 var suppressionsRoot = await suppressionsDoc.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-                var semanticModel = await suppressionsDoc.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-
+                
                 foreach (var kvp in _diagnosticsBySymbol)
                 {
                     var targetSymbol = kvp.Key;
@@ -81,14 +68,17 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
                     foreach (var diagnostic in diagnostics)
                     {
-                        suppressionsRoot = Fixer.AddGlobalSuppressMessageAttribute(suppressionsRoot, targetSymbol, diagnostic);
+                        if (!diagnostic.HasSourceSuppression)
+                        {
+                            suppressionsRoot = Fixer.AddGlobalSuppressMessageAttribute(suppressionsRoot, targetSymbol, diagnostic);
+                        }
                     }
                 }
 
                 return suppressionsDoc.WithSyntaxRoot(suppressionsRoot);
             }
 
-            private static async Task<ImmutableDictionary<ISymbol, ImmutableArray<Diagnostic>>> CreateDiagnosticsMapAsync(AbstractSuppressionCodeFixProvider fixer, Document triggerDocument, IEnumerable<KeyValuePair<Document, ImmutableArray<Diagnostic>>> diagnosticsByDocument, CancellationToken cancellationToken)
+            private static async Task<ImmutableDictionary<ISymbol, ImmutableArray<Diagnostic>>> CreateDiagnosticsMapAsync(AbstractSuppressionCodeFixProvider fixer, IEnumerable<KeyValuePair<Document, ImmutableArray<Diagnostic>>> diagnosticsByDocument, CancellationToken cancellationToken)
             {
                 var diagnosticsMapBuilder = ImmutableDictionary.CreateBuilder<ISymbol, List<Diagnostic>>();
                 foreach (var kvp in diagnosticsByDocument)
