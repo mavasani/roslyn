@@ -88,12 +88,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 public override string Id => _original.Id;
                 public override DiagnosticSeverity Severity => _original.Severity;
-                public override DiagnosticSuppressionInfo SuppressionInfo => _original.SuppressionInfo;
                 public override int WarningLevel => _original.WarningLevel;
                 public override Location Location => _original.Location;
                 public override IReadOnlyList<Location> AdditionalLocations => _original.AdditionalLocations;
+                public override bool HasSourceSuppression => _original.HasSourceSuppression;
                 public override ImmutableDictionary<string, string> Properties => _properties;
-
+                
                 public override string GetMessage(IFormatProvider formatProvider = null)
                 {
                     return _original.GetMessage(formatProvider);
@@ -124,9 +124,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     return new CompilerDiagnostic(_original.WithSeverity(severity), _properties);
                 }
 
-                internal override Diagnostic WithSuppressionInfo(DiagnosticSuppressionInfo suppressionInfo)
+                internal override Diagnostic WithHasSourceSuppression(bool hasSourceSuppression)
                 {
-                    return new CompilerDiagnostic(_original.WithSuppressionInfo(suppressionInfo), _properties);
+                    return new CompilerDiagnostic(_original.WithHasSourceSuppression(hasSourceSuppression), _properties);
                 }
             }
         }

@@ -96,7 +96,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             if (suppressMessageState.IsDiagnosticSuppressed(diagnostic, out info))
             {
                 // Attach the suppression info to the diagnostic.
-                diagnostic = diagnostic.WithSuppressionInfo(new DiagnosticSuppressionInfo(info.SuppressionMode));
+                diagnostic = diagnostic.WithHasSourceSuppression(true);
             }
 
             return diagnostic;
@@ -246,7 +246,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             foreach (var attribute in attributes)
             {
                 SuppressMessageInfo info;
-                if (!TryDecodeSuppressMessageAttributeData(attribute, out info, isGlobalAttribute: false))
+                if (!TryDecodeSuppressMessageAttributeData(attribute, out info))
                 {
                     continue;
                 }
@@ -281,7 +281,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             foreach (var instance in attributes)
             {
                 SuppressMessageInfo info;
-                if (!TryDecodeSuppressMessageAttributeData(instance, out info, isGlobalAttribute: true))
+                if (!TryDecodeSuppressMessageAttributeData(instance, out info))
                 {
                     continue;
                 }
@@ -334,7 +334,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private static bool TryDecodeSuppressMessageAttributeData(AttributeData attribute, out SuppressMessageInfo info, bool isGlobalAttribute)
+        private static bool TryDecodeSuppressMessageAttributeData(AttributeData attribute, out SuppressMessageInfo info)
         {
             info = default(SuppressMessageInfo);
 
@@ -364,7 +364,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             info.Scope = attribute.DecodeNamedArgument<string>("Scope", SpecialType.System_String);
             info.Target = attribute.DecodeNamedArgument<string>("Target", SpecialType.System_String);
             info.MessageId = attribute.DecodeNamedArgument<string>("MessageId", SpecialType.System_String);
-            info.SuppressionMode = isGlobalAttribute ? DiagnosticSuppressionMode.GlobalSuppressMessageAttribute : DiagnosticSuppressionMode.LocalSuppressMessageAttribute;
 
             return true;
         }

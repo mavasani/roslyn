@@ -124,11 +124,6 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
                 get { throw new NotImplementedException(); }
             }
 
-            public override DiagnosticSuppressionInfo SuppressionInfo
-            {
-                get { return null; }
-            }
-
             public override bool Equals(Diagnostic obj)
             {
                 throw new NotImplementedException();
@@ -159,7 +154,7 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
                 throw new NotImplementedException();
             }
 
-            internal override Diagnostic WithSuppressionInfo(DiagnosticSuppressionInfo suppressionInfo)
+            internal override Diagnostic WithHasSourceSuppression(bool hasSourceSuppression)
             {
                 throw new NotImplementedException();
             }

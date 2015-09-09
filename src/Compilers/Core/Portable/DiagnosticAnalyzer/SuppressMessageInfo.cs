@@ -8,6 +8,5 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public string Scope;
         public string Target;
         public string MessageId;
-        public DiagnosticSuppressionMode SuppressionMode;
     }
 }

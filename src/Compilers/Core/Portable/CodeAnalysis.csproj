@@ -53,8 +53,6 @@
     <Compile Include="CaseInsensitiveComparison.cs" />
     <Compile Include="DiagnosticAnalyzer\AnalyzerDriver.CompilationData.cs" />
     <Compile Include="DiagnosticAnalyzer\SuppressMessageInfo.cs" />
-    <Compile Include="Diagnostic\DiagnosticSuppressionInfo.cs" />
-    <Compile Include="Diagnostic\DiagnosticSuppressionMode.cs" />
     <Compile Include="UnicodeCharacterUtilities.cs" />
     <Compile Include="CodeAnalysisResources.Designer.cs">
       <AutoGen>True</AutoGen>

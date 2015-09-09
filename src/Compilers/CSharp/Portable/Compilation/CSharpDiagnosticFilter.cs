@@ -82,7 +82,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (hasPragmaSuppression)
             {
-                d = d.WithSuppressionInfo(new DiagnosticSuppressionInfo(DiagnosticSuppressionMode.SourceDirective));
+                d = d.WithHasSourceSuppression(true);
             }
 
             return d.WithReportDiagnostic(reportAction);

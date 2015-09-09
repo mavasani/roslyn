@@ -73,7 +73,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End If
 
             If hasDisableDirectiveSuppression Then
-                diagnostic = diagnostic.WithSuppressionInfo(New DiagnosticSuppressionInfo(DiagnosticSuppressionMode.SourceDirective))
+                diagnostic = diagnostic.WithHasSourceSuppression(True)
             End If
 
             Return diagnostic.WithReportDiagnostic(report)
