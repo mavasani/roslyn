@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -289,6 +290,14 @@ namespace Microsoft.CodeAnalysis
         /// appeared by itself somewhere within the scope that encloses "position".</remarks>
         protected abstract IAliasSymbol GetSpeculativeAliasInfoCore(int position, SyntaxNode nameSyntax, SpeculativeBindingOption bindingOption);
 
+        private void VerifySpanForGetDiagnostics(TextSpan? span)
+        {
+            if (span.HasValue && !this.SyntaxTree.GetRoot().FullSpan.Contains(span.Value))
+            {
+                throw new ArgumentException(nameof(span));
+            }
+        }
+
         /// <summary>
         /// Get all of the syntax errors within the syntax tree associated with this
         /// object. Does not get errors involving declarations or compiling method bodies or initializers.
@@ -297,7 +306,19 @@ namespace Microsoft.CodeAnalysis
         /// If no argument is specified, then diagnostics for the entire tree are returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the
         /// process of obtaining the diagnostics.</param>
-        public abstract ImmutableArray<Diagnostic> GetSyntaxDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken));
+        public ImmutableArray<Diagnostic> GetSyntaxDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            VerifySpanForGetDiagnostics(span);
+
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Parse, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        internal ImmutableArray<Diagnostic> GetSyntaxDiagnosticsIncludingSuppressions(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Parse, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: true, cancellationToken: cancellationToken);
+        }
 
         /// <summary>
         /// Get all of the declaration errors within the syntax tree associated with this
@@ -311,7 +332,19 @@ namespace Microsoft.CodeAnalysis
         /// is called, all declarations are analyzed for diagnostics. Calling this a second time
         /// will return the cached diagnostics.
         /// </remarks>
-        public abstract ImmutableArray<Diagnostic> GetDeclarationDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken));
+        public ImmutableArray<Diagnostic> GetDeclarationDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            VerifySpanForGetDiagnostics(span);
+
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Declare, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        internal ImmutableArray<Diagnostic> GetDeclarationDiagnosticsIncludingSuppressions(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Declare, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: true, cancellationToken: cancellationToken);
+        }
 
         /// <summary>
         /// Get all of the method body and initializer errors within the syntax tree associated with this
@@ -325,7 +358,19 @@ namespace Microsoft.CodeAnalysis
         /// is called, all method bodies are analyzed for diagnostics. Calling this a second time
         /// will repeat this work.
         /// </remarks>
-        public abstract ImmutableArray<Diagnostic> GetMethodBodyDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken));
+        public ImmutableArray<Diagnostic> GetMethodBodyDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            VerifySpanForGetDiagnostics(span);
+
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Compile, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        internal ImmutableArray<Diagnostic> GetMethodBodyDiagnosticsIncludingSuppressions(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Compile, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: true, cancellationToken:cancellationToken);
+        }
 
         /// <summary>
         /// Get all the errors within the syntax tree associated with this object. Includes errors
@@ -342,7 +387,19 @@ namespace Microsoft.CodeAnalysis
         /// GetDeclarationDiagnostics, diagnostics for method bodies and initializers are not
         /// cached, any semantic information used to obtain the diagnostics is discarded.
         /// </remarks>
-        public abstract ImmutableArray<Diagnostic> GetDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken));
+        public ImmutableArray<Diagnostic> GetDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            VerifySpanForGetDiagnostics(span);
+
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Compile, this.SyntaxTree, span, includeEarlierStages: true, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        internal ImmutableArray<Diagnostic> GetDiagnosticsIncludingSuppressions(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Compile, this.SyntaxTree, span, includeEarlierStages: true, includeDiagnosticsWithSourceSuppression: true, cancellationToken: cancellationToken);
+        }
 
         /// <summary>
         /// Gets the symbol associated with a declaration syntax node.

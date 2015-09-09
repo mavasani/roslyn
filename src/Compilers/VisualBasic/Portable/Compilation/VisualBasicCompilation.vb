@@ -1869,46 +1869,6 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
 
         ''' <summary>
-        ''' Get all diagnostics for the entire compilation. This includes diagnostics from parsing, declarations, and
-        ''' the bodies of methods. Getting all the diagnostics is potentially a length operations, as it requires parsing and
-        ''' compiling all the code. The set of diagnostics is not caches, so each call to this method will recompile all
-        ''' methods.
-        ''' </summary>
-        ''' <param name="cancellationToken">Cancellation token to allow cancelling the operation.</param>
-        Public Overrides Function GetDiagnostics(Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
-            Return GetDiagnostics(DefaultDiagnosticsStage, True, cancellationToken)
-        End Function
-
-        ''' <summary>
-        ''' Get parse diagnostics for the entire compilation. This includes diagnostics from parsing BUT NOT from declarations and
-        ''' the bodies of methods or initializers. The set of parse diagnostics is cached, so calling this method a second time
-        ''' should be fast.
-        ''' </summary>
-        Public Overrides Function GetParseDiagnostics(Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
-            Return GetDiagnostics(CompilationStage.Parse, False, cancellationToken)
-        End Function
-
-        ''' <summary>
-        ''' Get declarations diagnostics for the entire compilation. This includes diagnostics from declarations, BUT NOT
-        ''' the bodies of methods or initializers. The set of declaration diagnostics is cached, so calling this method a second time
-        ''' should be fast.
-        ''' </summary>
-        ''' <param name="cancellationToken">Cancellation token to allow cancelling the operation.</param>
-        Public Overrides Function GetDeclarationDiagnostics(Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
-            Return GetDiagnostics(CompilationStage.Declare, False, cancellationToken)
-        End Function
-
-        ''' <summary>
-        ''' Get method body diagnostics for the entire compilation. This includes diagnostics only from 
-        ''' the bodies of methods and initializers. These diagnostics are NOT cached, so calling this method a second time
-        ''' repeats significant work.
-        ''' </summary>
-        ''' <param name="cancellationToken">Cancellation token to allow cancelling the operation.</param>
-        Public Overrides Function GetMethodBodyDiagnostics(Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
-            Return GetDiagnostics(CompilationStage.Compile, False, cancellationToken)
-        End Function
-
-        ''' <summary>
         ''' Get all errors in the compilation, up through the given compilation stage. Note that this may
         ''' require significant work by the compiler, as all source code must be compiled to the given
         ''' level in order to get the errors. Errors on Options should be inspected by the user prior to constructing the compilation.
@@ -1917,7 +1877,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         ''' Returns all errors. The errors are not sorted in any particular order, and the client
         ''' should sort the errors as desired.
         ''' </returns>
-        Friend Overloads Function GetDiagnostics(stage As CompilationStage, Optional includeEarlierStages As Boolean = True, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+        Friend Overrides Function GetDiagnostics(stage As CompilationStage, includeEarlierStages As Boolean, includeDiagnosticsWithSourceSuppression As Boolean, cancellationToken As CancellationToken) As ImmutableArray(Of Diagnostic)
             Dim builder = DiagnosticBag.GetInstance()
 
             ' Add all parsing errors.
@@ -1957,7 +1917,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             ' Before returning diagnostics, we filter some of them
             ' to honor the compiler options (e.g., /nowarn and /warnaserror)
             Dim result = DiagnosticBag.GetInstance()
-            FilterAndAppendAndFreeDiagnostics(result, builder)
+            FilterAndAppendAndFreeDiagnostics(result, builder, includeDiagnosticsWithSourceSuppression)
             Return result.ToReadOnlyAndFree(Of Diagnostic)()
         End Function
 
@@ -1987,11 +1947,12 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Next
         End Function
 
-        Friend Function GetDiagnosticsForTree(stage As CompilationStage,
+        Friend Overrides Function GetDiagnosticsForSyntaxTree(stage As CompilationStage,
                                               tree As SyntaxTree,
                                               filterSpanWithinTree As TextSpan?,
                                               includeEarlierStages As Boolean,
-                                              Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+                                              includeDiagnosticsWithSourceSuppression As Boolean,
+                                              cancellationToken As CancellationToken) As ImmutableArray(Of Diagnostic)
             If Not SyntaxTrees.Contains(tree) Then
                 Throw New ArgumentException("Cannot GetDiagnosticsForSyntax for a tree that is not part of the compilation", NameOf(tree))
             End If
@@ -2031,7 +1992,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End If
 
             Dim result = DiagnosticBag.GetInstance()
-            FilterAndAppendAndFreeDiagnostics(result, builder)
+            FilterAndAppendAndFreeDiagnostics(result, builder, includeDiagnosticsWithSourceSuppression)
             Return result.ToReadOnlyAndFree(Of Diagnostic)()
         End Function
 
@@ -2064,20 +2025,21 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End If
         End Sub
 
-        Friend Overrides Function FilterAndAppendAndFreeDiagnostics(accumulator As DiagnosticBag, ByRef incoming As DiagnosticBag) As Boolean
-            Dim result As Boolean = FilterAndAppendDiagnostics(accumulator, incoming.AsEnumerableWithoutResolution())
+        Friend Overrides Function FilterAndAppendAndFreeDiagnostics(accumulator As DiagnosticBag, ByRef incoming As DiagnosticBag, Optional includeDiagnosticsWithSourceSuppression As Boolean = False) As Boolean
+            Dim result As Boolean = FilterAndAppendDiagnostics(accumulator, incoming.AsEnumerableWithoutResolution(), includeDiagnosticsWithSourceSuppression)
             incoming.Free()
             incoming = Nothing
             Return result
         End Function
 
         ' Filter out some warnings based on the compiler options (/nowarn and /warnaserror).
-        Friend Overloads Function FilterAndAppendDiagnostics(accumulator As DiagnosticBag, ByRef incoming As IEnumerable(Of Diagnostic)) As Boolean
+        Friend Overloads Function FilterAndAppendDiagnostics(accumulator As DiagnosticBag, ByRef incoming As IEnumerable(Of Diagnostic), Optional includeDiagnosticsWithSourceSuppression As Boolean = False) As Boolean
             Dim hasError As Boolean = False
 
             For Each diagnostic As Diagnostic In incoming
                 Dim filtered = Me._options.FilterDiagnostic(diagnostic)
-                If filtered Is Nothing Then
+                If filtered Is Nothing OrElse
+                    (Not includeDiagnosticsWithSourceSuppression AndAlso filtered.HasSourceSuppression) Then
                     Continue For
                 End If
 
@@ -2221,7 +2183,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
             ' The diagnostics should include syntax and declaration errors. We insert these before calling Emitter.Emit, so that we don't emit
             ' metadata if there are declaration errors or method body errors (but we do insert all errors from method body binding...)
-            Dim hasDeclarationErrors = Not FilterAndAppendDiagnostics(diagnostics, GetDiagnostics(CompilationStage.Declare, True, cancellationToken))
+            Dim hasDeclarationErrors = Not FilterAndAppendDiagnostics(diagnostics, GetDiagnostics(CompilationStage.Declare, True, False, cancellationToken))
 
             Dim moduleBeingBuilt = DirectCast(moduleBuilder, PEModuleBuilder)
 

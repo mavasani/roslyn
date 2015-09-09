@@ -99,34 +99,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        public override ImmutableArray<Diagnostic> GetSyntaxDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            VerifySpanForGetDiagnostics(span);
-            return Compilation.GetDiagnosticsForSyntaxTree(
-                CompilationStage.Parse, this.SyntaxTree, span, false, cancellationToken);
-        }
-
-        public override ImmutableArray<Diagnostic> GetDeclarationDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            VerifySpanForGetDiagnostics(span);
-            return Compilation.GetDiagnosticsForSyntaxTree(
-                CompilationStage.Declare, this.SyntaxTree, span, false, cancellationToken);
-        }
-
-        public override ImmutableArray<Diagnostic> GetMethodBodyDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            VerifySpanForGetDiagnostics(span);
-            return Compilation.GetDiagnosticsForSyntaxTree(
-                CompilationStage.Compile, this.SyntaxTree, span, false, cancellationToken);
-        }
-
-        public override ImmutableArray<Diagnostic> GetDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            VerifySpanForGetDiagnostics(span);
-            return Compilation.GetDiagnosticsForSyntaxTree(
-                CompilationStage.Compile, this.SyntaxTree, span, true, cancellationToken);
-        }
-
         /// <summary>
         /// Gets the enclosing binder associated with the node
         /// </summary>

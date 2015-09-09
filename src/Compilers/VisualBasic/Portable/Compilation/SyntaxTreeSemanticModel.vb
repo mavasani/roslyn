@@ -73,66 +73,6 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End Get
         End Property
 
-
-        ''' <summary>
-        ''' Get all the errors within the syntax tree associated with this object. Includes errors involving compiling
-        ''' method bodies or initializers, in addition to the errors returned by GetDeclarationDiagnostics and parse errors.
-        ''' </summary>
-        ''' <param name="span">Optional span within the syntax tree for which to get diagnostics.
-        ''' If no argument is specified, then diagnostics for the entire tree are returned.</param>
-        ''' <param name="cancellationToken">A cancellation token that can be used to cancel the process of obtaining the
-        ''' diagnostics.</param>
-        ''' <remarks>
-        ''' Because this method must semantically analyze all method bodies and initializers to check for diagnostics, it may
-        ''' take a significant amount of time. Unlike GetDeclarationDiagnostics, diagnostics for method bodies and
-        ''' initializers are not cached, the any semantic information used to obtain the diagnostics is discarded.
-        ''' </remarks>
-        Public Overrides Function GetDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
-            Return _compilation.GetDiagnosticsForTree(CompilationStage.Compile, _syntaxTree, span, True, cancellationToken)
-        End Function
-
-        ''' <summary>
-        ''' Get all of the syntax errors within the syntax tree associated with this
-        ''' object. Does not get errors involving declarations or compiling method bodies or initializers.
-        ''' </summary>
-        ''' <param name="span">Optional span within the syntax tree for which to get diagnostics.
-        ''' If no argument is specified, then diagnostics for the entire tree are returned.</param>
-        ''' <param name="cancellationToken">A cancellation token that can be used to cancel the
-        ''' process of obtaining the diagnostics.</param>
-        Public Overrides Function GetSyntaxDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
-            Return _compilation.GetDiagnosticsForTree(CompilationStage.Parse, _syntaxTree, span, False, cancellationToken)
-        End Function
-
-        ''' <summary>
-        ''' Get all the syntax and declaration errors within the syntax tree associated with this object. Does not get
-        ''' errors involving compiling method bodies or initializers.
-        ''' </summary>
-        ''' <param name="span">Optional span within the syntax tree for which to get diagnostics.
-        ''' If no argument is specified, then diagnostics for the entire tree are returned.</param>
-        ''' <param name="cancellationToken">A cancellation token that can be used to cancel the process of obtaining the
-        ''' diagnostics.</param>
-        ''' <remarks>The declaration errors for a syntax tree are cached. The first time this method is called, a ll
-        ''' declarations are analyzed for diagnostics. Calling this a second time will return the cached diagnostics.
-        ''' </remarks>
-        Public Overrides Function GetDeclarationDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
-            Return _compilation.GetDiagnosticsForTree(CompilationStage.Declare, _syntaxTree, span, False, cancellationToken)
-        End Function
-
-        ''' <summary>
-        ''' Get all the syntax and declaration errors within the syntax tree associated with this object. Does not get
-        ''' errors involving compiling method bodies or initializers.
-        ''' </summary>
-        ''' <param name="span">Optional span within the syntax tree for which to get diagnostics.
-        ''' If no argument is specified, then diagnostics for the entire tree are returned.</param>
-        ''' <param name="cancellationToken">A cancellation token that can be used to cancel the process of obtaining the
-        ''' diagnostics.</param>
-        ''' <remarks>The declaration errors for a syntax tree are cached. The first time this method is called, a ll
-        ''' declarations are analyzed for diagnostics. Calling this a second time will return the cached diagnostics.
-        ''' </remarks>
-        Public Overrides Function GetMethodBodyDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
-            Return _compilation.GetDiagnosticsForTree(CompilationStage.Compile, _syntaxTree, span, False, cancellationToken)
-        End Function
-
         ' PERF: These shared variables avoid repeated allocation of Func(Of Binder, MemberSemanticModel) in GetMemberSemanticModel
         Private Shared ReadOnly s_methodBodySemanticModelCreator As Func(Of Tuple(Of Binder, Boolean), MemberSemanticModel) = Function(key As Tuple(Of Binder, Boolean)) MethodBodySemanticModel.Create(DirectCast(key.Item1, MethodBodyBinder), key.Item2)
         Private Shared ReadOnly s_initializerSemanticModelCreator As Func(Of Tuple(Of Binder, Boolean), MemberSemanticModel) = Function(key As Tuple(Of Binder, Boolean)) InitializerSemanticModel.Create(DirectCast(key.Item1, DeclarationInitializerBinder), key.Item2)
