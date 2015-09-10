@@ -107,5 +107,17 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         Friend Overrides Function GetExpressionConstantValue(node As ExpressionSyntax, Optional cancellationToken As CancellationToken = Nothing) As ConstantValue
             Return _parentSemanticModel.GetExpressionConstantValue(node, cancellationToken)
         End Function
+
+        Public Overrides Function GetSyntaxDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Throw New NotSupportedException()
+        End Function
+
+        Public Overrides Function GetDeclarationDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Throw New NotSupportedException()
+        End Function
+
+        Public Overrides Function GetDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Throw New NotSupportedException()
+        End Function
     End Class
 End Namespace

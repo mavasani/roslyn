@@ -14,7 +14,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
         public SuppressionCodeAction(Diagnostic diagnostic, IEnumerable<NestedSuppressionCodeAction> nestedActions)
         {
-            _title = string.Format(FeaturesResources.TriageCodeActionTitle, diagnostic.Id);
+            _title = string.Format(FeaturesResources.SuppressionCodeActionTitle, diagnostic.Id);
             _equivalenceKey = ComputeEquivalenceKey(nestedActions);
             this.NestedActions = nestedActions;
         }

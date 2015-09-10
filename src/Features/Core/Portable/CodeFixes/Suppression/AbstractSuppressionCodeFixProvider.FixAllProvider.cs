@@ -29,7 +29,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
             {
                 var batchFixer = (BatchFixAllProvider)WellKnownFixAllProviders.BatchFixer;
                 var suppressionFixer = (AbstractSuppressionCodeFixProvider)((WrapperCodeFixProvider)fixAllContext.CodeFixProvider).SuppressionFixProvider;
-                var isGlobalSuppression = AbstractSuppressionCodeAction.IsEquivalenceKeyForGlobalSuppression(fixAllContext.CodeActionEquivalenceKey);
+                var isGlobalSuppression = NestedSuppressionCodeAction.IsEquivalenceKeyForGlobalSuppression(fixAllContext.CodeActionEquivalenceKey);
                 if (!isGlobalSuppression)
                 {
                     // Pragma warning fix all.

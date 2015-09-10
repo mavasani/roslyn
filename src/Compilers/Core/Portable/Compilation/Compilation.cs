@@ -889,36 +889,24 @@ namespace Microsoft.CodeAnalysis
         /// Gets the diagnostics produced during the parsing stage of a compilation. There are no diagnostics for declarations or accessor or
         /// method bodies, for example.
         /// </summary>
-        public ImmutableArray<Diagnostic> GetParseDiagnostics(CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return GetDiagnostics(CompilationStage.Parse, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
-        }
+        public abstract ImmutableArray<Diagnostic> GetParseDiagnostics(CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Gets the diagnostics produced during symbol declaration headers.  There are no diagnostics for accessor or
         /// method bodies, for example.
         /// </summary>
-        public ImmutableArray<Diagnostic> GetDeclarationDiagnostics(CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return GetDiagnostics(CompilationStage.Declare, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
-        }
+        public abstract ImmutableArray<Diagnostic> GetDeclarationDiagnostics(CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Gets the diagnostics produced during the analysis of method bodies and field initializers.
         /// </summary>
-        public ImmutableArray<Diagnostic> GetMethodBodyDiagnostics(CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return GetDiagnostics(CompilationStage.Compile, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
-        }
+        public abstract ImmutableArray<Diagnostic> GetMethodBodyDiagnostics(CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Gets the all the diagnostics for the compilation, including syntax, declaration, and binding. Does not
         /// include any diagnostics that might be produced during emit.
         /// </summary>
-        public ImmutableArray<Diagnostic> GetDiagnostics(CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return GetDiagnostics(DefaultDiagnosticsStage, includeEarlierStages: true, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
-        }
+        public abstract ImmutableArray<Diagnostic> GetDiagnostics(CancellationToken cancellationToken = default(CancellationToken));
 
         internal abstract ImmutableArray<Diagnostic> GetDiagnostics(
             CompilationStage stage,

@@ -21,9 +21,9 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
         private static readonly string s_globalSuppressionsFileName = "GlobalSuppressions";
         private static readonly string s_suppressionsFileCommentTemplate =
 @"
-{0} This file is used by Code Analysis to maintain SuppressMessage and DiagnosticTriage
+{0} This file is used by Code Analysis to maintain SuppressMessage 
 {0} attributes that are applied to this project.
-{0} Project-level suppressions and triage states either have no target or are given 
+{0} Project-level suppressions either have no target or are given 
 {0} a specific target and scoped to a namespace, type, member, etc.
 
 ";
@@ -72,7 +72,6 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
             }
         }
 
-        protected abstract string TitleForPragmaWarningSuppressionFix { get; }
         protected abstract SyntaxTriviaList CreatePragmaDisableDirectiveTrivia(Diagnostic diagnostic, bool needsLeadingEndOfLine);
         protected abstract SyntaxTriviaList CreatePragmaRestoreDirectiveTrivia(Diagnostic diagnostic, bool needsTrailingEndOfLine);
 

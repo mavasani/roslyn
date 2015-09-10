@@ -1869,6 +1869,46 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
 
         ''' <summary>
+        ''' Get all diagnostics for the entire compilation. This includes diagnostics from parsing, declarations, and
+        ''' the bodies of methods. Getting all the diagnostics is potentially a length operations, as it requires parsing and
+        ''' compiling all the code. The set of diagnostics is not caches, so each call to this method will recompile all
+        ''' methods.
+        ''' </summary>
+        ''' <param name="cancellationToken">Cancellation token to allow cancelling the operation.</param>
+        Public Overrides Function GetDiagnostics(Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Return GetDiagnostics(DefaultDiagnosticsStage, includeEarlierStages:=True, includeDiagnosticsWithSourceSuppression:=False, cancellationToken:=cancellationToken)
+        End Function
+
+        ''' <summary>
+        ''' Get parse diagnostics for the entire compilation. This includes diagnostics from parsing BUT NOT from declarations and
+        ''' the bodies of methods or initializers. The set of parse diagnostics is cached, so calling this method a second time
+        ''' should be fast.
+        ''' </summary>
+        Public Overrides Function GetParseDiagnostics(Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Return GetDiagnostics(CompilationStage.Parse, includeEarlierStages:=False, includeDiagnosticsWithSourceSuppression:=False, cancellationToken:=cancellationToken)
+        End Function
+
+        ''' <summary>
+        ''' Get declarations diagnostics for the entire compilation. This includes diagnostics from declarations, BUT NOT
+        ''' the bodies of methods or initializers. The set of declaration diagnostics is cached, so calling this method a second time
+        ''' should be fast.
+        ''' </summary>
+        ''' <param name="cancellationToken">Cancellation token to allow cancelling the operation.</param>
+        Public Overrides Function GetDeclarationDiagnostics(Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Return GetDiagnostics(CompilationStage.Declare, includeEarlierStages:=False, includeDiagnosticsWithSourceSuppression:=False, cancellationToken:=cancellationToken)
+        End Function
+
+        ''' <summary>
+        ''' Get method body diagnostics for the entire compilation. This includes diagnostics only from 
+        ''' the bodies of methods and initializers. These diagnostics are NOT cached, so calling this method a second time
+        ''' repeats significant work.
+        ''' </summary>
+        ''' <param name="cancellationToken">Cancellation token to allow cancelling the operation.</param>
+        Public Overrides Function GetMethodBodyDiagnostics(Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Return GetDiagnostics(CompilationStage.Compile, includeEarlierStages:=False, includeDiagnosticsWithSourceSuppression:=False, cancellationToken:=cancellationToken)
+        End Function
+
+        ''' <summary>
         ''' Get all errors in the compilation, up through the given compilation stage. Note that this may
         ''' require significant work by the compiler, as all source code must be compiled to the given
         ''' level in order to get the errors. Errors on Options should be inspected by the user prior to constructing the compilation.

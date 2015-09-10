@@ -380,6 +380,66 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Function
 
         ''' <summary>
+        ''' Get all of the syntax errors within the syntax tree associated with this
+        ''' object. Does not get errors involving declarations or compiling method bodies or initializers.
+        ''' </summary>
+        ''' <param name="span">Optional span within the syntax tree for which to get diagnostics.
+        ''' If no argument is specified, then diagnostics for the entire tree are returned.</param>
+        ''' <param name="cancellationToken">A cancellation token that can be used to cancel the
+        ''' process of obtaining the diagnostics.</param>
+        Public Overrides Function GetSyntaxDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Throw New NotSupportedException()
+        End Function
+
+
+        ''' <summary>
+        ''' Get all the syntax and declaration errors within the syntax tree associated with this object. Does not get
+        ''' errors involving compiling method bodies or initializers.
+        ''' </summary>
+        ''' <param name="span">Optional span within the syntax tree for which to get diagnostics.
+        ''' If no argument is specified, then diagnostics for the entire tree are returned.</param>
+        ''' <param name="cancellationToken">A cancellation token that can be used to cancel the process of obtaining the
+        ''' diagnostics.</param>
+        ''' <remarks>The declaration errors for a syntax tree are cached. The first time this method is called, a ll
+        ''' declarations are analyzed for diagnostics. Calling this a second time will return the cached diagnostics.
+        ''' </remarks>
+        Public Overrides Function GetDeclarationDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Throw New NotSupportedException()
+        End Function
+
+        ''' <summary>
+        ''' Get all the syntax and declaration errors within the syntax tree associated with this object. Does not get
+        ''' errors involving compiling method bodies or initializers.
+        ''' </summary>
+        ''' <param name="span">Optional span within the syntax tree for which to get diagnostics.
+        ''' If no argument is specified, then diagnostics for the entire tree are returned.</param>
+        ''' <param name="cancellationToken">A cancellation token that can be used to cancel the process of obtaining the
+        ''' diagnostics.</param>
+        ''' <remarks>The declaration errors for a syntax tree are cached. The first time this method is called, a ll
+        ''' declarations are analyzed for diagnostics. Calling this a second time will return the cached diagnostics.
+        ''' </remarks>
+        Public Overrides Function GetMethodBodyDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Throw New NotSupportedException()
+        End Function
+
+        ''' <summary>
+        ''' Get all the errors within the syntax tree associated with this object. Includes errors involving compiling
+        ''' method bodies or initializers, in addition to the errors returned by GetDeclarationDiagnostics.
+        ''' </summary>
+        ''' <param name="span">Optional span within the syntax tree for which to get diagnostics.
+        ''' If no argument is specified, then diagnostics for the entire tree are returned.</param>
+        ''' <param name="cancellationToken">A cancellation token that can be used to cancel the process of obtaining the
+        ''' diagnostics.</param>
+        ''' <remarks>
+        ''' Because this method must semantically all method bodies and initializers to check for diagnostics, it may
+        ''' take a significant amount of time. Unlike GetDeclarationDiagnostics, diagnostics for method bodies and
+        ''' initializers are not cached, the any semantic information used to obtain the diagnostics is discarded.
+        ''' </remarks>
+        Public Overrides Function GetDiagnostics(Optional span As TextSpan? = Nothing, Optional cancellationToken As CancellationToken = Nothing) As ImmutableArray(Of Diagnostic)
+            Throw New NotSupportedException()
+        End Function
+
+        ''' <summary>
         ''' Given a type declaration, get the corresponding type symbol.
         ''' </summary>
         ''' <param name="declarationSyntax">The syntax node that declares a type.</param>

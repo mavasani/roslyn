@@ -91,12 +91,32 @@ namespace Microsoft.CodeAnalysis.CSharp
             get { return _ignoresAccessibility; }
         }
 
-        private void VerifySpanForGetDiagnostics(TextSpan? span)
+        public override ImmutableArray<Diagnostic> GetSyntaxDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (span.HasValue && !this.Root.FullSpan.Contains(span.Value))
-            {
-                throw new ArgumentException("span");
-            }
+            VerifySpanForGetDiagnostics(span);
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Parse, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        public override ImmutableArray<Diagnostic> GetDeclarationDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            VerifySpanForGetDiagnostics(span);
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Declare, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        public override ImmutableArray<Diagnostic> GetMethodBodyDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            VerifySpanForGetDiagnostics(span);
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Compile, this.SyntaxTree, span, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        public override ImmutableArray<Diagnostic> GetDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            VerifySpanForGetDiagnostics(span);
+            return Compilation.GetDiagnosticsForSyntaxTree(
+                CompilationStage.Compile, this.SyntaxTree, span, includeEarlierStages: true, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
         }
 
         /// <summary>

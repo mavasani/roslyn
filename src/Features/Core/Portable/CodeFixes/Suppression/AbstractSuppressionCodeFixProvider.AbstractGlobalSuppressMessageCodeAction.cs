@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
 using Roslyn.Utilities;
+using static Roslyn.Utilities.PortableShim;
 
 namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 {
@@ -36,10 +37,30 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
             protected abstract Task<Document> GetChangedSuppressionDocumentAsync(CancellationToken cancellationToken);
             public override bool SupportsFixAllOccurrences => true;
 
+            private string GetSuppressionsFilePath(string suppressionsFileName)
+            {
+                if (!string.IsNullOrEmpty(_project.FilePath))
+                {
+                    var fullPath = Path.GetFullPath(_project.FilePath);
+                    var directory = PathUtilities.GetDirectoryName(fullPath);
+                    if (!string.IsNullOrEmpty(directory))
+                    {
+                        var suppressionsFilePath = PathUtilities.CombinePossiblyRelativeAndRelativePaths(directory, suppressionsFileName);
+                        if (!string.IsNullOrEmpty(suppressionsFilePath))
+                        {
+                            return suppressionsFilePath;
+                        }
+                    }
+                }
+
+                return suppressionsFileName;
+            }
+
             protected async Task<Document> GetOrCreateSuppressionsDocumentAsync(CancellationToken c)
             {
                 int index = 1;
                 var suppressionsFileName = s_globalSuppressionsFileName + Fixer.DefaultFileExtension;
+                var suppressionsFilePath = GetSuppressionsFilePath(suppressionsFileName);
 
                 Document suppressionsDoc = null;
                 while (suppressionsDoc == null)
@@ -47,7 +68,9 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                     var hasDocWithSuppressionsName = false;
                     foreach (var d in _project.Documents)
                     {
-                        if (d.Name == suppressionsFileName)
+                        var filePath = d.FilePath;
+                        var fullPath = !string.IsNullOrEmpty(filePath) ? Path.GetFullPath(filePath) : filePath;
+                        if (fullPath == suppressionsFilePath)
                         {
                             // Existing global suppressions file, see if this file only has global assembly attributes.
                             hasDocWithSuppressionsName = true;
@@ -64,10 +87,11 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
                     if (suppressionsDoc == null)
                     {
-                        if (hasDocWithSuppressionsName)
+                        if (hasDocWithSuppressionsName || File.Exists(suppressionsFilePath))
                         {
                             index++;
                             suppressionsFileName = s_globalSuppressionsFileName + index.ToString() + Fixer.DefaultFileExtension;
+                            suppressionsFilePath = GetSuppressionsFilePath(suppressionsFileName);
                         }
                         else
                         {

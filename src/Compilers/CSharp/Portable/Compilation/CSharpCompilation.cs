@@ -1850,6 +1850,41 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        /// <summary>
+        /// Gets the diagnostics produced during the parsing stage of a compilation. There are no diagnostics for declarations or accessor or
+        /// method bodies, for example.
+        /// </summary>
+        public override ImmutableArray<Diagnostic> GetParseDiagnostics(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return GetDiagnostics(CompilationStage.Parse, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the diagnostics produced during symbol declaration headers.  There are no diagnostics for accessor or
+        /// method bodies, for example.
+        /// </summary>
+        public override ImmutableArray<Diagnostic> GetDeclarationDiagnostics(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return GetDiagnostics(CompilationStage.Declare, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the diagnostics produced during the analysis of method bodies and field initializers.
+        /// </summary>
+        public override ImmutableArray<Diagnostic> GetMethodBodyDiagnostics(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return GetDiagnostics(CompilationStage.Compile, includeEarlierStages: false, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the all the diagnostics for the compilation, including syntax, declaration, and binding. Does not
+        /// include any diagnostics that might be produced during emit.
+        /// </summary>
+        public override ImmutableArray<Diagnostic> GetDiagnostics(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return GetDiagnostics(DefaultDiagnosticsStage, includeEarlierStages: true, includeDiagnosticsWithSourceSuppression: false, cancellationToken: cancellationToken);
+        }
+
         internal override ImmutableArray<Diagnostic> GetDiagnostics(CompilationStage stage, bool includeEarlierStages, bool includeDiagnosticsWithSourceSuppression, CancellationToken cancellationToken)
         {
             var builder = DiagnosticBag.GetInstance();
@@ -2105,8 +2140,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             SyntaxTree syntaxTree,
             TextSpan? filterSpanWithinTree,
             bool includeEarlierStages,
-            bool includeDiagnosticsWithSourceSuppression = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            bool includeDiagnosticsWithSourceSuppression,
+            CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 

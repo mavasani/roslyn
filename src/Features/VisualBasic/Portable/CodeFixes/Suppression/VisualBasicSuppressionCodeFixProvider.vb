@@ -104,12 +104,6 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.CodeFixes.Suppression
             End Get
         End Property
 
-        Protected Overrides ReadOnly Property TitleForPragmaWarningSuppressionFix As String
-            Get
-                Return VBFeaturesResources.SuppressWithPragma
-            End Get
-        End Property
-
         Protected Overrides Function IsAttributeListWithAssemblyAttributes(node As SyntaxNode) As Boolean
             Dim attributesStatement = TryCast(node, AttributesStatementSyntax)
             Return attributesStatement IsNot Nothing AndAlso

@@ -71,14 +71,6 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.Suppression
             }
         }
 
-        protected override string TitleForPragmaWarningSuppressionFix
-        {
-            get
-            {
-                return CSharpFeaturesResources.SuppressWithPragma;
-            }
-        }
-
         protected override bool IsAttributeListWithAssemblyAttributes(SyntaxNode node)
         {
             var attributeList = node as AttributeListSyntax;

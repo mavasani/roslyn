@@ -26,7 +26,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 SyntaxNode nodeWithTokens,
                 Document document,
                 Diagnostic diagnostic)
-                : base (fixer, title: fixer.TitleForPragmaWarningSuppressionFix)
+                : base (fixer, title: FeaturesResources.SuppressWithPragma)
             {
                 _startToken = startToken;
                 _endToken = endToken;

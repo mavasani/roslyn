@@ -378,6 +378,26 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        public override ImmutableArray<Diagnostic> GetSyntaxDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotSupportedException();
+        }
+
+        public override ImmutableArray<Diagnostic> GetDeclarationDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotSupportedException();
+        }
+
+        public override ImmutableArray<Diagnostic> GetMethodBodyDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotSupportedException();
+        }
+
+        public override ImmutableArray<Diagnostic> GetDiagnostics(TextSpan? span = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotSupportedException();
+        }
+
         public override INamespaceSymbol GetDeclaredSymbol(NamespaceDeclarationSyntax declarationSyntax, CancellationToken cancellationToken = default(CancellationToken))
         {
             // Can't defined namespace inside a member.

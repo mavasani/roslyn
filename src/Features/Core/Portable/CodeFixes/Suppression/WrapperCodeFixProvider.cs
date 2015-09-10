@@ -20,10 +20,17 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
         public ISuppressionFixProvider SuppressionFixProvider => _suppressionFixProvider;
         public override ImmutableArray<string> FixableDiagnosticIds => _originalDiagnosticIds;
 
-        public override Task RegisterCodeFixesAsync(CodeFixContext context)
+        public async override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var diagnostics = context.Diagnostics.WhereAsArray(_suppressionFixProvider.CanBeSuppressed);
-            return _suppressionFixProvider.GetSuppressionsAsync(context.Document, context.Span, diagnostics, context.CancellationToken);
+            var suppressionFixes = await _suppressionFixProvider.GetSuppressionsAsync(context.Document, context.Span, diagnostics, context.CancellationToken).ConfigureAwait(false);
+            if (suppressionFixes != null)
+            {
+                foreach (var suppressionFix in suppressionFixes)
+                {
+                    context.RegisterCodeFix(suppressionFix.Action, suppressionFix.Diagnostics);
+                }
+            }
         }
 
         public override FixAllProvider GetFixAllProvider()
