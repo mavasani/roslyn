@@ -62,6 +62,7 @@
     <Compile Include="Implementation\ProjectSystem\Interop\IVsUndoState.cs" />
     <Compile Include="Implementation\Serialization\AssemblySerializationInfoService.cs" />
     <Compile Include="Implementation\SolutionSize\SolutionSizeTracker.cs" />
+    <Compile Include="Implementation\TableDataSource\SuppressionStateColumnDefinition.cs" />
     <Compile Include="Implementation\TableDataSource\AbstractTableDataSource.cs" />
     <Compile Include="Implementation\TableDataSource\MiscDiagnosticTableControlEventProcessorProvider.cs" />
     <Compile Include="Implementation\TableDataSource\MiscellaneousDiagnosticListTable.cs" />

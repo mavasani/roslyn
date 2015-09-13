@@ -196,6 +196,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                             case StandardTableKeyNames.ProjectGuid:
                                 content = ProjectGuid;
                                 return ProjectGuid != Guid.Empty;
+                            case SuppressionStateColumnDefinition.ColumnName:
+                                content = item.HasSourceSuppression ? ServicesVSResources.SuppressionStateSuppressed : ServicesVSResources.SuppressionStateActive;
+                                return true;
                             default:
                                 content = null;
                                 return false;

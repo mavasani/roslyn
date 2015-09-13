@@ -1003,6 +1003,33 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Active.
+        /// </summary>
+        internal static string SuppressionStateActive {
+            get {
+                return ResourceManager.GetString("SuppressionStateActive", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Suppression State.
+        /// </summary>
+        internal static string SuppressionStateColumnHeader {
+            get {
+                return ResourceManager.GetString("SuppressionStateColumnHeader", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Suppressed.
+        /// </summary>
+        internal static string SuppressionStateSuppressed {
+            get {
+                return ResourceManager.GetString("SuppressionStateSuppressed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to IDs are not supported for this symbol type..
         /// </summary>
         internal static string SymbolTypeIdInvalid {

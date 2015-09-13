@@ -7,9 +7,11 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.Internal.VisualStudio.Shell.TableControl;
 using Microsoft.VisualStudio.LanguageServices.Implementation.TaskList;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Shell.TableControl;
 using Microsoft.VisualStudio.Shell.TableManager;
 using Microsoft.VisualStudio.Text;
 
@@ -43,8 +45,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             }
 
             _errorList.PropertyChanged += OnErrorListPropertyChanged;
-
             AddInitialTableSource(workspace.CurrentSolution, GetCurrentDataSource());
+            SuppressionStateColumnDefinition.SetDefaultFilter(_errorList.TableControl);
         }
 
         private ITableDataSource GetCurrentDataSource()
@@ -294,6 +296,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                                 var guid = GetProjectGuid(_factory._workspace, item.ProjectId);
                                 content = guid;
                                 return guid != Guid.Empty;
+                            case SuppressionStateColumnDefinition.ColumnName:
+                                content = item.HasSourceSuppression ? ServicesVSResources.SuppressionStateSuppressed : ServicesVSResources.SuppressionStateActive;
+                                return true;
                             default:
                                 content = null;
                                 return false;
