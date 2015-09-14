@@ -498,4 +498,16 @@ Use the dropdown to view and switch to other projects this file may belong to.</
   <data name="SuppressionStateSuppressed" xml:space="preserve">
     <value>Suppressed</value>
   </data>
+  <data name="SuppressMultipleOccurrences" xml:space="preserve">
+    <value>Suppress diagnostics</value>
+  </data>
+  <data name="SuppressMultipleOccurrencesForLanguage" xml:space="preserve">
+    <value>Suppress diagnostics ('{0}')</value>
+  </data>
+  <data name="ComputingSuppressionFix" xml:space="preserve">
+    <value>Computing suppressions fix...</value>
+  </data>
+  <data name="ComputingSuppressionFixForLanguage" xml:space="preserve">
+    <value>Computing suppressions fix ('{0}')...</value>
+  </data>
 </root>

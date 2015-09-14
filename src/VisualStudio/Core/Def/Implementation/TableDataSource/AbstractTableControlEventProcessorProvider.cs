@@ -9,21 +9,44 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
     {
         public ITableControlEventProcessor GetAssociatedEventProcessor(IWpfTableControl tableControl)
         {
-            return new EventProcessor();
+            return CreateEventProcessor(tableControl);
         }
 
-        private class EventProcessor : TableControlEventProcessorBase
+        protected virtual EventProcessor CreateEventProcessor(IWpfTableControl tableControl)
         {
-            public override void PreprocessNavigate(ITableEntryHandle entryHandle, TableEntryNavigateEventArgs e)
+            return new EventProcessor(tableControl);
+        }
+
+        protected class EventProcessor : TableControlEventProcessorBase
+        {
+            protected readonly IWpfTableControl TableControl;
+
+            public EventProcessor(IWpfTableControl tableControl)
+            {
+                TableControl = tableControl;
+            }
+
+            protected static AbstractTableEntriesSnapshot<TData> GetEntriesSnapshot(ITableEntryHandle entryHandle)
             {
                 int index;
+                return GetEntriesSnapshot(entryHandle, out index);
+            }
+
+            protected static AbstractTableEntriesSnapshot<TData> GetEntriesSnapshot(ITableEntryHandle entryHandle, out int index)
+            {
                 ITableEntriesSnapshot snapshot;
                 if (!entryHandle.TryGetSnapshot(out snapshot, out index))
                 {
-                    return;
+                    return null;
                 }
 
-                var roslynSnapshot = snapshot as AbstractTableEntriesSnapshot<TData>;
+                return snapshot as AbstractTableEntriesSnapshot<TData>;
+            }
+
+            public override void PreprocessNavigate(ITableEntryHandle entryHandle, TableEntryNavigateEventArgs e)
+            {
+                int index;
+                var roslynSnapshot = GetEntriesSnapshot(entryHandle, out index);
                 if (roslynSnapshot == null)
                 {
                     return;

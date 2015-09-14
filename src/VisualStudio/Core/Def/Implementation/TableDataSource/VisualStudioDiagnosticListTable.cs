@@ -4,14 +4,13 @@ using System;
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Design;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.Internal.VisualStudio.Shell.TableControl;
 using Microsoft.VisualStudio.LanguageServices.Implementation.TaskList;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.Shell.TableControl;
 using Microsoft.VisualStudio.Shell.TableManager;
 using Microsoft.VisualStudio.Text;
 

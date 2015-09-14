@@ -101,7 +101,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             StopTracking();
         }
 
-        protected TData GetItem(int index)
+        internal TData GetItem(int index)
         {
             if (index < 0 || _items.Length <= index)
             {

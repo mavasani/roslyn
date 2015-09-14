@@ -133,6 +133,24 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Computing suppressions fix....
+        /// </summary>
+        internal static string ComputingSuppressionFix {
+            get {
+                return ResourceManager.GetString("ComputingSuppressionFix", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Computing suppressions fix (&apos;{0}&apos;)....
+        /// </summary>
+        internal static string ComputingSuppressionFixForLanguage {
+            get {
+                return ResourceManager.GetString("ComputingSuppressionFixForLanguage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Could not find location of folder on disk.
         /// </summary>
         internal static string CouldNotFindLocationOfFol {
@@ -1026,6 +1044,24 @@ namespace Microsoft.VisualStudio.LanguageServices {
         internal static string SuppressionStateSuppressed {
             get {
                 return ResourceManager.GetString("SuppressionStateSuppressed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Suppress diagnostics.
+        /// </summary>
+        internal static string SuppressMultipleOccurrences {
+            get {
+                return ResourceManager.GetString("SuppressMultipleOccurrences", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Suppress diagnostics (&apos;{0}&apos;).
+        /// </summary>
+        internal static string SuppressMultipleOccurrencesForLanguage {
+            get {
+                return ResourceManager.GetString("SuppressMultipleOccurrencesForLanguage", resourceCulture);
             }
         }
         
