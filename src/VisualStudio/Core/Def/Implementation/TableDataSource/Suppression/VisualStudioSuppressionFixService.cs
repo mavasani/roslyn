@@ -19,6 +19,9 @@ using Roslyn.Utilities;
 
 namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
 {
+    /// <summary>
+    /// Service to compute and apply bulk suppression fixes.
+    /// </summary>
     [Export(typeof(IVisualStudioSuppressionFixService))]
     internal sealed class VisualStudioSuppressionFixService : IVisualStudioSuppressionFixService
     {
@@ -63,12 +66,15 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             {
                 return;
             }
+
+            // TODO
         }
 
         private void ApplySuppressionFix(bool selectedEntriesOnly, bool suppressInSource)
         {
             ImmutableDictionary<Document, ImmutableArray<Diagnostic>> diagnosticsToFixMap = null;
 
+            // Get the diagnostics to fix from the suppression state service.
             var result = _waitIndicator.Wait(
                 ServicesVSResources.SuppressMultipleOccurrences,
                 ServicesVSResources.ComputingSuppressionFix,
@@ -96,6 +102,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                     }
                 });
 
+            // Bail out if the user cancelled.
             if (result == WaitIndicatorResult.Canceled ||
                 diagnosticsToFixMap == null || diagnosticsToFixMap.IsEmpty)
             {
@@ -103,6 +110,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             }
 
             var equivalenceKey = suppressInSource ? FeaturesResources.SuppressWithPragma : FeaturesResources.SuppressWithGlobalSuppressMessage;
+
+            // We have different suppression fixers for every language.
+            // So we need to group diagnostics by the containing project language and apply fixes separately.
             var groups = diagnosticsToFixMap.GroupBy(entry => entry.Key.Project.Language);
             var hasMultipleLangauges = groups.Count() > 1;
             var currentSolution = _workspace.CurrentSolution;
@@ -120,6 +130,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
 
                 if (needsMappingToNewSolution)
                 {
+                    // A fix was applied to a project group targeting a different language in a prior iteration.
+                    // We need to remap our document entries to the new solution.
                     var builder = ImmutableDictionary.CreateBuilder<Document, ImmutableArray<Diagnostic>>();
                     foreach (var kvp in group)
                     {
@@ -143,12 +155,15 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                     allDiagnosticsBuilder.AddRange(documentDiagnostics.Value);
                 }
 
+                // Fetch the suppression fixer to apply the fix.
                 suppressionFixer = _codeFixService.GetSuppressionFixer(language, allDiagnosticsBuilder.ToImmutable());
                 if (suppressionFixer == null)
                 {
                     continue;
                 }
 
+                // Use the Fix multiple occurrences service to compute a bulk suppression fix for the specified diagnostics,
+                // show a preview changes dialog and then apply the fix to the workspace.
                 _fixMultipleOccurencesService.ComputeAndApplyFix(
                     documentDiagnosticsPerLanguage,
                     _workspace,
@@ -162,6 +177,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                 newSolution = _workspace.CurrentSolution;
                 if (currentSolution == newSolution)
                 {
+                    // User cancelled, so we just bail out.
                     break;
                 }
 

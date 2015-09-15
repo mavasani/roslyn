@@ -305,7 +305,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                             content = item.ProjectGuids;
                             return ((Guid[])content).Length > 0;
                         case SuppressionStateColumnDefinition.ColumnName:
-                            content = item.HasSourceSuppression ? ServicesVSResources.SuppressionStateSuppressed : ServicesVSResources.SuppressionStateActive;
+                            content = data.IsSuppressed ? ServicesVSResources.SuppressionStateSuppressed : ServicesVSResources.SuppressionStateActive;
                             return true;
                         default:
                             content = null;

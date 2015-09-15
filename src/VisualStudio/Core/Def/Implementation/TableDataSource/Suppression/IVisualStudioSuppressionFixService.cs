@@ -2,6 +2,9 @@
 
 namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
 {
+    /// <summary>
+    /// Service to allow adding or removing bulk suppressions (in source or suppressions file).
+    /// </summary>
     internal interface IVisualStudioSuppressionFixService
     {
         void AddSuppressions(bool selectedErrorListEntriesOnly, bool suppressInSource);

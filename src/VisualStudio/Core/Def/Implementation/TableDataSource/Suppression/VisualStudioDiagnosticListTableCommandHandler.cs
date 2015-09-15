@@ -25,6 +25,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
 
         public void Initialize(IServiceProvider serviceProvider)
         {
+            // Add command handlers for bulk suppression commands.
             var menuCommandService = (IMenuCommandService)serviceProvider.GetService(typeof(IMenuCommandService));
             if (menuCommandService != null)
             {

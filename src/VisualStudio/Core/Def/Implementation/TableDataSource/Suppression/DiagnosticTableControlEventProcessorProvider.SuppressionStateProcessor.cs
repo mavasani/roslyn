@@ -22,6 +22,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
 
             public override void PostprocessSelectionChanged(TableSelectionChangedEventArgs e)
             {
+                // Update the suppression state information for the new error list selection.
                 _suppressionStateService.ProcessSelectionChanged(e);
             }
         }

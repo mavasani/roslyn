@@ -5,18 +5,18 @@ using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.Text;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Shell.TableControl;
 using Microsoft.VisualStudio.Shell.TableManager;
-using Roslyn.Utilities;
 
 namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
 {
+    /// <summary>
+    /// Service to maintain information about the suppression state of specific set of items in the error list.
+    /// </summary>
     [Export(typeof(DiagnosticTableControlSuppressionStateService))]
     internal class DiagnosticTableControlSuppressionStateService
     {
@@ -214,19 +214,19 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                 var roslynSnapshot = GetEntriesSnapshot(entryHandle, out index);
                 if (roslynSnapshot != null)
                 {
-                    diagnosticData = roslynSnapshot.GetItem(index);
-                    if (diagnosticData.HasTextSpan)
+                    diagnosticData = roslynSnapshot.GetItem(index)?.Primary;
+                    if (diagnosticData != null && diagnosticData.HasTextSpan)
                     {
                         if (isAddSuppression)
                         {
                             // Compiler diagnostics can only be suppressed in source.
-                            if (!diagnosticData.HasSourceSuppression &&
+                            if (!diagnosticData.IsSuppressed &&
                                 (isSuppressionInSource || !IsCompilerDiagnostic(diagnosticData.Id)))
                             {
                                 builder.Add(diagnosticData);
                             }
                         }
-                        else if (diagnosticData.HasSourceSuppression)
+                        else if (diagnosticData.IsSuppressed)
                         {
                             builder.Add(diagnosticData);
                         }
@@ -284,34 +284,6 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             {
                 _shellService.UpdateCommandUI(0);
             }
-        }
-
-        private static bool TryGetValue(ITableEntryHandle entryHandle, string keyName, out string content)
-        {
-            content = null;
-
-            object contentObj;
-            if (!entryHandle.TryGetValue(keyName, out contentObj))
-            {
-                return false;
-            }
-
-            content = contentObj as string;
-            return !string.IsNullOrEmpty(content);
-        }
-
-        private static bool TryGetValue(ITableEntryHandle entryHandle, string keyName, out int content)
-        {
-            content = -1;
-
-            object contentObj;
-            if (!entryHandle.TryGetValue(keyName, out contentObj))
-            {
-                return false;
-            }
-
-            content = (int)contentObj;
-            return content >= 0;
         }
     }
 }

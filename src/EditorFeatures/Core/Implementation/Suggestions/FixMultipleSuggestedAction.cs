@@ -67,6 +67,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
         {
             using (Logger.LogBlock(FunctionId.CodeFixes_FixAllOccurrencesSession, cancellationToken))
             {
+                // We might not have an origin subject buffer, for example if we are fixing selected diagnostics in the error list.
                 if (this.SubjectBuffer != null)
                 {
                     base.Invoke(cancellationToken);

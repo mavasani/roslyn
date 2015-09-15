@@ -9,6 +9,9 @@ using Microsoft.CodeAnalysis.Host.Mef;
 
 namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
 {
+    /// <summary>
+    /// Service to compute and apply <see cref="FixMultipleCodeAction"/> code fixes.
+    /// </summary>
     [ExportWorkspaceServiceFactory(typeof(IFixMultipleOccurrencesService), ServiceLayer.Host), Shared]
     internal class FixMultipleOccurrencesService : IFixMultipleOccurrencesService, IWorkspaceServiceFactory
     {
