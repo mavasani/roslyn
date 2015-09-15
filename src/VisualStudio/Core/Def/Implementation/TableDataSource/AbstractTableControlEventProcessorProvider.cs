@@ -9,23 +9,16 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
     {
         public ITableControlEventProcessor GetAssociatedEventProcessor(IWpfTableControl tableControl)
         {
-            return CreateEventProcessor(tableControl);
+            return CreateEventProcessor();
         }
 
-        protected virtual EventProcessor CreateEventProcessor(IWpfTableControl tableControl)
+        protected virtual EventProcessor CreateEventProcessor()
         {
-            return new EventProcessor(tableControl);
+            return new EventProcessor();
         }
 
         protected class EventProcessor : TableControlEventProcessorBase
         {
-            protected readonly IWpfTableControl TableControl;
-
-            public EventProcessor(IWpfTableControl tableControl)
-            {
-                TableControl = tableControl;
-            }
-
             protected static AbstractTableEntriesSnapshot<TData> GetEntriesSnapshot(ITableEntryHandle entryHandle)
             {
                 int index;

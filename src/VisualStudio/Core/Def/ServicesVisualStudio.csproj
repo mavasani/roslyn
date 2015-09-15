@@ -63,11 +63,12 @@
     <Compile Include="Implementation\Serialization\AssemblySerializationInfoService.cs" />
     <Compile Include="Implementation\SolutionSize\SolutionSizeTracker.cs" />
     <Compile Include="Implementation\TableDataSource\DiagnosticTableControlEventProcessorProvider.AggregateDiagnosticTableControlEventProcessor.cs" />
-    <Compile Include="Implementation\TableDataSource\DiagnosticTableControlEventProcessorProvider.SuppressionStateProcessor.cs" />
-    <Compile Include="Implementation\TableDataSource\VisualStudioBulkSuppressionService.cs" />
-    <Compile Include="Implementation\TableDataSource\IVisualStudioBulkSuppressionService.cs" />
-    <Compile Include="Implementation\TableDataSource\IVisualStudioDiagnosticListCommandHandler.cs" />
-    <Compile Include="Implementation\TableDataSource\SuppressionStateColumnDefinition.cs" />
+    <Compile Include="Implementation\TableDataSource\Suppression\VisualStudioDiagnosticListTableCommandHandler.cs" />
+    <Compile Include="Implementation\TableDataSource\DiagnosticTableControlSuppressionStateService.cs" />
+    <Compile Include="Implementation\TableDataSource\Suppression\DiagnosticTableControlEventProcessorProvider.SuppressionStateProcessor.cs" />
+    <Compile Include="Implementation\TableDataSource\Suppression\VisualStudioSuppressionFixService.cs" />
+    <Compile Include="Implementation\TableDataSource\Suppression\IVisualStudioSuppressionFixService.cs" />
+    <Compile Include="Implementation\TableDataSource\Suppression\SuppressionStateColumnDefinition.cs" />
     <Compile Include="Implementation\TableDataSource\AbstractTableDataSource.cs" />
     <Compile Include="Implementation\TableDataSource\MiscDiagnosticTableControlEventProcessorProvider.cs" />
     <Compile Include="Implementation\TableDataSource\MiscellaneousDiagnosticListTable.cs" />

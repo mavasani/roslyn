@@ -12,40 +12,26 @@ using Microsoft.VisualStudio.Utilities;
 namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
 {
     [Export(typeof(ITableControlEventProcessorProvider))]
-    [Export(typeof(IVisualStudioDiagnosticListCommandHandler))]
     [DataSourceType(StandardTableDataSources.ErrorTableDataSource)]
     [DataSource(VisualStudioDiagnosticListTable.IdentifierString)]
     [Name(Name)]
     [Order(Before = "default")]
-    internal partial class DiagnosticTableControlEventProcessorProvider : AbstractTableControlEventProcessorProvider<DiagnosticData>, IVisualStudioDiagnosticListCommandHandler
+    internal partial class DiagnosticTableControlEventProcessorProvider : AbstractTableControlEventProcessorProvider<DiagnosticData>
     {
         internal const string Name = "C#/VB Diagnostic Table Event Processor";
-
-        private readonly IVisualStudioBulkSuppressionService _suppressionService;
-        private IServiceProvider _serviceProvider;
-        private VisualStudioWorkspace _workspace;
-
+        private readonly DiagnosticTableControlSuppressionStateService _suppressionStateService;
+        
         [ImportingConstructor]
-        public DiagnosticTableControlEventProcessorProvider(IVisualStudioBulkSuppressionService suppressionService)
+        public DiagnosticTableControlEventProcessorProvider(
+            DiagnosticTableControlSuppressionStateService suppressionStateService)
         {
-            _suppressionService = suppressionService;
+            _suppressionStateService = suppressionStateService;
         }
 
-        void IVisualStudioDiagnosticListCommandHandler.Initialize(IServiceProvider serviceProvider, VisualStudioWorkspace workspace)
+        protected override EventProcessor CreateEventProcessor()
         {
-            _serviceProvider = serviceProvider;
-            _workspace = workspace;
-        }
-
-        protected override EventProcessor CreateEventProcessor(IWpfTableControl tableControl)
-        {
-            if (_serviceProvider != null)
-            {
-                var suppressionStateEventProcessor = new SuppressionStateEventProcessor(_serviceProvider, _workspace, _suppressionService, tableControl);
-                return new AggregateDiagnosticTableControlEventProcessor(tableControl, suppressionStateEventProcessor);
-            }
-
-            return base.CreateEventProcessor(tableControl);
+            var suppressionStateEventProcessor = new SuppressionStateEventProcessor(_suppressionStateService);
+            return new AggregateDiagnosticTableControlEventProcessor(additionalEventProcessors: suppressionStateEventProcessor);
         }
     }
 }

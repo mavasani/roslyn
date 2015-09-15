@@ -108,5 +108,17 @@ namespace Microsoft.CodeAnalysis.CodeFixes
 
             return ProjectDiagnosticsToFix[Project].First();
         }
+
+        public new FixAllContext WithCancellationToken(CancellationToken cancellationToken)
+        {
+            if (this.CancellationToken == cancellationToken)
+            {
+                return this;
+            }
+
+            return Document != null ?
+                new FixMultipleContext(Document, CodeFixProvider, CodeActionEquivalenceKey, DiagnosticIds, _diagnosticProvider, cancellationToken) :
+                new FixMultipleContext(Project, CodeFixProvider, CodeActionEquivalenceKey, DiagnosticIds, _diagnosticProvider, cancellationToken);
+        }
     }
 }

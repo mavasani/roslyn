@@ -10,8 +10,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
         private class AggregateDiagnosticTableControlEventProcessor : EventProcessor
         {
             private readonly ImmutableArray<EventProcessor> _additionalEventProcessors;
-            public AggregateDiagnosticTableControlEventProcessor(IWpfTableControl tableControl, params EventProcessor[] additionalEventProcessors)
-                : base (tableControl)
+            public AggregateDiagnosticTableControlEventProcessor(params EventProcessor[] additionalEventProcessors)
             {
                 _additionalEventProcessors = additionalEventProcessors.ToImmutableArray();
             }

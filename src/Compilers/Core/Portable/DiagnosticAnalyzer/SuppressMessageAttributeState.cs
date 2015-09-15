@@ -89,7 +89,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return diagnostic;
             }
 
-            var suppressMessageState = AnalyzerDriver.GetCachedCompilationData(compilation).SuppressMessageAttributeState;
+            var suppressMessageState = AnalyzerDriver.GetOrCreateCachedCompilationData(compilation).SuppressMessageAttributeState;
 
             SuppressMessageInfo info;
             if (suppressMessageState.IsDiagnosticSuppressed(diagnostic, out info))

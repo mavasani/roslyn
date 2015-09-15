@@ -2,9 +2,9 @@
 
 namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
 {
-    internal interface IVisualStudioBulkSuppressionService
+    internal interface IVisualStudioSuppressionFixService
     {
-        void AddSuppressions(bool selectedErrorListEntriesOnly, bool suppressInSuppressionFile);
+        void AddSuppressions(bool selectedErrorListEntriesOnly, bool suppressInSource);
         void RemoveSuppressions(bool selectedErrorListEntriesOnly);
     }
 }
