@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editor.Host;
+using Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem;
 using Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -25,19 +26,19 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
     [Export(typeof(IVisualStudioSuppressionFixService))]
     internal sealed class VisualStudioSuppressionFixService : IVisualStudioSuppressionFixService
     {
-        private readonly VisualStudioWorkspace _workspace;
+        private readonly VisualStudioWorkspaceImpl _workspace;
         private readonly IWpfTableControl _tableControl;
         private readonly ICodeFixService _codeFixService;
         private readonly IFixMultipleOccurrencesService _fixMultipleOccurencesService;
-        private readonly DiagnosticTableControlSuppressionStateService _suppressionStateService;
+        private readonly IVisualStudioDiagnosticListSuppressionStateService _suppressionStateService;
         private readonly IWaitIndicator _waitIndicator;
 
         [ImportingConstructor]
         public VisualStudioSuppressionFixService(
             SVsServiceProvider serviceProvider,
-            VisualStudioWorkspace workspace,
+            VisualStudioWorkspaceImpl workspace,
             ICodeFixService codeFixService,
-            DiagnosticTableControlSuppressionStateService suppressionStateService,
+            IVisualStudioDiagnosticListSuppressionStateService suppressionStateService,
             IWaitIndicator waitIndicator)
         {
             _workspace = workspace;
@@ -50,17 +51,35 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             _tableControl = errorList?.TableControl;
         }
 
-        public void AddSuppressions(bool selectedErrorListEntriesOnly, bool suppressInSource)
+        public void AddSuppressions(bool selectedErrorListEntriesOnly, bool suppressInSource, IVsHierarchy projectHierarchyOpt)
         {
             if (_tableControl == null)
             {
                 return;
             }
 
-            ApplySuppressionFix(selectedErrorListEntriesOnly, suppressInSource);
+            Func<Project, bool> shouldFixInProject = GetShouldFixInProjectDelegate(_workspace, projectHierarchyOpt);
+            ApplySuppressionFix(selectedErrorListEntriesOnly, suppressInSource, shouldFixInProject);
         }
 
-        public void RemoveSuppressions(bool selectedErrorListEntriesOnly)
+        private static Func<Project, bool> GetShouldFixInProjectDelegate(VisualStudioWorkspaceImpl workspace, IVsHierarchy projectHierarchyOpt)
+        {
+            if (projectHierarchyOpt == null)
+            {
+                return p => true;
+            }
+            else
+            {
+                var projectIdsForHierarchy = workspace.ProjectTracker.Projects
+                    .Where(p => p.Language == LanguageNames.CSharp || p.Language == LanguageNames.VisualBasic)
+                    .Where(p => p.Hierarchy == projectHierarchyOpt)
+                    .Select(p => workspace.CurrentSolution.GetProject(p.Id).Id)
+                    .ToImmutableHashSet();
+                return p => projectIdsForHierarchy.Contains(p.Id);
+            }
+        }
+
+        public void RemoveSuppressions(bool selectedErrorListEntriesOnly, IVsHierarchy projectHierarchyOpt)
         {
             if (_tableControl == null)
             {
@@ -70,7 +89,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             // TODO
         }
 
-        private void ApplySuppressionFix(bool selectedEntriesOnly, bool suppressInSource)
+        private void ApplySuppressionFix(bool selectedEntriesOnly, bool suppressInSource, Func<Project, bool> shouldFixInProject)
         {
             ImmutableDictionary<Document, ImmutableArray<Diagnostic>> diagnosticsToFixMap = null;
 
@@ -95,7 +114,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                         }
 
                         waitContext.CancellationToken.ThrowIfCancellationRequested();
-                        diagnosticsToFixMap = GetDiagnosticsToFixMapAsync(_workspace, diagnosticsToFix, waitContext.CancellationToken).WaitAndGetResult(waitContext.CancellationToken);
+                        diagnosticsToFixMap = GetDiagnosticsToFixMapAsync(_workspace, diagnosticsToFix, shouldFixInProject, waitContext.CancellationToken).WaitAndGetResult(waitContext.CancellationToken);
                     }
                     catch (OperationCanceledException)
                     {
@@ -185,7 +204,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             }
         }
 
-        private async Task<ImmutableDictionary<Document, ImmutableArray<Diagnostic>>> GetDiagnosticsToFixMapAsync(Workspace workspace, IEnumerable<DiagnosticData> diagnosticsToFix, CancellationToken cancellationToken)
+        private async Task<ImmutableDictionary<Document, ImmutableArray<Diagnostic>>> GetDiagnosticsToFixMapAsync(Workspace workspace, IEnumerable<DiagnosticData> diagnosticsToFix, Func<Project, bool> shouldFixInProject, CancellationToken cancellationToken)
         {
             var builder = ImmutableDictionary.CreateBuilder<DocumentId, List<DiagnosticData>>();
             foreach (var diagnosticData in diagnosticsToFix)
@@ -210,7 +229,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             {
                 var projectId = group.Key;
                 var project = workspace.CurrentSolution.GetProject(projectId);
-                if (projectId == null)
+                if (project == null || !shouldFixInProject(project))
                 {
                     continue;
                 }

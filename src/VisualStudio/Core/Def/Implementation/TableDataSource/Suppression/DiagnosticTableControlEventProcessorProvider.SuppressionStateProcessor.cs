@@ -13,9 +13,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
     {
         private partial class SuppressionStateEventProcessor : EventProcessor
         {
-            private readonly DiagnosticTableControlSuppressionStateService _suppressionStateService;
+            private readonly IVisualStudioDiagnosticListSuppressionStateService _suppressionStateService;
 
-            public SuppressionStateEventProcessor(DiagnosticTableControlSuppressionStateService suppressionStateService)
+            public SuppressionStateEventProcessor(IVisualStudioDiagnosticListSuppressionStateService suppressionStateService)
             {
                 _suppressionStateService = suppressionStateService;
             }

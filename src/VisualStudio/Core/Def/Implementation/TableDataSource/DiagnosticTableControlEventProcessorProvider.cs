@@ -19,11 +19,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
     internal partial class DiagnosticTableControlEventProcessorProvider : AbstractTableControlEventProcessorProvider<DiagnosticData>
     {
         internal const string Name = "C#/VB Diagnostic Table Event Processor";
-        private readonly DiagnosticTableControlSuppressionStateService _suppressionStateService;
+        private readonly IVisualStudioDiagnosticListSuppressionStateService _suppressionStateService;
         
         [ImportingConstructor]
         public DiagnosticTableControlEventProcessorProvider(
-            DiagnosticTableControlSuppressionStateService suppressionStateService)
+            IVisualStudioDiagnosticListSuppressionStateService suppressionStateService)
         {
             _suppressionStateService = suppressionStateService;
         }

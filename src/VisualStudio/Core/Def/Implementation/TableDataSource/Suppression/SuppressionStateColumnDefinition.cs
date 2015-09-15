@@ -20,21 +20,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
         public const string ColumnName = "suppressionstate";
         private static readonly string[] _defaultFilters = new[] { ServicesVSResources.SuppressionStateActive, ServicesVSResources.SuppressionStateSuppressed };
         private static readonly string[] _defaultCheckedFilters = new[] { ServicesVSResources.SuppressionStateActive };
-        private readonly DiagnosticTableControlSuppressionStateService _suppressionStateService;
-        private bool _changeVisibilityOnSuppressedDiagnostic = true;
-        private bool _visiblity = false;
-
-        [ImportingConstructor]
-        public SuppressionStateColumnDefinition(DiagnosticTableControlSuppressionStateService suppressionStateService)
-        {
-            _suppressionStateService = suppressionStateService;
-        }
 
         public override string Name => ColumnName;
         public override string DisplayName => ServicesVSResources.SuppressionStateColumnHeader;
         public override string HeaderName => ServicesVSResources.SuppressionStateColumnHeader;
         public override double MinWidth => 50.0;
-        public override bool DefaultVisible => false;
+        public override bool DefaultVisible => true;
         public override bool IsFilterable => true;
         public override IEnumerable<string> FilterPresets => _defaultFilters;
         
@@ -45,23 +36,6 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             if (suppressionStateColumn != null)
             {
                 tableControl.SetFilter(ColumnName, new ColumnHashSetFilter(suppressionStateColumn, excluded: ServicesVSResources.SuppressionStateSuppressed));
-                tableControl.FiltersChanged += suppressionStateColumn.TableControl_FiltersChanged;
-                tableControl.EntriesChanged += suppressionStateColumn.TableControl_EntriesChanged;
-            }
-        }
-
-        private void TableControl_FiltersChanged(object sender, FiltersChangedEventArgs e)
-        {
-            // User explicitly changed a filter, so don't muck with column visibility ourselves.
-            _changeVisibilityOnSuppressedDiagnostic = false;
-        }
-
-        private void TableControl_EntriesChanged(object sender, EntriesChangedEventArgs e)
-        {
-            if (_changeVisibilityOnSuppressedDiagnostic)
-            {
-                this.
-                _suppressionStateService.CanRemoveSuppressionsSelectedEntries
             }
         }
     }

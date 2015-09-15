@@ -12,12 +12,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
     internal partial class VisualStudioDiagnosticListTableCommandHandler
     {
         private readonly IVisualStudioSuppressionFixService _suppressionFixService;
-        private readonly DiagnosticTableControlSuppressionStateService _suppressionStateService;
+        private readonly IVisualStudioDiagnosticListSuppressionStateService _suppressionStateService;
         
         [ImportingConstructor]
         public VisualStudioDiagnosticListTableCommandHandler(
             IVisualStudioSuppressionFixService suppressionFixService,
-            DiagnosticTableControlSuppressionStateService suppressionStateService)
+            IVisualStudioDiagnosticListSuppressionStateService suppressionStateService)
         {
             _suppressionFixService = suppressionFixService;
             _suppressionStateService = suppressionStateService;
@@ -38,7 +38,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             AddCommand(menuCommandService, ID.RoslynCommands.AddSuppressions, delegate { }, OnAddSuppressionsStatus);
             AddCommand(menuCommandService, ID.RoslynCommands.AddSuppressionsInSource, OnAddSuppressionsInSource, OnAddSuppressionsInSourceStatus);
             AddCommand(menuCommandService, ID.RoslynCommands.AddSuppressionsInSuppressionFile, OnAddSuppressionsInSuppressionFile, OnAddSuppressionsInSuppressionFileStatus);
-            AddCommand(menuCommandService, ID.RoslynCommands.RemoveSuppressions, OnRemoveSuppressions, OnRemoveSuppressionsStatus);
+
+            // TODO: RemoveSupressions NYI
+            //AddCommand(menuCommandService, ID.RoslynCommands.RemoveSuppressions, OnRemoveSuppressions, OnRemoveSuppressionsStatus);
         }
 
         /// <summary>
@@ -86,17 +88,17 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
 
         private void OnAddSuppressionsInSource(object sender, EventArgs e)
         {
-            _suppressionFixService.AddSuppressions(selectedErrorListEntriesOnly: true, suppressInSource: true);
+            _suppressionFixService.AddSuppressions(selectedErrorListEntriesOnly: true, suppressInSource: true, projectHierarchyOpt: null);
         }
 
         private void OnAddSuppressionsInSuppressionFile(object sender, EventArgs e)
         {
-            _suppressionFixService.AddSuppressions(selectedErrorListEntriesOnly: true, suppressInSource: false);
+            _suppressionFixService.AddSuppressions(selectedErrorListEntriesOnly: true, suppressInSource: false, projectHierarchyOpt: null);
         }
 
         private void OnRemoveSuppressions(object sender, EventArgs e)
         {
-            _suppressionFixService.RemoveSuppressions(selectedErrorListEntriesOnly: true);
+            _suppressionFixService.RemoveSuppressions(selectedErrorListEntriesOnly: true, projectHierarchyOpt: null);
         }
     }
 }

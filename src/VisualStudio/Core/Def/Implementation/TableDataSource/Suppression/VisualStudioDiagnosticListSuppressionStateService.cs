@@ -18,8 +18,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
     /// <summary>
     /// Service to maintain information about the suppression state of specific set of items in the error list.
     /// </summary>
-    [Export(typeof(DiagnosticTableControlSuppressionStateService))]
-    internal class DiagnosticTableControlSuppressionStateService
+    [Export(typeof(IVisualStudioDiagnosticListSuppressionStateService))]
+    internal class VisualStudioDiagnosticListSuppressionStateService : IVisualStudioDiagnosticListSuppressionStateService
     {
         private readonly VisualStudioWorkspace _workspace;
         private readonly IVsUIShell _shellService;
@@ -32,7 +32,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
         private int _selectedNonSuppressionStateItems;
 
         [ImportingConstructor]
-        public DiagnosticTableControlSuppressionStateService(
+        public VisualStudioDiagnosticListSuppressionStateService(
             SVsServiceProvider serviceProvider,
             VisualStudioWorkspace workspace)
         {
@@ -248,11 +248,6 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             {
                 _shellService.UpdateCommandUI(0);
             }
-        }
-
-        public void HasSuppressedEntry(IEnumerable<ITableEntry> entries)
-        {
-
         }
     }
 }
