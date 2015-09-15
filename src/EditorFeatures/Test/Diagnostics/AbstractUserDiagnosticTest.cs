@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CodeFixes.Suppression;
-using Microsoft.CodeAnalysis.Editor.UnitTests.CodeActions;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Editor.UnitTests.CodeActions;
 using Microsoft.CodeAnalysis.Editor.UnitTests.Diagnostics.GenerateType;
 using Microsoft.CodeAnalysis.Editor.UnitTests.Workspaces;
 using Microsoft.CodeAnalysis.GenerateType;
@@ -32,9 +32,9 @@ namespace Microsoft.CodeAnalysis.Editor.UnitTests.Diagnostics
 
         protected override IList<CodeAction> GetCodeActions(TestWorkspace workspace, string fixAllActionEquivalenceKey)
         {
-                var diagnostics = GetDiagnosticAndFix(workspace, fixAllActionEquivalenceKey);
+            var diagnostics = GetDiagnosticAndFix(workspace, fixAllActionEquivalenceKey);
             return diagnostics?.Item2?.Fixes.Select(f => f.Action).ToList();
-            }
+        }
 
         internal Tuple<Diagnostic, CodeFixCollection> GetDiagnosticAndFix(TestWorkspace workspace, string fixAllActionEquivalenceKey = null)
         {

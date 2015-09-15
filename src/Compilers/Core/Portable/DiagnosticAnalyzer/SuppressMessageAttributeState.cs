@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Roslyn.Utilities;
 
@@ -13,9 +12,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 {
     internal partial class SuppressMessageAttributeState
     {
-        private static readonly ConditionalWeakTable<Compilation, SuppressMessageAttributeState> SuppressMessageStateByCompilation =
-            new ConditionalWeakTable<Compilation, SuppressMessageAttributeState>();
-
         private static readonly SmallDictionary<string, TargetScope> s_suppressMessageScopeTypes = new SmallDictionary<string, TargetScope>()
             {
                 { null, TargetScope.None },
@@ -83,7 +79,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         public static Diagnostic ApplySourceSuppressions(Diagnostic diagnostic, Compilation compilation, ISymbol symbolOpt = null)
         {
-            if (diagnostic.HasSourceSuppression)
+            if (diagnostic.IsSuppressed)
             {
                 // Diagnostic already has a source suppression.
                 return diagnostic;
@@ -95,7 +91,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             if (suppressMessageState.IsDiagnosticSuppressed(diagnostic, out info))
             {
                 // Attach the suppression info to the diagnostic.
-                diagnostic = diagnostic.WithHasSourceSuppression(true);
+                diagnostic = diagnostic.WithIsSuppressed(true);
             }
 
             return diagnostic;
