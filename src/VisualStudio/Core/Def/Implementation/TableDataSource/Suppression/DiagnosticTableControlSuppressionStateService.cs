@@ -6,6 +6,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CodeFixes.Suppression;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -129,42 +130,21 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
 
         private static bool EntrySupportsSuppressionState(ITableEntryHandle entryHandle, out bool isRoslynEntry, out bool isSuppressedEntry, out bool isCompilerDiagnosticEntry)
         {
-            isRoslynEntry = false;
-            isSuppressedEntry = false;
-            isCompilerDiagnosticEntry = false;
+            int index;
+            var roslynSnapshot = GetEntriesSnapshot(entryHandle, out index);
 
-            string value;
-            if (!entryHandle.TryGetValue(SuppressionStateColumnDefinition.ColumnName, out value) ||
-                string.IsNullOrEmpty(value))
+            var diagnosticData = roslynSnapshot?.GetItem(index)?.Primary;
+            if (diagnosticData == null || !diagnosticData.HasTextSpan || SuppressionHelpers.IsNotConfigurableDiagnostic(diagnosticData))
             {
+                isRoslynEntry = false;
+                isSuppressedEntry = false;
+                isCompilerDiagnosticEntry = false;
                 return false;
             }
 
-            string errorCode;
-            if (!entryHandle.TryGetValue(StandardTableColumnDefinitions.ErrorCode, out errorCode) ||
-                string.IsNullOrEmpty(errorCode))
-            {
-                return false;
-            }
-
-            isCompilerDiagnosticEntry = IsCompilerDiagnostic(errorCode);
-
-            if (value == ServicesVSResources.SuppressionStateSuppressed)
-            {
-                isSuppressedEntry = true;
-            }
-            else if (value != ServicesVSResources.SuppressionStateActive)
-            {
-                // TODO: Remove the below workaround once FxCop supports the new Suppression state column.
-                if (IsFxCopDiagnostic(errorCode))
-                {
-                    return true;
-                }
-
-                return false;
-            }
-
-            isRoslynEntry = GetEntriesSnapshot(entryHandle) != null;
+            isRoslynEntry = true;
+            isSuppressedEntry = diagnosticData.IsSuppressed;
+            isCompilerDiagnosticEntry = SuppressionHelpers.IsCompilerDiagnostic(diagnosticData);
             return true;
         }
 
@@ -183,22 +163,6 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             }
 
             return snapshot as AbstractTableEntriesSnapshot<DiagnosticData>;
-        }
-
-        private static bool IsCompilerDiagnostic(string diagnosticId)
-        {
-            int id;
-            return (diagnosticId.StartsWith("CS") || diagnosticId.StartsWith("BC")) &&
-                diagnosticId.Length > 2 &&
-                int.TryParse(diagnosticId.Substring(2), out id);
-        }
-
-        private static bool IsFxCopDiagnostic(string diagnosticId)
-        {
-            int id;
-            return diagnosticId.StartsWith("CA") &&
-                diagnosticId.Length > 2 &&
-                int.TryParse(diagnosticId.Substring(2), out id);
         }
 
         public ImmutableArray<DiagnosticData> GetItems(bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, CancellationToken cancellationToken)
@@ -221,7 +185,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                         {
                             // Compiler diagnostics can only be suppressed in source.
                             if (!diagnosticData.IsSuppressed &&
-                                (isSuppressionInSource || !IsCompilerDiagnostic(diagnosticData.Id)))
+                                (isSuppressionInSource || !SuppressionHelpers.IsCompilerDiagnostic(diagnosticData)))
                             {
                                 builder.Add(diagnosticData);
                             }
@@ -284,6 +248,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             {
                 _shellService.UpdateCommandUI(0);
             }
+        }
+
+        public void HasSuppressedEntry(IEnumerable<ITableEntry> entries)
+        {
+
         }
     }
 }

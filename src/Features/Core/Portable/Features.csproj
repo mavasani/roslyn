@@ -107,6 +107,7 @@
     <Compile Include="CodeFixes\FixAllOccurrences\IFixAllGetFixesService.cs" />
     <Compile Include="CodeFixes\Iterator\AbstractIteratorCodeFixProvider.cs" />
     <Compile Include="CodeFixes\PredefinedCodeFixProviderNames.cs" />
+    <Compile Include="CodeFixes\Suppression\SuppressionHelpers.cs" />
     <Compile Include="CodeFixes\Suppression\AbstractSuppressionCodeFixProvider.AbstractSuppressionCodeAction.cs" />
     <Compile Include="CodeFixes\Suppression\AbstractSuppressionCodeFixProvider.FixAllProvider.cs" />
     <Compile Include="CodeFixes\Suppression\AbstractSuppressionCodeFixProvider.AbstractGlobalSuppressMessageCodeAction.cs" />
