@@ -21,8 +21,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
     /// <summary>
     /// Service to maintain information about the suppression state of specific set of items in the error list.
     /// </summary>
-    [Export(typeof(VisualStudioDiagnosticListSuppressionStateService))]
-    internal class VisualStudioDiagnosticListSuppressionStateService
+    [Export(typeof(IVisualStudioDiagnosticListSuppressionStateService))]
+    internal class VisualStudioDiagnosticListSuppressionStateService : IVisualStudioDiagnosticListSuppressionStateService
     {
         private readonly VisualStudioWorkspace _workspace;
         private readonly IVsUIShell _shellService;
@@ -204,7 +204,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
         /// <summary>
         /// Gets <see cref="DiagnosticData"/> objects for error list entries, filtered based on the given parameters.
         /// </summary>
-        public async Task<ImmutableArray<DiagnosticData>> GetItemsAsync(bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, CancellationToken cancellationToken)
+        public ImmutableArray<DiagnosticData> GetItems(bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, bool onlyCompilerDiagnostics, CancellationToken cancellationToken)
         {
             var builder = ImmutableArray.CreateBuilder<DiagnosticData>();
             Dictionary<string, Project> projectNameToProjectMapOpt = null;
@@ -315,25 +315,31 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                 }
 
                 if (IsEntryWithConfigurableSuppressionState(diagnosticData))
-                {
-                    if (isAddSuppression)
                     {
-                        // Compiler diagnostics can only be suppressed in source.
-                        if (!diagnosticData.IsSuppressed &&
-                            (isSuppressionInSource || !SuppressionHelpers.IsCompilerDiagnostic(diagnosticData)))
+                        var isCompilerDiagnostic = SuppressionHelpers.IsCompilerDiagnostic(diagnosticData);
+                        if (onlyCompilerDiagnostics && !isCompilerDiagnostic)
+                        {
+                            continue;
+                        }
+
+                        if (isAddSuppression)
+                        {
+                            // Compiler diagnostics can only be suppressed in source.
+                            if (!diagnosticData.IsSuppressed &&
+                                (isSuppressionInSource || !isCompilerDiagnostic))
+                            {
+                                builder.Add(diagnosticData);
+                            }
+                        }
+                        else if (diagnosticData.IsSuppressed)
                         {
                             builder.Add(diagnosticData);
                         }
-                    }
-                    else if (diagnosticData.IsSuppressed)
-                    {
-                        builder.Add(diagnosticData);
-                    }
                 }
             }
 
             return builder.ToImmutable();
-        }
+                    }
 
         private static async Task<ImmutableDictionary<string, Document>> GetFilePathToDocumentMapAsync(Project project, CancellationToken cancellationToken)
         {

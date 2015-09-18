@@ -23,8 +23,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
     /// <summary>
     /// Service to compute and apply bulk suppression fixes.
     /// </summary>
-    [Export(typeof(VisualStudioSuppressionFixService))]
-    internal sealed class VisualStudioSuppressionFixService
+    [Export(typeof(IVisualStudioSuppressionFixService))]
+    internal sealed class VisualStudioSuppressionFixService : IVisualStudioSuppressionFixService
     {
         private readonly VisualStudioWorkspaceImpl _workspace;
         private readonly IWpfTableControl _tableControl;
@@ -40,18 +40,28 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             VisualStudioWorkspaceImpl workspace,
             IDiagnosticAnalyzerService diagnosticService,
             ICodeFixService codeFixService,
-            VisualStudioDiagnosticListSuppressionStateService suppressionStateService,
+            IVisualStudioDiagnosticListSuppressionStateService suppressionStateService,
             IWaitIndicator waitIndicator)
         {
             _workspace = workspace;
             _diagnosticService = diagnosticService;
             _codeFixService = codeFixService;
-            _suppressionStateService = suppressionStateService;
+            _suppressionStateService = (VisualStudioDiagnosticListSuppressionStateService)suppressionStateService;
             _waitIndicator = waitIndicator;
             _fixMultipleOccurencesService = workspace.Services.GetService<IFixMultipleOccurrencesService>();
 
             var errorList = serviceProvider.GetService(typeof(SVsErrorList)) as IErrorList;
             _tableControl = errorList?.TableControl;
+        }
+
+        public void AddSuppressions(IVsHierarchy projectHierarchyOpt)
+        {
+            Func<Project, bool> shouldFixInProject = GetShouldFixInProjectDelegate(_workspace, projectHierarchyOpt);
+            
+            // Apply suppressions fix in global suppressions file for non-compiler diagnostics and
+            // in source only for compiler diagnostics.
+            ApplySuppressionFix(shouldFixInProject, selectedEntriesOnly: false, isAddSuppression: true, isSuppressionInSource: false, onlyCompilerDiagnostics: false, showPreviewChangesDialog: false);
+            ApplySuppressionFix(shouldFixInProject, selectedEntriesOnly: false, isAddSuppression: true, isSuppressionInSource: true, onlyCompilerDiagnostics: true, showPreviewChangesDialog: false);
         }
 
         public void AddSuppressions(bool selectedErrorListEntriesOnly, bool suppressInSource, IVsHierarchy projectHierarchyOpt)
@@ -62,7 +72,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             }
 
             Func<Project, bool> shouldFixInProject = GetShouldFixInProjectDelegate(_workspace, projectHierarchyOpt);
-            ApplySuppressionFix(selectedErrorListEntriesOnly, isAddSuppression: true, isSuppressionInSource: suppressInSource, shouldFixInProject: shouldFixInProject);
+            ApplySuppressionFix(shouldFixInProject, selectedErrorListEntriesOnly, isAddSuppression: true, isSuppressionInSource: suppressInSource, onlyCompilerDiagnostics: false, showPreviewChangesDialog: true);
         }
 
         public void RemoveSuppressions(bool selectedErrorListEntriesOnly, IVsHierarchy projectHierarchyOpt)
@@ -73,7 +83,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             }
 
             Func<Project, bool> shouldFixInProject = GetShouldFixInProjectDelegate(_workspace, projectHierarchyOpt);
-            ApplySuppressionFix(selectedErrorListEntriesOnly, isAddSuppression: false, isSuppressionInSource: false, shouldFixInProject: shouldFixInProject);
+            ApplySuppressionFix(shouldFixInProject, selectedErrorListEntriesOnly, isAddSuppression: false, isSuppressionInSource: false, onlyCompilerDiagnostics: false, showPreviewChangesDialog: true);
         }
 
         private static Func<Project, bool> GetShouldFixInProjectDelegate(VisualStudioWorkspaceImpl workspace, IVsHierarchy projectHierarchyOpt)
@@ -93,24 +103,28 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             }
         }
 
-        private void ApplySuppressionFix(bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, Func<Project, bool> shouldFixInProject)
+        private void ApplySuppressionFix(Func<Project, bool> shouldFixInProject, bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, bool onlyCompilerDiagnostics, bool showPreviewChangesDialog)
         {
             ImmutableDictionary<Document, ImmutableArray<Diagnostic>> diagnosticsToFixMap = null;
 
-            var previewChangesTitle = isAddSuppression ? ServicesVSResources.SuppressMultipleOccurrences : ServicesVSResources.RemoveSuppressMultipleOccurrences;
+            var waitDialogAndPreviewChangesTitle = isAddSuppression ? ServicesVSResources.SuppressMultipleOccurrences : ServicesVSResources.RemoveSuppressMultipleOccurrences;
             var waitDialogMessage = isAddSuppression ? ServicesVSResources.ComputingSuppressionFix : ServicesVSResources.ComputingRemoveSuppressionFix;
             
             // Get the diagnostics to fix from the suppression state service.
             var result = _waitIndicator.Wait(
-                previewChangesTitle,
+                waitDialogAndPreviewChangesTitle,
                 waitDialogMessage,
                 allowCancel: true,
                 action: waitContext =>
                 {
                     try
                     {
-                        var diagnosticsToFix = _suppressionStateService.GetItemsAsync(selectedEntriesOnly, isAddSuppression, isSuppressionInSource, waitContext.CancellationToken)
-                                .WaitAndGetResult(waitContext.CancellationToken);
+                        var diagnosticsToFix = _suppressionStateService.GetItems(
+                                selectedEntriesOnly,
+                                isAddSuppression,
+                                isSuppressionInSource,
+                                onlyCompilerDiagnostics,
+                                waitContext.CancellationToken);
 
                         if (diagnosticsToFix.IsEmpty)
                         {
@@ -155,12 +169,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                     // Change the dialog title and wait message appropriately.
                     if (isAddSuppression)
                     {
-                        previewChangesTitle = string.Format(ServicesVSResources.SuppressMultipleOccurrencesForLanguage, language);
+                        waitDialogAndPreviewChangesTitle = string.Format(ServicesVSResources.SuppressMultipleOccurrencesForLanguage, language);
                         waitDialogMessage = string.Format(ServicesVSResources.ComputingSuppressionFixForLanguage, language);
                     }
                     else
                     {
-                        previewChangesTitle = string.Format(ServicesVSResources.RemoveSuppressMultipleOccurrencesForLanguage, language);
+                        waitDialogAndPreviewChangesTitle = string.Format(ServicesVSResources.RemoveSuppressMultipleOccurrencesForLanguage, language);
                         waitDialogMessage = string.Format(ServicesVSResources.ComputingRemoveSuppressionFixForLanguage, language);
                     }
                 }
@@ -210,8 +224,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                     suppressionFixer,
                     suppressionFixer.GetFixAllProvider(),
                     equivalenceKey,
-                    previewChangesTitle,
+                    waitDialogAndPreviewChangesTitle,
                     waitDialogMessage,
+                    showPreviewChangesDialog,
                     CancellationToken.None);
                 
                 newSolution = _workspace.CurrentSolution;
