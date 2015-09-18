@@ -56,7 +56,7 @@ namespace Microsoft.CodeAnalysis.Editor.UnitTests.Diagnostics
             {
                 var fixer = providerAndFixer.Item2;
                 var diagnostics = testDriver.GetAllDiagnostics(provider, document, span)
-                    .Where(d => fixer.CanBeSuppressed(d))
+                    .Where(d => fixer.CanBeSuppressedOrUnsuppressed(d))
                     .ToImmutableArray();
 
                 var wrapperCodeFixer = new WrapperCodeFixProvider(fixer, diagnostics);

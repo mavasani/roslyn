@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Composition;
 using System.Globalization;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -156,6 +157,31 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.Suppression
             }
 
             return attributeArgumentList;
+        }
+
+        protected override bool IsAnyPragmaDirectiveForId(SyntaxTrivia trivia, string id, out bool enableDirective, out bool hasMultipleIds)
+        {
+            if (trivia.Kind() == SyntaxKind.PragmaWarningDirectiveTrivia)
+            {
+                var pragmaWarning = (PragmaWarningDirectiveTriviaSyntax)trivia.GetStructure();
+                enableDirective = pragmaWarning.DisableOrRestoreKeyword.Kind() == SyntaxKind.RestoreKeyword;
+                hasMultipleIds = pragmaWarning.ErrorCodes.Count > 1;
+                return true;
+            }
+
+            enableDirective = false;
+            hasMultipleIds = false;
+            return false;
+        }
+
+        protected override SyntaxTrivia TogglePragmaDirective(SyntaxTrivia trivia)
+        {
+            var pragmaWarning = (PragmaWarningDirectiveTriviaSyntax)trivia.GetStructure();
+            var currentKeyword = pragmaWarning.DisableOrRestoreKeyword;
+            var toggledKeywordKind = currentKeyword.Kind() == SyntaxKind.DisableKeyword ? SyntaxKind.RestoreKeyword : SyntaxKind.DisableKeyword;
+            var toggledToken = SyntaxFactory.Token(currentKeyword.LeadingTrivia, toggledKeywordKind, currentKeyword.TrailingTrivia);
+            var newPragmaWarning = pragmaWarning.WithDisableOrRestoreKeyword(toggledToken);
+            return SyntaxFactory.Trivia(newPragmaWarning);
         }
     }
 }

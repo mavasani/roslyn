@@ -62,7 +62,18 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             }
 
             Func<Project, bool> shouldFixInProject = GetShouldFixInProjectDelegate(_workspace, projectHierarchyOpt);
-            ApplySuppressionFix(selectedErrorListEntriesOnly, suppressInSource, shouldFixInProject);
+            ApplySuppressionFix(selectedErrorListEntriesOnly, isAddSuppression: true, isSuppressionInSource: suppressInSource, shouldFixInProject: shouldFixInProject);
+        }
+
+        public void RemoveSuppressions(bool selectedErrorListEntriesOnly, IVsHierarchy projectHierarchyOpt)
+        {
+            if (_tableControl == null)
+            {
+                return;
+            }
+
+            Func<Project, bool> shouldFixInProject = GetShouldFixInProjectDelegate(_workspace, projectHierarchyOpt);
+            ApplySuppressionFix(selectedErrorListEntriesOnly, isAddSuppression: false, isSuppressionInSource: false, shouldFixInProject: shouldFixInProject);
         }
 
         private static Func<Project, bool> GetShouldFixInProjectDelegate(VisualStudioWorkspaceImpl workspace, IVsHierarchy projectHierarchyOpt)
@@ -82,34 +93,24 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             }
         }
 
-        public void RemoveSuppressions(bool selectedErrorListEntriesOnly, IVsHierarchy projectHierarchyOpt)
-        {
-            if (_tableControl == null)
-            {
-                return;
-            }
-
-            // TODO
-        }
-
-        private void ApplySuppressionFix(bool selectedEntriesOnly, bool suppressInSource, Func<Project, bool> shouldFixInProject)
+        private void ApplySuppressionFix(bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, Func<Project, bool> shouldFixInProject)
         {
             ImmutableDictionary<Document, ImmutableArray<Diagnostic>> diagnosticsToFixMap = null;
 
+            var previewChangesTitle = isAddSuppression ? ServicesVSResources.SuppressMultipleOccurrences : ServicesVSResources.RemoveSuppressMultipleOccurrences;
+            var waitDialogMessage = isAddSuppression ? ServicesVSResources.ComputingSuppressionFix : ServicesVSResources.ComputingRemoveSuppressionFix;
+            
             // Get the diagnostics to fix from the suppression state service.
             var result = _waitIndicator.Wait(
-                ServicesVSResources.SuppressMultipleOccurrences,
-                ServicesVSResources.ComputingSuppressionFix,
+                previewChangesTitle,
+                waitDialogMessage,
                 allowCancel: true,
                 action: waitContext =>
                 {
                     try
                     {
-                        var diagnosticsToFix = _suppressionStateService.GetItems(
-                                selectedEntriesOnly,
-                                isAddSuppression: true,
-                                isSuppressionInSource: suppressInSource,
-                                cancellationToken: waitContext.CancellationToken);
+                        var diagnosticsToFix = _suppressionStateService.GetItemsAsync(selectedEntriesOnly, isAddSuppression, isSuppressionInSource, waitContext.CancellationToken)
+                                .WaitAndGetResult(waitContext.CancellationToken);
 
                         if (diagnosticsToFix.IsEmpty)
                         {
@@ -121,6 +122,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                     }
                     catch (OperationCanceledException)
                     {
+                        diagnosticsToFixMap = null;
                     }
                 });
 
@@ -131,7 +133,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                 return;
             }
 
-            var equivalenceKey = suppressInSource ? FeaturesResources.SuppressWithPragma : FeaturesResources.SuppressWithGlobalSuppressMessage;
+            // Equivalence key determines what fix will be applied.
+            // Make sure we don't include any specific diagnostic ID, as we want all of the given diagnostics (which can have varied ID) to be fixed.
+            var equivalenceKey = isAddSuppression ?
+                (isSuppressionInSource ? FeaturesResources.SuppressWithPragma : FeaturesResources.SuppressWithGlobalSuppressMessage) :
+                FeaturesResources.RemoveSuppressionEquivalenceKeyPrefix;
 
             // We have different suppression fixers for every language.
             // So we need to group diagnostics by the containing project language and apply fixes separately.
@@ -144,8 +150,20 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
             foreach (var group in groups)
             {
                 var language = group.Key;
-                var previewChangesTitle = hasMultipleLangauges ? string.Format(ServicesVSResources.SuppressMultipleOccurrencesForLanguage, language) : ServicesVSResources.SuppressMultipleOccurrences;
-                var waitDialogMessage = hasMultipleLangauges ? string.Format(ServicesVSResources.ComputingSuppressionFixForLanguage, language) : ServicesVSResources.ComputingSuppressionFix;
+                if (hasMultipleLangauges)
+                {
+                    // Change the dialog title and wait message appropriately.
+                    if (isAddSuppression)
+                    {
+                        previewChangesTitle = string.Format(ServicesVSResources.SuppressMultipleOccurrencesForLanguage, language);
+                        waitDialogMessage = string.Format(ServicesVSResources.ComputingSuppressionFixForLanguage, language);
+                    }
+                    else
+                    {
+                        previewChangesTitle = string.Format(ServicesVSResources.RemoveSuppressMultipleOccurrencesForLanguage, language);
+                        waitDialogMessage = string.Format(ServicesVSResources.ComputingRemoveSuppressionFixForLanguage, language);
+                    }
+                }
 
                 ImmutableDictionary<Document, ImmutableArray<Diagnostic>> documentDiagnosticsPerLanguage = null;
                 CodeFixProvider suppressionFixer = null;

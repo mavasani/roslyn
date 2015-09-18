@@ -178,5 +178,51 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.CodeFixes.Suppression
 
             Return attributeArgumentList
         End Function
+
+        Protected Overrides Function IsAnyPragmaDirectiveForId(trivia As SyntaxTrivia, id As String, ByRef enableDirective As Boolean, ByRef hasMultipleIds As Boolean) As Boolean
+            Select Case trivia.Kind()
+                Case SyntaxKind.DisableWarningDirectiveTrivia
+                    Dim pragmaWarning = DirectCast(trivia.GetStructure(), DisableWarningDirectiveTriviaSyntax)
+                    enableDirective = False
+                    hasMultipleIds = pragmaWarning.ErrorCodes.Count > 1
+                    Return True
+
+                Case SyntaxKind.EnableWarningDirectiveTrivia
+                    Dim pragmaWarning = DirectCast(trivia.GetStructure(), EnableWarningDirectiveTriviaSyntax)
+                    enableDirective = True
+                    hasMultipleIds = pragmaWarning.ErrorCodes.Count > 1
+                    Return True
+
+                Case Else
+                    enableDirective = False
+                    hasMultipleIds = False
+                    Return False
+            End Select
+        End Function
+
+        Protected Overrides Function TogglePragmaDirective(trivia As SyntaxTrivia) As SyntaxTrivia
+            Select Case trivia.Kind()
+                Case SyntaxKind.DisableWarningDirectiveTrivia
+                    Dim pragmaWarning = DirectCast(trivia.GetStructure(), DisableWarningDirectiveTriviaSyntax)
+                    Dim disabledKeyword = pragmaWarning.DisableKeyword
+                    Dim enabledKeyword = SyntaxFactory.Token(disabledKeyword.LeadingTrivia, SyntaxKind.EnableKeyword, disabledKeyword.TrailingTrivia)
+                    Dim newPragmaWarning = SyntaxFactory.EnableWarningDirectiveTrivia(pragmaWarning.HashToken, enabledKeyword, pragmaWarning.WarningKeyword, pragmaWarning.ErrorCodes) _
+                        .WithLeadingTrivia(pragmaWarning.GetLeadingTrivia) _
+                        .WithTrailingTrivia(pragmaWarning.GetTrailingTrivia)
+                    Return SyntaxFactory.Trivia(newPragmaWarning)
+
+                Case SyntaxKind.EnableWarningDirectiveTrivia
+                    Dim pragmaWarning = DirectCast(trivia.GetStructure(), EnableWarningDirectiveTriviaSyntax)
+                    Dim enabledKeyword = pragmaWarning.EnableKeyword
+                    Dim disabledKeyword = SyntaxFactory.Token(enabledKeyword.LeadingTrivia, SyntaxKind.DisableKeyword, enabledKeyword.TrailingTrivia)
+                    Dim newPragmaWarning = SyntaxFactory.DisableWarningDirectiveTrivia(pragmaWarning.HashToken, disabledKeyword, pragmaWarning.WarningKeyword, pragmaWarning.ErrorCodes) _
+                        .WithLeadingTrivia(pragmaWarning.GetLeadingTrivia) _
+                        .WithTrailingTrivia(pragmaWarning.GetTrailingTrivia)
+                    Return SyntaxFactory.Trivia(newPragmaWarning)
+
+                Case Else
+                    Contract.Fail()
+            End Select
+        End Function
     End Class
 End Namespace
