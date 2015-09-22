@@ -14,16 +14,16 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.CodeFixes.Suppression
     Friend Class VisualBasicSuppressionCodeFixProvider
         Inherits AbstractSuppressionCodeFixProvider
 
-        Protected Overrides Function CreatePragmaRestoreDirectiveTrivia(diagnostic As Diagnostic, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
+        Protected Overrides Function CreatePragmaRestoreDirectiveTrivia(diagnostic As Diagnostic, needsLeadingEndOfLine As Boolean, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
             Dim errorCodes = GetErrorCodes(diagnostic)
             Dim pragmaDirective = SyntaxFactory.EnableWarningDirectiveTrivia(errorCodes)
-            Return CreatePragmaDirectiveTrivia(pragmaDirective, diagnostic, True, needsTrailingEndOfLine)
+            Return CreatePragmaDirectiveTrivia(pragmaDirective, diagnostic, needsLeadingEndOfLine, needsTrailingEndOfLine)
         End Function
 
-        Protected Overrides Function CreatePragmaDisableDirectiveTrivia(diagnostic As Diagnostic, needsLeadingEndOfLine As Boolean) As SyntaxTriviaList
+        Protected Overrides Function CreatePragmaDisableDirectiveTrivia(diagnostic As Diagnostic, needsLeadingEndOfLine As Boolean, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
             Dim errorCodes = GetErrorCodes(diagnostic)
             Dim pragmaDirective = SyntaxFactory.DisableWarningDirectiveTrivia(errorCodes)
-            Return CreatePragmaDirectiveTrivia(pragmaDirective, diagnostic, needsLeadingEndOfLine, True)
+            Return CreatePragmaDirectiveTrivia(pragmaDirective, diagnostic, needsLeadingEndOfLine, needsTrailingEndOfLine)
         End Function
 
         Private Shared Function GetErrorCodes(diagnostic As Diagnostic) As SeparatedSyntaxList(Of IdentifierNameSyntax)
@@ -179,25 +179,38 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.CodeFixes.Suppression
             Return attributeArgumentList
         End Function
 
+        Protected Overrides Function IsSingleAttributeInAttributeList(attribute As SyntaxNode) As Boolean
+            Dim attributeSyntax = TryCast(attribute, AttributeSyntax)
+            If attributeSyntax IsNot Nothing Then
+                Dim attributeList = TryCast(attributeSyntax.Parent, AttributeListSyntax)
+                Return attributeList IsNot Nothing AndAlso attributeList.Attributes.Count = 1
+            End If
+
+            Return False
+        End Function
+
         Protected Overrides Function IsAnyPragmaDirectiveForId(trivia As SyntaxTrivia, id As String, ByRef enableDirective As Boolean, ByRef hasMultipleIds As Boolean) As Boolean
+            Dim errorCodes As SeparatedSyntaxList(Of IdentifierNameSyntax)
+
             Select Case trivia.Kind()
                 Case SyntaxKind.DisableWarningDirectiveTrivia
                     Dim pragmaWarning = DirectCast(trivia.GetStructure(), DisableWarningDirectiveTriviaSyntax)
+                    errorCodes = pragmaWarning.ErrorCodes
                     enableDirective = False
-                    hasMultipleIds = pragmaWarning.ErrorCodes.Count > 1
-                    Return True
 
                 Case SyntaxKind.EnableWarningDirectiveTrivia
                     Dim pragmaWarning = DirectCast(trivia.GetStructure(), EnableWarningDirectiveTriviaSyntax)
+                    errorCodes = pragmaWarning.ErrorCodes
                     enableDirective = True
-                    hasMultipleIds = pragmaWarning.ErrorCodes.Count > 1
-                    Return True
 
                 Case Else
                     enableDirective = False
                     hasMultipleIds = False
                     Return False
             End Select
+
+            hasMultipleIds = errorCodes.Count > 1
+            Return errorCodes.Any(Function(node) node.ToString = id)
         End Function
 
         Protected Overrides Function TogglePragmaDirective(trivia As SyntaxTrivia) As SyntaxTrivia

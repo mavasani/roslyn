@@ -119,12 +119,13 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
                 {
                     try
                     {
-                        var diagnosticsToFix = _suppressionStateService.GetItems(
+                        var diagnosticsToFix = _suppressionStateService.GetItemsAsync(
                                 selectedEntriesOnly,
                                 isAddSuppression,
                                 isSuppressionInSource,
                                 onlyCompilerDiagnostics,
-                                waitContext.CancellationToken);
+                                waitContext.CancellationToken)
+                            .WaitAndGetResult(waitContext.CancellationToken);
 
                         if (diagnosticsToFix.IsEmpty)
                         {

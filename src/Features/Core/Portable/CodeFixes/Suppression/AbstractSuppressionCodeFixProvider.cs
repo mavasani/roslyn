@@ -38,8 +38,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
             return SuppressionHelpers.CanBeSuppressed(diagnostic) || SuppressionHelpers.CanBeUnsuppressed(diagnostic);
         }
 
-        protected abstract SyntaxTriviaList CreatePragmaDisableDirectiveTrivia(Diagnostic diagnostic, bool needsLeadingEndOfLine);
-        protected abstract SyntaxTriviaList CreatePragmaRestoreDirectiveTrivia(Diagnostic diagnostic, bool needsTrailingEndOfLine);
+        protected abstract SyntaxTriviaList CreatePragmaDisableDirectiveTrivia(Diagnostic diagnostic, bool needsLeadingEndOfLine, bool needsTrailingEndOfLine);
+        protected abstract SyntaxTriviaList CreatePragmaRestoreDirectiveTrivia(Diagnostic diagnostic, bool needsLeadingEndOfLine, bool needsTrailingEndOfLine);
 
         protected abstract SyntaxNode AddGlobalSuppressMessageAttribute(SyntaxNode newRoot, ISymbol targetSymbol, Diagnostic diagnostic);
 
@@ -48,6 +48,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
         protected abstract bool IsAttributeListWithAssemblyAttributes(SyntaxNode node);
         protected abstract bool IsEndOfLine(SyntaxTrivia trivia);
         protected abstract bool IsEndOfFileToken(SyntaxToken token);
+        protected abstract bool IsSingleAttributeInAttributeList(SyntaxNode attribute);
         protected abstract bool IsAnyPragmaDirectiveForId(SyntaxTrivia trivia, string id, out bool enableDirective, out bool hasMultipleIds);
         protected abstract SyntaxTrivia TogglePragmaDirective(SyntaxTrivia trivia);
 
@@ -110,20 +111,20 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                     var nestedActions = new List<NestedSuppressionCodeAction>();
 
                     // pragma warning disable.
-                    nestedActions.Add(new PragmaWarningCodeAction(this, suppressionTargetInfo.StartToken, suppressionTargetInfo.EndToken, suppressionTargetInfo.NodeWithTokens, document, diagnostic));
+                    nestedActions.Add(new PragmaWarningCodeAction(suppressionTargetInfo, document, diagnostic, this));
 
                     // SuppressMessageAttribute suppression is not supported for compiler diagnostics.
                     if (!skipSuppressMessage && !SuppressionHelpers.IsCompilerDiagnostic(diagnostic))
                     {
                         // global assembly-level suppress message attribute.
-                        nestedActions.Add(new GlobalSuppressMessageCodeAction(this, suppressionTargetInfo.TargetSymbol, document.Project, diagnostic));
+                        nestedActions.Add(new GlobalSuppressMessageCodeAction(suppressionTargetInfo.TargetSymbol, document.Project, diagnostic, this));
                     }
 
                     result.Add(new CodeFix(new SuppressionCodeAction(diagnostic, nestedActions), diagnostic));
                 }
                 else if (!skipUnsuppress)
                 {
-                    var codeAcion = new RemoveSuppressionCodeAction(this, suppressionTargetInfo.StartToken, suppressionTargetInfo.EndToken, suppressionTargetInfo.NodeWithTokens, document, diagnostic);
+                    var codeAcion = await RemoveSuppressionCodeAction.CreateAsync(suppressionTargetInfo, document, diagnostic, this, cancellationToken).ConfigureAwait(false);
                     result.Add(new CodeFix(codeAcion, diagnostic));
                 }
             }
@@ -131,7 +132,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
             return result;
         }
 
-        private class SuppressionTargetInfo
+        internal class SuppressionTargetInfo
         {
             public ISymbol TargetSymbol { get; set; }
             public SyntaxToken StartToken { get; set; }

@@ -204,7 +204,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
         /// <summary>
         /// Gets <see cref="DiagnosticData"/> objects for error list entries, filtered based on the given parameters.
         /// </summary>
-        public ImmutableArray<DiagnosticData> GetItems(bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, bool onlyCompilerDiagnostics, CancellationToken cancellationToken)
+        public async Task<ImmutableArray<DiagnosticData>> GetItemsAsync(bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, bool onlyCompilerDiagnostics, CancellationToken cancellationToken)
         {
             var builder = ImmutableArray.CreateBuilder<DiagnosticData>();
             Dictionary<string, Project> projectNameToProjectMapOpt = null;

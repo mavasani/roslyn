@@ -396,7 +396,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 if (reportSuppressedDiagnostics || !d.IsSuppressed)
                 {
                     allDiagnostics.Add(d);
-                }                
+                }
             }
 
             return allDiagnostics.ToReadOnlyAndFree();

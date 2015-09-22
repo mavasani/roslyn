@@ -37,8 +37,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                     Contract.ThrowIfFalse(isPragmaWarningSuppression || NestedSuppressionCodeAction.IsEquivalenceKeyForRemoveSuppression(fixAllContext.CodeActionEquivalenceKey));
 
                     batchFixer = isPragmaWarningSuppression ?
-                        (BatchFixAllProvider)new PragmaWarningBatchFixAllProvider(suppressionFixer) :
-                        new RemoveSuppressionBatchFixAllProvider(suppressionFixer);
+                        new PragmaWarningBatchFixAllProvider(suppressionFixer) :
+                        RemoveSuppressionCodeAction.GetBatchFixer(suppressionFixer);
                 }
 
                 var title = fixAllContext.CodeActionEquivalenceKey;
