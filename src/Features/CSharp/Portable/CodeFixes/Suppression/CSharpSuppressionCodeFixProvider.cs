@@ -16,24 +16,25 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.Suppression
     [ExportSuppressionFixProvider(PredefinedCodeFixProviderNames.Suppression, LanguageNames.CSharp), Shared]
     internal class CSharpSuppressionCodeFixProvider : AbstractSuppressionCodeFixProvider
     {
-        protected override SyntaxTriviaList CreatePragmaRestoreDirectiveTrivia(Diagnostic diagnostic, bool needsLeadingEndOfLine, bool needsTrailingEndOfLine)
+        protected override SyntaxTriviaList CreatePragmaRestoreDirectiveTrivia(Diagnostic diagnostic, Func<SyntaxNode, SyntaxNode> formatNode, bool needsLeadingEndOfLine, bool needsTrailingEndOfLine)
         {
             var restoreKeyword = SyntaxFactory.Token(SyntaxKind.RestoreKeyword);
-            return CreatePragmaDirectiveTrivia(restoreKeyword, diagnostic, needsLeadingEndOfLine, needsTrailingEndOfLine);
+            return CreatePragmaDirectiveTrivia(restoreKeyword, diagnostic, formatNode, needsLeadingEndOfLine, needsTrailingEndOfLine);
         }
 
-        protected override SyntaxTriviaList CreatePragmaDisableDirectiveTrivia(Diagnostic diagnostic, bool needsLeadingEndOfLine, bool needsTrailingEndOfLine)
+        protected override SyntaxTriviaList CreatePragmaDisableDirectiveTrivia(Diagnostic diagnostic, Func<SyntaxNode, SyntaxNode> formatNode, bool needsLeadingEndOfLine, bool needsTrailingEndOfLine)
         {
             var disableKeyword = SyntaxFactory.Token(SyntaxKind.DisableKeyword);
-            return CreatePragmaDirectiveTrivia(disableKeyword, diagnostic, needsLeadingEndOfLine, needsTrailingEndOfLine);
+            return CreatePragmaDirectiveTrivia(disableKeyword, diagnostic, formatNode, needsLeadingEndOfLine, needsTrailingEndOfLine);
         }
 
-        private SyntaxTriviaList CreatePragmaDirectiveTrivia(SyntaxToken disableOrRestoreKeyword, Diagnostic diagnostic, bool needsLeadingEndOfLine, bool needsTrailingEndOfLine)
+        private SyntaxTriviaList CreatePragmaDirectiveTrivia(SyntaxToken disableOrRestoreKeyword, Diagnostic diagnostic, Func<SyntaxNode, SyntaxNode> formatNode, bool needsLeadingEndOfLine, bool needsTrailingEndOfLine)
         {
             var id = SyntaxFactory.IdentifierName(diagnostic.Id);
             var ids = new SeparatedSyntaxList<ExpressionSyntax>().Add(id);
             var pragmaDirective = SyntaxFactory.PragmaWarningDirectiveTrivia(disableOrRestoreKeyword, ids, true);
-            var pragmaDirectiveTrivia = SyntaxFactory.Trivia(pragmaDirective.WithAdditionalAnnotations(Formatter.Annotation));
+            pragmaDirective = (PragmaWarningDirectiveTriviaSyntax)formatNode(pragmaDirective);
+            var pragmaDirectiveTrivia = SyntaxFactory.Trivia(pragmaDirective);
             var endOfLineTrivia = SyntaxFactory.ElasticCarriageReturnLineFeed;
             var triviaList = SyntaxFactory.TriviaList(pragmaDirectiveTrivia);
 

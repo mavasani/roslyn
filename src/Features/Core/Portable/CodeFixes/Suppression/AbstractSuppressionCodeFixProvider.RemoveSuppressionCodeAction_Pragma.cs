@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 
@@ -57,15 +58,12 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 
                 public async Task<Document> GetChangedDocumentAsync(bool includeStartTokenChange, bool includeEndTokenChange, CancellationToken cancellationToken)
                 {
-                    Func<SyntaxToken, SyntaxToken> getNewStartToken;
-                    Func<SyntaxToken, SyntaxToken> getNewEndToken;
-
                     bool add = false;
                     bool toggle = false;
 
                     int indexOfLeadingPragmaDisableToRemove = -1, indexOfTrailingPragmaEnableToRemove = -1;
-                    if (CanRemovePragmaTrivia(_suppressionTargetInfo.StartToken, _diagnostic, Fixer, leading: true, indexOfTriviaToRemove: out indexOfLeadingPragmaDisableToRemove) &&
-                        CanRemovePragmaTrivia(_suppressionTargetInfo.EndToken, _diagnostic, Fixer, leading: false, indexOfTriviaToRemove: out indexOfTrailingPragmaEnableToRemove))
+                    if (CanRemovePragmaTrivia(_suppressionTargetInfo.StartToken, _diagnostic, Fixer, isStartToken: true, indexOfTriviaToRemove: out indexOfLeadingPragmaDisableToRemove) &&
+                        CanRemovePragmaTrivia(_suppressionTargetInfo.EndToken, _diagnostic, Fixer, isStartToken: false, indexOfTriviaToRemove: out indexOfTrailingPragmaEnableToRemove))
                     {
                         // Verify if there is no other trivia before the start token would again cause this diagnostic to be suppressed.
                         // If invalidated, then we just toggle existing pragma enable and disable directives before and start of the line.
@@ -78,35 +76,47 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                         add = true;
                     }
 
-                    getNewStartToken = startToken => includeStartTokenChange ?
-                        GetNewTokenWithModifiedPragma(startToken, add, toggle, indexOfLeadingPragmaDisableToRemove, isStartToken: true) :
+                    Func<SyntaxToken, TextSpan, SyntaxToken> getNewStartToken = (startToken, currentDiagnosticSpan) => includeStartTokenChange ?
+                        GetNewTokenWithModifiedPragma(startToken, currentDiagnosticSpan, add, toggle, indexOfLeadingPragmaDisableToRemove, isStartToken: true) :
                         startToken;
 
-                    getNewEndToken = endToken => includeEndTokenChange ?
-                        GetNewTokenWithModifiedPragma(endToken, add, toggle, indexOfTrailingPragmaEnableToRemove, isStartToken: false) :
+                    Func<SyntaxToken, TextSpan, SyntaxToken> getNewEndToken = (endToken, currentDiagnosticSpan) => includeEndTokenChange ?
+                        GetNewTokenWithModifiedPragma(endToken, currentDiagnosticSpan, add, toggle, indexOfTrailingPragmaEnableToRemove, isStartToken: false) :
                         endToken;
 
                     return await PragmaHelpers.GetChangeDocumentWithPragmaAdjustedAsync(
                         _document,
+                        _diagnostic.Location.SourceSpan,
                         _suppressionTargetInfo,
                         getNewStartToken,
                         getNewEndToken,
                         cancellationToken).ConfigureAwait(false);
                 }
 
-                private static bool CanRemovePragmaTrivia(SyntaxToken token, Diagnostic diagnostic, AbstractSuppressionCodeFixProvider fixer, bool leading, out int indexOfTriviaToRemove)
+                private static SyntaxTriviaList GetTriviaListForSuppression(SyntaxToken token, bool isStartToken, AbstractSuppressionCodeFixProvider fixer)
+                {
+                    return isStartToken || fixer.IsEndOfFileToken(token) ?
+                        token.LeadingTrivia :
+                        token.TrailingTrivia;
+                }
+
+                private static SyntaxToken UpdateTriviaList(SyntaxToken token, bool isStartToken, SyntaxTriviaList triviaList, AbstractSuppressionCodeFixProvider fixer)
+                {
+                    return isStartToken || fixer.IsEndOfFileToken(token) ?
+                        token.WithLeadingTrivia(triviaList) :
+                        token.WithTrailingTrivia(triviaList);
+                }
+
+                private static bool CanRemovePragmaTrivia(SyntaxToken token, Diagnostic diagnostic, AbstractSuppressionCodeFixProvider fixer, bool isStartToken, out int indexOfTriviaToRemove)
                 {
                     indexOfTriviaToRemove = -1;
 
-                    var seenAnyPragmaForId = false;
-                    var triviaList = leading ?
-                        token.LeadingTrivia :
-                        (fixer.IsEndOfFileToken(token) ? token.LeadingTrivia : token.TrailingTrivia);
+                    var triviaList = GetTriviaListForSuppression(token, isStartToken, fixer);
 
                     var diagnosticSpan = diagnostic.Location.SourceSpan;
-                    Func<SyntaxTrivia, bool> shouldIncludeTrivia = t => leading ? t.FullSpan.End <= diagnosticSpan.Start : t.FullSpan.Start >= diagnosticSpan.End;
+                    Func<SyntaxTrivia, bool> shouldIncludeTrivia = t => isStartToken ? t.FullSpan.End <= diagnosticSpan.Start : t.FullSpan.Start >= diagnosticSpan.End;
                     var filteredTriviaList = triviaList.Where(shouldIncludeTrivia);
-                    if (leading)
+                    if (isStartToken)
                     {
                         // Walk bottom up for leading trivia.
                         filteredTriviaList = filteredTriviaList.Reverse();
@@ -117,43 +127,43 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                         bool isEnableDirective, hasMultipleIds;
                         if (fixer.IsAnyPragmaDirectiveForId(trivia, diagnostic.Id, out isEnableDirective, out hasMultipleIds))
                         {
-                            if (seenAnyPragmaForId || hasMultipleIds)
+                            if (hasMultipleIds)
                             {
                                 // Handle only simple cases where we have a single pragma directive with single ID matching ours in the trivia.
                                 return false;
                             }
 
-                            seenAnyPragmaForId = true;
-
                             // We want to look for leading disable directive and trailing enable directive.
-                            if ((leading && !isEnableDirective) ||
-                                (!leading && isEnableDirective))
+                            if ((isStartToken && !isEnableDirective) ||
+                                (!isStartToken && isEnableDirective))
                             {
                                 indexOfTriviaToRemove = triviaList.IndexOf(trivia);
                                 return true;
                             }
+
+                            return false;
                         }
                     }
 
                     return false;
                 }
 
-                private SyntaxToken GetNewTokenWithModifiedPragma(SyntaxToken token, bool add, bool toggle, int indexOfTriviaToRemoveOrToggle, bool isStartToken)
+                private SyntaxToken GetNewTokenWithModifiedPragma(SyntaxToken token, TextSpan currentDiagnosticSpan, bool add, bool toggle, int indexOfTriviaToRemoveOrToggle, bool isStartToken)
                 {
                     return add ?
-                        GetNewTokenWithAddedPragma(token, isStartToken) :
+                        GetNewTokenWithAddedPragma(token, currentDiagnosticSpan, isStartToken) :
                         GetNewTokenWithRemovedOrToggledPragma(token, indexOfTriviaToRemoveOrToggle, isStartToken, toggle);
                 }
 
-                private SyntaxToken GetNewTokenWithAddedPragma(SyntaxToken token, bool isStartToken)
+                private SyntaxToken GetNewTokenWithAddedPragma(SyntaxToken token, TextSpan currentDiagnosticSpan, bool isStartToken)
                 {
                     if (isStartToken)
                     {
-                        return PragmaHelpers.GetNewStartTokenWithAddedPragma(token, _diagnostic, Fixer, isRemoveSuppression: true);
+                        return PragmaHelpers.GetNewStartTokenWithAddedPragma(token, currentDiagnosticSpan, _diagnostic, Fixer, FormatNode, isRemoveSuppression: true);
                     }
                     else
                     {
-                        return PragmaHelpers.GetNewEndTokenWithAddedPragma(token, _diagnostic, Fixer, isRemoveSuppression: true);
+                        return PragmaHelpers.GetNewEndTokenWithAddedPragma(token, currentDiagnosticSpan, _diagnostic, Fixer, FormatNode, isRemoveSuppression: true);
                     }
                 }
 
@@ -169,11 +179,11 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                     }
                 }
 
-                private static SyntaxToken GetNewTokenWithPragmaUnsuppress(SyntaxToken token, int indexOfTriviaToRemoveOrToggle, Diagnostic diagnostic, AbstractSuppressionCodeFixProvider fixer, bool leading, bool toggle)
+                private static SyntaxToken GetNewTokenWithPragmaUnsuppress(SyntaxToken token, int indexOfTriviaToRemoveOrToggle, Diagnostic diagnostic, AbstractSuppressionCodeFixProvider fixer, bool isStartToken, bool toggle)
                 {
                     Contract.ThrowIfFalse(indexOfTriviaToRemoveOrToggle >= 0);
 
-                    var triviaList = leading ? token.LeadingTrivia : token.TrailingTrivia;
+                    var triviaList = GetTriviaListForSuppression(token, isStartToken, fixer);
 
                     if (toggle)
                     {
@@ -187,7 +197,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                         triviaList = triviaList.RemoveAt(indexOfTriviaToRemoveOrToggle);
                     }
 
-                    return leading ? token.WithLeadingTrivia(triviaList) : token.WithTrailingTrivia(triviaList);
+                    return UpdateTriviaList(token, isStartToken, triviaList, fixer);
                 }
 
                 private async Task<bool> IsDiagnosticSuppressedBeforeLeadingPragmaAsync(int indexOfPragma, CancellationToken cancellationToken)
@@ -209,11 +219,17 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 public SyntaxToken StartToken_TestOnly => _suppressionTargetInfo.StartToken;
                 public SyntaxToken EndToken_TestOnly => _suppressionTargetInfo.EndToken;
 
+                private SyntaxNode FormatNode(SyntaxNode node)
+                {
+                    return Formatter.Format(node, _document.Project.Solution.Workspace);
+                }
+
                 private static void NormalizeTriviaOnTokens(AbstractSuppressionCodeFixProvider fixer, ref Document document, ref SuppressionTargetInfo suppressionTargetInfo)
                 {
                     var startToken = suppressionTargetInfo.StartToken;
                     var endToken = suppressionTargetInfo.EndToken;
                     var nodeWithTokens = suppressionTargetInfo.NodeWithTokens;
+                    var startAndEndTokensAreSame = startToken == endToken;
 
                     var previousOfStart = startToken.GetPreviousToken();
                     var nextOfEnd = endToken.GetNextToken();
@@ -228,7 +244,15 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                     var currentStartToken = startToken;
                     var currentEndToken = endToken;
                     var newStartToken = startToken.WithLeadingTrivia(previousOfStart.TrailingTrivia.Concat(startToken.LeadingTrivia));
-                    var newEndToken = endToken.WithTrailingTrivia(endToken.TrailingTrivia.Concat(nextOfEnd.LeadingTrivia));
+
+                    SyntaxToken newEndToken = currentEndToken;
+                    if (startAndEndTokensAreSame)
+                    {
+                        newEndToken = newStartToken;
+                    }
+
+                    newEndToken = newEndToken.WithTrailingTrivia(endToken.TrailingTrivia.Concat(nextOfEnd.LeadingTrivia));
+
                     var newPreviousOfStart = previousOfStart.WithTrailingTrivia();
                     var newNextOfEnd = nextOfEnd.WithLeadingTrivia();
 

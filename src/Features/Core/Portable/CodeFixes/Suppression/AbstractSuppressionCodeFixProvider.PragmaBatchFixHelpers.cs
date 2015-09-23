@@ -101,7 +101,8 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                                 includeStartTokenChange: false, includeEndTokenChange: true, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                             var currentText = await currentDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
-                            var newText = currentText.WithChanges(startTokenChanges.Concat(endTokenChanges));
+                            var orderedChanges = startTokenChanges.Concat(endTokenChanges).OrderBy(change => change.Span).Distinct();
+                            var newText = currentText.WithChanges(orderedChanges);
                             currentDocument = currentDocument.WithText(newText);
                         }
                     }
@@ -120,8 +121,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
                 CancellationToken cancellationToken)
             {
                 var newDocument = await pragmaAction.GetChangedDocumentAsync(includeStartTokenChange, includeEndTokenChange, cancellationToken).ConfigureAwait(false);
-                newDocument = await Formatter.FormatAsync(newDocument, cancellationToken: cancellationToken).ConfigureAwait(false);
-
+                
                 // Update the diagnostics spans based on the text changes.
                 var textChanges = await newDocument.GetTextChangesAsync(currentDocument, cancellationToken).ConfigureAwait(false);
                 foreach (var textChange in textChanges)

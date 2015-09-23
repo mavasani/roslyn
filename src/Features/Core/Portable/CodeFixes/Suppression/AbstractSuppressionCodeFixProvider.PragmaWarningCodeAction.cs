@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.Formatting;
 
 namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
 {
@@ -45,14 +46,20 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Suppression
             {
                 return await PragmaHelpers.GetChangeDocumentWithPragmaAdjustedAsync(
                     _document,
+                    _diagnostic.Location.SourceSpan,
                     _suppressionTargetInfo,
-                    startToken => includeStartTokenChange ? PragmaHelpers.GetNewStartTokenWithAddedPragma(startToken, _diagnostic, Fixer) : startToken,
-                    endToken => includeEndTokenChange ? PragmaHelpers.GetNewEndTokenWithAddedPragma(endToken, _diagnostic, Fixer) : endToken,
+                    (startToken, currentDiagnosticSpan) => includeStartTokenChange ? PragmaHelpers.GetNewStartTokenWithAddedPragma(startToken, currentDiagnosticSpan, _diagnostic, Fixer, FormatNode) : startToken,
+                    (endToken, currentDiagnosticSpan) => includeEndTokenChange ? PragmaHelpers.GetNewEndTokenWithAddedPragma(endToken, currentDiagnosticSpan, _diagnostic, Fixer, FormatNode) : endToken,
                     cancellationToken).ConfigureAwait(false);
             }
 
             public SyntaxToken StartToken_TestOnly => _suppressionTargetInfo.StartToken;
             public SyntaxToken EndToken_TestOnly => _suppressionTargetInfo.EndToken;
+
+            private SyntaxNode FormatNode(SyntaxNode node)
+            {
+                return Formatter.Format(node, _document.Project.Solution.Workspace);
+            }
         }
     }
 }

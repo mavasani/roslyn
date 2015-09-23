@@ -14,16 +14,16 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.CodeFixes.Suppression
     Friend Class VisualBasicSuppressionCodeFixProvider
         Inherits AbstractSuppressionCodeFixProvider
 
-        Protected Overrides Function CreatePragmaRestoreDirectiveTrivia(diagnostic As Diagnostic, needsLeadingEndOfLine As Boolean, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
+        Protected Overrides Function CreatePragmaRestoreDirectiveTrivia(diagnostic As Diagnostic, formatNode As Func(Of SyntaxNode, SyntaxNode), needsLeadingEndOfLine As Boolean, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
             Dim errorCodes = GetErrorCodes(diagnostic)
             Dim pragmaDirective = SyntaxFactory.EnableWarningDirectiveTrivia(errorCodes)
-            Return CreatePragmaDirectiveTrivia(pragmaDirective, diagnostic, needsLeadingEndOfLine, needsTrailingEndOfLine)
+            Return CreatePragmaDirectiveTrivia(pragmaDirective, diagnostic, formatNode, needsLeadingEndOfLine, needsTrailingEndOfLine)
         End Function
 
-        Protected Overrides Function CreatePragmaDisableDirectiveTrivia(diagnostic As Diagnostic, needsLeadingEndOfLine As Boolean, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
+        Protected Overrides Function CreatePragmaDisableDirectiveTrivia(diagnostic As Diagnostic, formatNode As Func(Of SyntaxNode, SyntaxNode), needsLeadingEndOfLine As Boolean, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
             Dim errorCodes = GetErrorCodes(diagnostic)
             Dim pragmaDirective = SyntaxFactory.DisableWarningDirectiveTrivia(errorCodes)
-            Return CreatePragmaDirectiveTrivia(pragmaDirective, diagnostic, needsLeadingEndOfLine, needsTrailingEndOfLine)
+            Return CreatePragmaDirectiveTrivia(pragmaDirective, diagnostic, formatNode, needsLeadingEndOfLine, needsTrailingEndOfLine)
         End Function
 
         Private Shared Function GetErrorCodes(diagnostic As Diagnostic) As SeparatedSyntaxList(Of IdentifierNameSyntax)
@@ -34,8 +34,9 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.CodeFixes.Suppression
             Return New SeparatedSyntaxList(Of IdentifierNameSyntax)().Add(SyntaxFactory.IdentifierName(text))
         End Function
 
-        Private Function CreatePragmaDirectiveTrivia(enableOrDisablePragmaDirective As StructuredTriviaSyntax, diagnostic As Diagnostic, needsLeadingEndOfLine As Boolean, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
-            Dim pragmaDirectiveTrivia = SyntaxFactory.Trivia(enableOrDisablePragmaDirective.WithAdditionalAnnotations(Formatter.Annotation))
+        Private Function CreatePragmaDirectiveTrivia(enableOrDisablePragmaDirective As StructuredTriviaSyntax, diagnostic As Diagnostic, formatNode As Func(Of SyntaxNode, SyntaxNode), needsLeadingEndOfLine As Boolean, needsTrailingEndOfLine As Boolean) As SyntaxTriviaList
+            enableOrDisablePragmaDirective = CType(formatNode(enableOrDisablePragmaDirective), StructuredTriviaSyntax)
+            Dim pragmaDirectiveTrivia = SyntaxFactory.Trivia(enableOrDisablePragmaDirective)
             Dim endOfLineTrivia = SyntaxFactory.ElasticCarriageReturnLineFeed
             Dim triviaList = SyntaxFactory.TriviaList(pragmaDirectiveTrivia)
 
