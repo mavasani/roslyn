@@ -208,7 +208,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV1
                     for (int i = 0; i < documents.Length; i++)
                     {
                         var document = documents[i];
-                        tasks[i] = Task.Run(async () => await AppendDiagnosticsAsync(document, cancellationToken).ConfigureAwait(false), cancellationToken);
+                        tasks[i] = Task.Run(() => AppendDiagnosticsAsync(document, cancellationToken).Wait(cancellationToken), cancellationToken);
                     };
 
                     await Task.WhenAll(tasks).ConfigureAwait(false);

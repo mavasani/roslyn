@@ -208,16 +208,15 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
         }
 
         /// <summary>
-        /// Gets <see cref="DiagnosticData"/> objects for error list entries, filtered based on the given parameters.
+        /// Gets <see cref="DiagnosticData"/> objects for selected error list entries.
         /// </summary>
-        public async Task<ImmutableArray<DiagnosticData>> GetItemsAsync(bool selectedEntriesOnly, bool isAddSuppression, bool isSuppressionInSource, bool onlyCompilerDiagnostics, CancellationToken cancellationToken)
+        public async Task<ImmutableArray<DiagnosticData>> GetSelectedItemsAsync(bool isAddSuppression, CancellationToken cancellationToken)
         {
             var builder = ImmutableArray.CreateBuilder<DiagnosticData>();
             Dictionary<string, Project> projectNameToProjectMapOpt = null;
             Dictionary<Project, ImmutableDictionary<string, Document>> filePathToDocumentMapOpt = null;
 
-            var entries = selectedEntriesOnly ? _tableControl.SelectedEntries : _tableControl.Entries;
-            foreach (var entryHandle in entries)
+            foreach (var entryHandle in _tableControl.SelectedEntries)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -323,25 +322,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
 
                 if (IsEntryWithConfigurableSuppressionState(diagnosticData))
                 {
-                    var isCompilerDiagnostic = SuppressionHelpers.IsCompilerDiagnostic(diagnosticData);
-                    if (onlyCompilerDiagnostics && !isCompilerDiagnostic)
-                    {
-                        continue;
-                    }
-
-                    if (isAddSuppression)
-                    {
-                        // Compiler diagnostics can only be suppressed in source.
-                        if (!diagnosticData.IsSuppressed &&
-                            (isSuppressionInSource || !isCompilerDiagnostic))
-                        {
-                            builder.Add(diagnosticData);
-                        }
-                    }
-                    else if (diagnosticData.IsSuppressed)
-                    {
-                        builder.Add(diagnosticData);
-                    }
+                    builder.Add(diagnosticData);
                 }
             }
 
