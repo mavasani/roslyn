@@ -158,6 +158,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
+        /// Returns true if the given analyzer has enabled analysis on generated code by invoking <see cref="AnalysisContext.EnableAnalysisOnGeneratedCode"/>.
+        /// </summary>
+        public async Task<bool> IsGeneratedCodeAnalyzerAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+        {
+            var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            return sessionScope.IsGeneratedCodeAnalyzer(analyzer);
+        }
+
+        /// <summary>
         /// Return <see cref="DiagnosticAnalyzer.SupportedDiagnostics"/> of given <paramref name="analyzer"/>.
         /// </summary>
         public ImmutableArray<DiagnosticDescriptor> GetSupportedDiagnosticDescriptors(

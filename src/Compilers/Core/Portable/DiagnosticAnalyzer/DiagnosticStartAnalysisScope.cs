@@ -93,6 +93,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             _scope.EnableConcurrentExecution(_analyzer);
         }
+
+        public override void EnableAnalysisOnGeneratedCode()
+        {
+            _scope.EnableAnalysisOnGeneratedCode(_analyzer);
+        }
     }
 
     /// <summary>
@@ -232,6 +237,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     {
         private ImmutableArray<CompilationStartAnalyzerAction> _compilationStartActions = ImmutableArray<CompilationStartAnalyzerAction>.Empty;
         private ImmutableHashSet<DiagnosticAnalyzer> _concurrentAnalyzers = ImmutableHashSet<DiagnosticAnalyzer>.Empty;
+        private ImmutableHashSet<DiagnosticAnalyzer> _generatedCodeAnalyzers = ImmutableHashSet<DiagnosticAnalyzer>.Empty;
 
         public ImmutableArray<CompilationStartAnalyzerAction> CompilationStartActions
         {
@@ -241,6 +247,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public bool IsConcurrentAnalyzer(DiagnosticAnalyzer analyzer)
         {
             return _concurrentAnalyzers.Contains(analyzer);
+        }
+
+        public bool IsGeneratedCodeAnalyzer(DiagnosticAnalyzer analyzer)
+        {
+            return _generatedCodeAnalyzers.Contains(analyzer);
         }
 
         public void RegisterCompilationStartAction(DiagnosticAnalyzer analyzer, Action<CompilationStartAnalysisContext> action)
@@ -253,6 +264,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public void EnableConcurrentExecution(DiagnosticAnalyzer analyzer)
         {
             _concurrentAnalyzers = _concurrentAnalyzers.Add(analyzer);
+        }
+
+        public void EnableAnalysisOnGeneratedCode(DiagnosticAnalyzer analyzer)
+        {
+            _generatedCodeAnalyzers = _generatedCodeAnalyzers.Add(analyzer);
         }
     }
 

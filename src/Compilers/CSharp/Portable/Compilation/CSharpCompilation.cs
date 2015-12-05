@@ -2878,7 +2878,12 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal override AnalyzerDriver AnalyzerForLanguage(ImmutableArray<DiagnosticAnalyzer> analyzers, AnalyzerManager analyzerManager)
         {
-            return new AnalyzerDriver<SyntaxKind>(analyzers, n => n.Kind(), analyzerManager);
+            return new AnalyzerDriver<SyntaxKind>(analyzers, n => n.Kind(), analyzerManager, IsGeneratedCode);
+        }
+
+        private static bool IsGeneratedCode(SyntaxTree tree, CancellationToken cancellationToken)
+        {
+            return tree.IsGeneratedCode(trivia => trivia.Kind() == SyntaxKind.SingleLineCommentTrivia, cancellationToken);
         }
 
         internal void SymbolDeclaredEvent(Symbol symbol)

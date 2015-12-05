@@ -535,6 +535,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
+        /// Marks the given event as fully analyzed for the given analyzers.
+        /// </summary>
+        public async Task MarkEventCompleteAsync(CompilationEvent compilationEvent, IEnumerable<DiagnosticAnalyzer> analyzers, CancellationToken cancellationToken)
+        {
+            foreach (var analyzer in analyzers)
+            {
+                await GetAnalyzerState(analyzer).MarkEventCompleteAsync(compilationEvent, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
         /// Attempts to start processing a symbol for the given analyzer's symbol actions.
         /// </summary>
         /// <returns>
@@ -592,6 +603,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
+        /// Marks the given symbol declaration as fully analyzed for the given analyzers.
+        /// </summary>
+        public async Task MarkDeclarationCompleteAsync(SyntaxReference decl, IEnumerable<DiagnosticAnalyzer> analyzers, CancellationToken cancellationToken)
+        {
+            foreach (var analyzer in analyzers)
+            {
+                await GetAnalyzerState(analyzer).MarkDeclarationCompleteAsync(decl, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
         /// Marks all the symbol declarations for the given symbol as fully analyzed for all the given analyzers.
         /// </summary>
         public async Task MarkDeclarationsCompleteAsync(ImmutableArray<SyntaxReference> declarations, IEnumerable<DiagnosticAnalyzer> analyzers, CancellationToken cancellationToken)
@@ -620,6 +642,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public Task MarkSyntaxAnalysisCompleteAsync(SyntaxTree tree, DiagnosticAnalyzer analyzer, CancellationToken cancellationToken)
         {
             return GetAnalyzerState(analyzer).MarkSyntaxAnalysisCompleteAsync(tree, cancellationToken);
+        }
+
+        /// <summary>
+        /// Marks the given tree as fully syntactically analyzed for the given analyzers.
+        /// </summary>
+        public async Task MarkSyntaxAnalysisCompleteAsync(SyntaxTree tree, IEnumerable<DiagnosticAnalyzer> analyzers, CancellationToken cancellationToken)
+        {
+            foreach (var analyzer in analyzers)
+            {
+                await GetAnalyzerState(analyzer).MarkSyntaxAnalysisCompleteAsync(tree, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 }

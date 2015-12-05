@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Collections;
 using Microsoft.CodeAnalysis.Semantics;
 using Microsoft.CodeAnalysis.Text;
@@ -16,7 +17,6 @@ using AnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.Analy
 using SyntaxNodeAnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.SyntaxNodeAnalyzerStateData;
 using OperationAnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.OperationAnalyzerStateData;
 using DeclarationAnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.DeclarationAnalyzerStateData;
-using System.Threading.Tasks;
 
 namespace Microsoft.CodeAnalysis.Diagnostics
 {
@@ -40,8 +40,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerManager _analyzerManager;
         private readonly Func<DiagnosticAnalyzer, bool> _isCompilerAnalyzer;
         private readonly Func<DiagnosticAnalyzer, SemaphoreSlim> _getAnalyzerGateOpt;
+        private readonly Func<DiagnosticAnalyzer, bool> _isGeneratedCodeAnalyzerOpt;
         private readonly ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan> _analyzerExecutionTimeMapOpt;
-
         private readonly CancellationToken _cancellationToken;
 
         /// <summary>
@@ -62,6 +62,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// It should return a unique gate object for the given analyzer instance for non-concurrent analyzers, and null otherwise.
         /// All analyzer callbacks for non-concurrent analyzers will be guarded with a lock on the gate.
         /// </param>
+        /// <param name="isGeneratedCodeAnalyzer">Delegate to identify if an analyzer has enabled analysis on generated code.</param>
         /// <param name="logExecutionTime">Flag indicating whether we need to log analyzer execution time.</param>
         /// <param name="addLocalDiagnosticOpt">Optional delegate to add local analyzer diagnostics.</param>
         /// <param name="addNonLocalDiagnosticOpt">Optional delegate to add non-local analyzer diagnostics.</param>
@@ -74,6 +75,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
             AnalyzerManager analyzerManager,
             Func<DiagnosticAnalyzer, SemaphoreSlim> getAnalyzerGate,
+            Func<DiagnosticAnalyzer, bool> isGeneratedCodeAnalyzer,
             bool logExecutionTime = false,
             Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnosticOpt = null,
             Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnosticOpt = null,
@@ -82,7 +84,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var analyzerExecutionTimeMapOpt = logExecutionTime ? new ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan>() : null;
 
             return new AnalyzerExecutor(compilation, analyzerOptions, addDiagnostic, onAnalyzerException, isCompilerAnalyzer, 
-                analyzerManager, getAnalyzerGate, analyzerExecutionTimeMapOpt, addLocalDiagnosticOpt, addNonLocalDiagnosticOpt, cancellationToken);
+                analyzerManager, getAnalyzerGate, isGeneratedCodeAnalyzer, analyzerExecutionTimeMapOpt, addLocalDiagnosticOpt, addNonLocalDiagnosticOpt, cancellationToken);
         }
 
         /// <summary>
@@ -107,6 +109,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 addDiagnostic: null,
                 isCompilerAnalyzer: null,
                 getAnalyzerGateOpt: null,
+                isGeneratedCodeAnalyzerOpt: null,
                 onAnalyzerException: onAnalyzerException,
                 analyzerManager: analyzerManager,
                 analyzerExecutionTimeMapOpt: null,
@@ -123,6 +126,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
             AnalyzerManager analyzerManager,
             Func<DiagnosticAnalyzer, SemaphoreSlim> getAnalyzerGateOpt,
+            Func<DiagnosticAnalyzer, bool> isGeneratedCodeAnalyzerOpt,
             ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan> analyzerExecutionTimeMapOpt,
             Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnosticOpt,
             Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnosticOpt,
@@ -135,6 +139,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _isCompilerAnalyzer = isCompilerAnalyzer;
             _analyzerManager = analyzerManager;
             _getAnalyzerGateOpt = getAnalyzerGateOpt;
+            _isGeneratedCodeAnalyzerOpt = isGeneratedCodeAnalyzerOpt;
             _analyzerExecutionTimeMapOpt = analyzerExecutionTimeMapOpt;
             _addLocalDiagnosticOpt = addLocalDiagnosticOpt;
             _addNonLocalDiagnosticOpt = addNonLocalDiagnosticOpt;
@@ -149,7 +154,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return new AnalyzerExecutor(_compilation, _analyzerOptions, _addDiagnostic, _onAnalyzerException, _isCompilerAnalyzer,
-                _analyzerManager, _getAnalyzerGateOpt, _analyzerExecutionTimeMapOpt, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt, cancellationToken);
+                _analyzerManager, _getAnalyzerGateOpt, _isGeneratedCodeAnalyzerOpt, _analyzerExecutionTimeMapOpt, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt, cancellationToken);
         }
 
         internal Compilation Compilation => _compilation;
@@ -157,7 +162,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         internal CancellationToken CancellationToken => _cancellationToken;
         internal Action<Exception, DiagnosticAnalyzer, Diagnostic> OnAnalyzerException => _onAnalyzerException;
         internal ImmutableDictionary<DiagnosticAnalyzer, TimeSpan> AnalyzerExecutionTimes => _analyzerExecutionTimeMapOpt.ToImmutableDictionary();
-
+        
         /// <summary>
         /// Executes the <see cref="DiagnosticAnalyzer.Initialize(AnalysisContext)"/> for the given analyzer.
         /// </summary>
@@ -171,7 +176,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public async Task ExecuteInitializeMethodAsync(DiagnosticAnalyzer analyzer, HostSessionStartAnalysisScope sessionScope)
         {
             // The Initialize method should be run asynchronously in case it is not well behaved, e.g. does not terminate.
-            await ExecuteAndCatchIfThrowsAsync(analyzer, () => analyzer.Initialize(new AnalyzerAnalysisContext(analyzer, sessionScope))).ConfigureAwait(false);
+            await ExecuteAndCatchIfThrowsAsync(analyzer,
+                () => analyzer.Initialize(new AnalyzerAnalysisContext(analyzer, sessionScope))).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -255,13 +261,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="getTopMostNodeForAnalysis">Delegate to get topmost declaration node for a symbol declaration reference.</param>
         /// <param name="analysisScope">Scope for analyzer execution.</param>
         /// <param name="analysisStateOpt">An optional object to track analysis state.</param>
+        /// <param name="isGeneratedCodeSymbol">Flag indicating if this is a generated code symbol.</param>
         public async Task ExecuteSymbolActionsAsync(
             ImmutableArray<SymbolAnalyzerAction> symbolActions,
             DiagnosticAnalyzer analyzer,
             ISymbol symbol,
             Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis,
             AnalysisScope analysisScope,
-            AnalysisState analysisStateOpt)
+            AnalysisState analysisStateOpt,
+            bool isGeneratedCodeSymbol)
         {
             AnalyzerStateData analyzerStateOpt = null;
 
@@ -270,7 +278,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 analyzerStateOpt = await TryStartAnalyzingSymbolAsync(symbol, analyzer, analysisScope, analysisStateOpt, _cancellationToken).ConfigureAwait(false);
                 if (analysisStateOpt == null || analyzerStateOpt != null)
                 {
-                    await ExecuteSymbolActionsCoreAsync(symbolActions, analyzer, symbol, getTopMostNodeForAnalysis, analyzerStateOpt).ConfigureAwait(false);
+                    await ExecuteSymbolActionsCoreAsync(symbolActions, analyzer, symbol, getTopMostNodeForAnalysis, analyzerStateOpt, isGeneratedCodeSymbol).ConfigureAwait(false);
 
                     if (analysisStateOpt != null)
                     {
@@ -289,9 +297,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             DiagnosticAnalyzer analyzer,
             ISymbol symbol,
             Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis,
-            AnalyzerStateData analyzerStateOpt)
+            AnalyzerStateData analyzerStateOpt,
+            bool isGeneratedCodeSymbol)
         {
             Debug.Assert(getTopMostNodeForAnalysis != null);
+
+            if (isGeneratedCodeSymbol && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            {
+                return;
+            }
 
             var addDiagnostic = GetAddDiagnostic(symbol, _compilation, analyzer, _addDiagnostic, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt, getTopMostNodeForAnalysis);
 
@@ -325,13 +339,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="compilationUnitCompletedEvent">Compilation event for semantic model analysis.</param>
         /// <param name="analysisScope">Scope for analyzer execution.</param>
         /// <param name="analysisStateOpt">An optional object to track analysis state.</param>
+        /// <param name="isGeneratedCode">Flag indicating if the syntax tree being analyzed is generated code.</param>
         public async Task ExecuteSemanticModelActionsAsync(
             ImmutableArray<SemanticModelAnalyzerAction> semanticModelActions,
             DiagnosticAnalyzer analyzer,
             SemanticModel semanticModel,
             CompilationEvent compilationUnitCompletedEvent,
             AnalysisScope analysisScope,
-            AnalysisState analysisStateOpt)
+            AnalysisState analysisStateOpt,
+            bool isGeneratedCode)
         {
             AnalyzerStateData analyzerStateOpt = null;
 
@@ -340,7 +356,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 analyzerStateOpt = await TryStartProcessingEventAsync(compilationUnitCompletedEvent, analyzer, analysisScope, analysisStateOpt, _cancellationToken).ConfigureAwait(false);
                 if (analysisStateOpt == null || analyzerStateOpt != null)
                 {
-                    await ExecuteSemanticModelActionsCoreAsync(semanticModelActions, analyzer, semanticModel, analyzerStateOpt).ConfigureAwait(false);
+                    await ExecuteSemanticModelActionsCoreAsync(semanticModelActions, analyzer, semanticModel, analyzerStateOpt, isGeneratedCode).ConfigureAwait(false);
 
                     if (analysisStateOpt != null)
                     {
@@ -358,8 +374,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ImmutableArray<SemanticModelAnalyzerAction> semanticModelActions,
             DiagnosticAnalyzer analyzer,
             SemanticModel semanticModel,
-            AnalyzerStateData analyzerStateOpt)
+            AnalyzerStateData analyzerStateOpt,
+            bool isGeneratedCode)
         {
+            if (isGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            {
+                return;
+            }
+
             var addDiagnostic = GetAddDiagnostic(semanticModel.SyntaxTree, analyzer, isSyntaxDiagnostic: false);
 
             foreach (var semanticModelAction in semanticModelActions)
@@ -386,12 +408,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="tree">Syntax tree to analyze.</param>
         /// <param name="analysisScope">Scope for analyzer execution.</param>
         /// <param name="analysisStateOpt">An optional object to track analysis state.</param>
+        /// <param name="isGeneratedCode">Flag indicating if the syntax tree being analyzed is generated code.</param>
         public async Task ExecuteSyntaxTreeActionsAsync(
             ImmutableArray<SyntaxTreeAnalyzerAction> syntaxTreeActions,
             DiagnosticAnalyzer analyzer,
             SyntaxTree tree,
             AnalysisScope analysisScope,
-            AnalysisState analysisStateOpt)
+            AnalysisState analysisStateOpt,
+            bool isGeneratedCode)
         {
             AnalyzerStateData analyzerStateOpt = null;
 
@@ -400,7 +424,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 analyzerStateOpt = await TryStartSyntaxAnalysis(tree, analyzer, analysisScope, analysisStateOpt, _cancellationToken).ConfigureAwait(false);
                 if (analysisStateOpt == null || analyzerStateOpt != null)
                 {
-                    await ExecuteSyntaxTreeActionsCoreAsync(syntaxTreeActions, analyzer, tree, analyzerStateOpt).ConfigureAwait(false);
+                    await ExecuteSyntaxTreeActionsCoreAsync(syntaxTreeActions, analyzer, tree, analyzerStateOpt, isGeneratedCode).ConfigureAwait(false);
 
                     if (analysisStateOpt != null)
                     {
@@ -418,10 +442,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ImmutableArray<SyntaxTreeAnalyzerAction> syntaxTreeActions,
             DiagnosticAnalyzer analyzer,
             SyntaxTree tree,
-            AnalyzerStateData analyzerStateOpt)
+            AnalyzerStateData analyzerStateOpt,
+            bool isGeneratedCode)
         {
-            var addDiagnostic = GetAddDiagnostic(tree, analyzer, isSyntaxDiagnostic: true);
+            if (isGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            {
+                return;
+            }
 
+            var addDiagnostic = GetAddDiagnostic(tree, analyzer, isSyntaxDiagnostic: true);
+            
             foreach (var syntaxTreeAction in syntaxTreeActions)
             {
                 if (ShouldExecuteAction(analyzerStateOpt, syntaxTreeAction))
@@ -452,7 +482,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 var syntaxNodeContext = new SyntaxNodeAnalysisContext(node, semanticModel, _analyzerOptions, addDiagnostic,
                     d => IsSupportedDiagnostic(syntaxNodeAction.Analyzer, d), _cancellationToken);
-                await ExecuteAndCatchIfThrowsAsync(syntaxNodeAction.Analyzer, () => syntaxNodeAction.Action(syntaxNodeContext)).ConfigureAwait(false);
+                await ExecuteAndCatchIfThrowsAsync(syntaxNodeAction.Analyzer,
+                    () => syntaxNodeAction.Action(syntaxNodeContext)).ConfigureAwait(false);
 
                 analyzerStateOpt?.ProcessedActions.Add(syntaxNodeAction);
             }
@@ -461,6 +492,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private async Task ExecuteOperationActionAsync(
             OperationAnalyzerAction operationAction,
             IOperation operation,
+            SemanticModel model,
             Action<Diagnostic> addDiagnostic,
             OperationAnalyzerStateData analyzerStateOpt)
         {
@@ -469,7 +501,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             if (ShouldExecuteAction(analyzerStateOpt, operationAction))
             {
                 var operationContext = new OperationAnalysisContext(operation, _analyzerOptions, _addDiagnostic, d => IsSupportedDiagnostic(operationAction.Analyzer, d), _cancellationToken);
-                await ExecuteAndCatchIfThrowsAsync(operationAction.Analyzer, () => operationAction.Action(operationContext)).ConfigureAwait(false);
+                await ExecuteAndCatchIfThrowsAsync(operationAction.Analyzer,
+                    () => operationAction.Action(operationContext)).ConfigureAwait(false);
 
                 analyzerStateOpt?.ProcessedActions.Add(operationAction);
             }
@@ -487,9 +520,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Func<SyntaxNode, TLanguageKindEnum> getKind,
             SyntaxReference declaration,
             AnalysisScope analysisScope,
-            AnalysisState analysisStateOpt)
+            AnalysisState analysisStateOpt,
+            bool isInGeneratedCode)
             where TLanguageKindEnum : struct
         {
+            if (isInGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            {
+                return;
+            }
+
             DeclarationAnalyzerStateData analyzerStateOpt = null;
 
             try
@@ -520,8 +559,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             SemanticModel semanticModel,
             SyntaxReference declaration,
             AnalysisScope analysisScope,
-            AnalysisState analysisStateOpt)
+            AnalysisState analysisStateOpt,
+            bool isInGeneratedCode)
         {
+            if (isInGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            {
+                return;
+            }
+
             DeclarationAnalyzerStateData analyzerStateOpt = null;
 
             try
@@ -572,7 +617,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var syntaxNodeActions = executableNodeActions as ArrayBuilder<SyntaxNodeAnalyzerAction<TLanguageKindEnum>>;
             var operationActions = executableNodeActions as ArrayBuilder<OperationAnalyzerAction>;
             ImmutableArray<IOperation> operationBlocks = executableBlocks[0] is IOperation ? (ImmutableArray<IOperation>)(object)executableBlocks : ImmutableArray<IOperation>.Empty;
-
+            
             // Include the code block actions.
             blockActions.AddAll(actions);
 
@@ -658,7 +703,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     var operationActionsByKind = GetOperationActionsByKind(operationActions);
                     var operationsToAnalyze = (IEnumerable<IOperation>)getNodesToAnalyze(executableBlocks);
-                    await ExecuteOperationActionsAsync(operationsToAnalyze, operationActionsByKind, addDiagnostic, analyzerStateOpt?.ExecutableNodesAnalysisState as OperationAnalyzerStateData).ConfigureAwait(false);
+                    await ExecuteOperationActionsAsync(operationsToAnalyze, operationActionsByKind, semanticModel, addDiagnostic, analyzerStateOpt?.ExecutableNodesAnalysisState as OperationAnalyzerStateData).ConfigureAwait(false);
                 }
             }
 
@@ -745,9 +790,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
            TextSpan filterSpan,
            SyntaxReference declaration,
            AnalysisScope analysisScope,
-           AnalysisState analysisStateOpt)
+           AnalysisState analysisStateOpt,
+           bool isInGeneratedCode)
            where TLanguageKindEnum : struct
         {
+            if (isInGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            {
+                return;
+            }
+
             DeclarationAnalyzerStateData analyzerStateOpt = null;
 
             try
@@ -861,8 +912,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             TextSpan filterSpan,
             SyntaxReference declaration,
             AnalysisScope analysisScope,
-            AnalysisState analysisStateOpt)
+            AnalysisState analysisStateOpt,
+            bool isInGeneratedCode)
         {
+            if (isInGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            {
+                return;
+            }
+
             OperationAnalyzerStateData analyzerStateOpt = null;
 
             try
@@ -888,12 +945,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             OperationAnalyzerStateData analyzerStateOpt)
         {
             var addDiagnostic = GetAddDiagnostic(model.SyntaxTree, filterSpan, analyzer, isSyntaxDiagnostic: false);
-            await ExecuteOperationActionsAsync(operationsToAnalyze, operationActionsByKind, addDiagnostic, analyzerStateOpt).ConfigureAwait(false);
+            await ExecuteOperationActionsAsync(operationsToAnalyze, operationActionsByKind, model, addDiagnostic, analyzerStateOpt).ConfigureAwait(false);
         }
 
         private async Task ExecuteOperationActionsAsync(
             IEnumerable<IOperation> operationsToAnalyze,
             IDictionary<OperationKind, ImmutableArray<OperationAnalyzerAction>> operationActionsByKind,
+            SemanticModel model,
             Action<Diagnostic> addDiagnostic,
             OperationAnalyzerStateData analyzerStateOpt)
         {
@@ -903,7 +961,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             IOperation partiallyProcessedNode = analyzerStateOpt?.CurrentOperation;
             if (partiallyProcessedNode != null)
             {
-                await ExecuteOperationActionsAsync(partiallyProcessedNode, operationActionsByKind, addDiagnostic, analyzerStateOpt).ConfigureAwait(false);
+                await ExecuteOperationActionsAsync(partiallyProcessedNode, operationActionsByKind, model, addDiagnostic, analyzerStateOpt).ConfigureAwait(false);
             }
 
             foreach (var child in operationsToAnalyze)
@@ -912,7 +970,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     SetCurrentOperation(analyzerStateOpt, child);
 
-                    await ExecuteOperationActionsAsync(child, operationActionsByKind, addDiagnostic, analyzerStateOpt).ConfigureAwait(false);
+                    await ExecuteOperationActionsAsync(child, operationActionsByKind, model, addDiagnostic, analyzerStateOpt).ConfigureAwait(false);
                 }
             }
         }
@@ -920,6 +978,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private async Task ExecuteOperationActionsAsync(
             IOperation operation,
             IDictionary<OperationKind, ImmutableArray<OperationAnalyzerAction>> operationActionsByKind,
+            SemanticModel model,
             Action<Diagnostic> addDiagnostic,
             OperationAnalyzerStateData analyzerStateOpt)
         {
@@ -928,7 +987,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 foreach (var action in actionsForKind)
                 {
-                    await ExecuteOperationActionAsync(action, operation, addDiagnostic, analyzerStateOpt).ConfigureAwait(false);
+                    await ExecuteOperationActionAsync(action, operation, model, addDiagnostic, analyzerStateOpt).ConfigureAwait(false);
                 }
             }
 
@@ -1282,6 +1341,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return executionTime;
+        }
+
+        private bool ShouldSkipGeneratedCodeForAnalyzer(DiagnosticAnalyzer analyzer)
+        {
+            // We skip analysis of generated code unless the analyzer has explicitly enabled generated code analysis.
+            return _isGeneratedCodeAnalyzerOpt == null || !_isGeneratedCodeAnalyzerOpt(analyzer);
         }
     }
 }
