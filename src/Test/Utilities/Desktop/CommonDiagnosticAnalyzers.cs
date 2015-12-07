@@ -595,5 +595,50 @@ namespace Microsoft.CodeAnalysis
                 }
             }
         }
+
+        [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
+        public class GeneratedCodeAnalyzer : DiagnosticAnalyzer
+        {
+            private readonly bool _enableAnalysisOnGeneratedCode;
+            public static readonly DiagnosticDescriptor Descriptor = new DiagnosticDescriptor(
+                "GeneratedCodeAnalyzerId",
+                "Title",
+                "GeneratedCodeAnalyzerMessage for '{0}'",
+                "Category",
+                DiagnosticSeverity.Warning,
+                true);
+
+            public GeneratedCodeAnalyzer(bool enableAnalysisOnGeneratedCode = true)
+            {
+                _enableAnalysisOnGeneratedCode = enableAnalysisOnGeneratedCode;
+            }
+
+            public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Descriptor);
+            public override void Initialize(AnalysisContext context)
+            {
+                context.RegisterCompilationStartAction(this.OnCompilationStart);
+
+                if (_enableAnalysisOnGeneratedCode)
+                {
+                    // Enable analysis on generated code.
+                    context.EnableAnalysisOnGeneratedCode();
+                }
+            }
+
+            private void OnCompilationStart(CompilationStartAnalysisContext context)
+            {
+                context.RegisterSymbolAction(symbolContext =>
+                {
+                    var diagnostic = Diagnostic.Create(Descriptor, symbolContext.Symbol.Locations[0], symbolContext.Symbol.Name);
+                    symbolContext.ReportDiagnostic(diagnostic);
+                }, SymbolKind.NamedType);
+
+                context.RegisterSyntaxTreeAction(treeContext =>
+                {
+                    var diagnostic = Diagnostic.Create(Descriptor, treeContext.Tree.GetRoot().GetLocation(), treeContext.Tree.FilePath);
+                    treeContext.ReportDiagnostic(diagnostic);
+                });
+            }
+        }
     }
 }
