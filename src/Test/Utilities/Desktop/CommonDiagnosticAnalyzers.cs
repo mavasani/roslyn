@@ -599,7 +599,7 @@ namespace Microsoft.CodeAnalysis
         [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
         public class GeneratedCodeAnalyzer : DiagnosticAnalyzer
         {
-            private readonly bool _enableAnalysisOnGeneratedCode;
+            private readonly bool _enableAnalysisOnGeneratedCode, _reportDiagnosticsOnNestedFromContaining;
             public static readonly DiagnosticDescriptor Descriptor = new DiagnosticDescriptor(
                 "GeneratedCodeAnalyzerId",
                 "Title",
@@ -608,9 +608,10 @@ namespace Microsoft.CodeAnalysis
                 DiagnosticSeverity.Warning,
                 true);
 
-            public GeneratedCodeAnalyzer(bool enableAnalysisOnGeneratedCode = true)
+            public GeneratedCodeAnalyzer(bool enableAnalysisOnGeneratedCode, bool reportDiagnosticsOnNestedFromContaining = false)
             {
                 _enableAnalysisOnGeneratedCode = enableAnalysisOnGeneratedCode;
+                _reportDiagnosticsOnNestedFromContaining = false;
             }
 
             public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Descriptor);
@@ -629,15 +630,37 @@ namespace Microsoft.CodeAnalysis
             {
                 context.RegisterSymbolAction(symbolContext =>
                 {
-                    var diagnostic = Diagnostic.Create(Descriptor, symbolContext.Symbol.Locations[0], symbolContext.Symbol.Name);
-                    symbolContext.ReportDiagnostic(diagnostic);
+                    if (_reportDiagnosticsOnNestedFromContaining)
+                    {
+                        if (symbolContext.Symbol.ContainingType != null)
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            var namedType = (INamedTypeSymbol)symbolContext.Symbol;
+                            var nestedTypes = namedType.GetTypeMembers();
+                            foreach (var nestedType in nestedTypes)
+                            {
+                                ReportSymbolDiagnosticCore(nestedType, symbolContext.ReportDiagnostic);
+                            }
+                        }
+                    }
+
+                    ReportSymbolDiagnosticCore(symbolContext.Symbol, symbolContext.ReportDiagnostic);
                 }, SymbolKind.NamedType);
 
                 context.RegisterSyntaxTreeAction(treeContext =>
                 {
-                    var diagnostic = Diagnostic.Create(Descriptor, treeContext.Tree.GetRoot().GetLocation(), treeContext.Tree.FilePath);
+                    var diagnostic = Diagnostic.Create(Descriptor, treeContext.Tree.GetRoot().GetFirstToken().GetLocation(), treeContext.Tree.FilePath);
                     treeContext.ReportDiagnostic(diagnostic);
                 });
+            }
+
+            private void ReportSymbolDiagnosticCore(ISymbol symbol, Action<Diagnostic> addDiagnostic)
+            {
+                var diagnostic = Diagnostic.Create(Descriptor, symbol.Locations[0], symbol.Name);
+                addDiagnostic(diagnostic);
             }
         }
     }

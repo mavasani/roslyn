@@ -96,12 +96,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="analyzers">The set of analyzers to include in the analysis</param>
         /// <param name="analyzerManager">AnalyzerManager to manage analyzers for analyzer host's lifetime.</param>
-        /// <param name="isGeneratedCode">Delegate to identify trees representing generated code.</param>
-        protected AnalyzerDriver(ImmutableArray<DiagnosticAnalyzer> analyzers, AnalyzerManager analyzerManager, Func<SyntaxTree, CancellationToken, bool> isGeneratedCode)
+        /// <param name="isSingleLineComment">Delegate to identify if a given trivia is single line comment.</param>
+        protected AnalyzerDriver(ImmutableArray<DiagnosticAnalyzer> analyzers, AnalyzerManager analyzerManager, Func<SyntaxTrivia, bool> isSingleLineComment)
         {
             this.analyzers = analyzers;
             this.analyzerManager = analyzerManager;
-            _isGeneratedCode = isGeneratedCode;
+            _isGeneratedCode = (tree, ct) => GeneratedCodeUtilities.IsGeneratedCode(tree, isSingleLineComment, ct);
         }
 
         /// <summary>
@@ -489,8 +489,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     continue;
                 }
 
-                    builder.Add(diagnostic);
-                }
+                builder.Add(diagnostic);
+            }
 
             return builder.ToImmutable();
         }
@@ -727,7 +727,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             ProcessEventCore(e, analysisScope, analysisStateOpt, cancellationToken);
             analysisStateOpt?.OnCompilationEventProcessed(e, analysisScope);
-            }
+        }
 
         private void ProcessEventCore(CompilationEvent e, AnalysisScope analysisScope, AnalysisState analysisStateOpt, CancellationToken cancellationToken)
         {
@@ -1123,8 +1123,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="analyzers">The set of analyzers to include in the analysis</param>
         /// <param name="getKind">A delegate that returns the language-specific kind for a given syntax node</param>
         /// <param name="analyzerManager">AnalyzerManager to manage analyzers for the lifetime of analyzer host.</param>
-        /// <param name="isGeneratedCode">Delegate to identify trees representing generated code.</param>
-        internal AnalyzerDriver(ImmutableArray<DiagnosticAnalyzer> analyzers, Func<SyntaxNode, TLanguageKindEnum> getKind, AnalyzerManager analyzerManager, Func<SyntaxTree, CancellationToken, bool> isGeneratedCode) : base(analyzers, analyzerManager, isGeneratedCode)
+        /// <param name="isSingleLineComment">Delegate to identify if a given trivia is single line comment.</param>
+        internal AnalyzerDriver(ImmutableArray<DiagnosticAnalyzer> analyzers, Func<SyntaxNode, TLanguageKindEnum> getKind, AnalyzerManager analyzerManager, Func<SyntaxTrivia, bool> isSingleLineComment)
+            : base(analyzers, analyzerManager, isSingleLineComment)
         {
             _getKind = getKind;
         }

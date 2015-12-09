@@ -2081,11 +2081,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
         Friend Overrides Function AnalyzerForLanguage(analyzers As ImmutableArray(Of DiagnosticAnalyzer), analyzerManager As AnalyzerManager) As AnalyzerDriver
             Dim getKind As Func(Of SyntaxNode, SyntaxKind) = Function(node As SyntaxNode) node.Kind
-            Return New AnalyzerDriver(Of SyntaxKind)(analyzers, getKind, analyzerManager, AddressOf IsGeneratedCode)
-        End Function
-
-        Private Shared Function IsGeneratedCode(tree As SyntaxTree, cancellationToken As CancellationToken) As Boolean
-            Return tree.IsGeneratedCode(Function(trivia As SyntaxTrivia) trivia.Kind() = SyntaxKind.CommentTrivia, cancellationToken)
+            Dim isSingleLineComment As Func(Of SyntaxTrivia, Boolean) = Function(trivia As SyntaxTrivia) trivia.Kind() = SyntaxKind.CommentTrivia
+            Return New AnalyzerDriver(Of SyntaxKind)(analyzers, getKind, analyzerManager, isSingleLineComment)
         End Function
 
 #End Region
