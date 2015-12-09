@@ -476,6 +476,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var builder = ImmutableArray.CreateBuilder<Diagnostic>();
             for (var i = 0; i < diagnostics.Length; i++)
             {
+#if DEBUG
+                // We should have ignored diagnostics with invalid locations and reported analyzer exception diagnostic for the same.
+                DiagnosticAnalysisContextHelpers.VerifyDiagnosticLocationsInCompilation(diagnostics[i], compilation);
+#endif
+
                 var diagnostic = SuppressMessageAttributeState.ApplySourceSuppressions(diagnostics[i], compilation);
                 if (!reportSuppressedDiagnostics && diagnostic.IsSuppressed)
                 {
@@ -519,7 +524,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                     foreach (var symbol in declaredSymbols)
                     {
-                        if (HasGeneratedCodeAttribute(symbol))
+                        if (GeneratedCodeUtilities.HasGeneratedCodeAttribute(symbol, _generatedCodeAttribute))
                         {
                             return true;
                         }
@@ -1020,7 +1025,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private bool IsGeneratedCodeSymbol(ISymbol symbol)
         {
-            if (HasGeneratedCodeAttribute(symbol))
+            if (_generatedCodeAttribute != null && GeneratedCodeUtilities.HasGeneratedCodeAttribute(symbol, _generatedCodeAttribute))
             {
                 return true;
             }
@@ -1044,23 +1049,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         protected bool IsGeneratedCode(SyntaxTree tree)
         {
             return _generatedCodeFiles.Contains(tree);
-        }
-
-        internal bool HasGeneratedCodeAttribute(ISymbol symbol)
-        {
-            Debug.Assert(symbol != null);
-
-            if (_generatedCodeAttribute == null)
-            {
-                return false;
-            }
-
-            if (symbol.GetAttributes().Any(a => a.AttributeClass == _generatedCodeAttribute))
-            {
-                return true;
-            }
-
-            return symbol.ContainingSymbol != null && HasGeneratedCodeAttribute(symbol.ContainingSymbol);
         }
 
         protected bool HasAnyGeneratedCodeAnalyzer => _generatedCodeAnalyzers?.Count > 0;
