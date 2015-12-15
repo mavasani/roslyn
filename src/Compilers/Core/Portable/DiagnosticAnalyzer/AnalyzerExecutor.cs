@@ -16,9 +16,7 @@ using Roslyn.Utilities;
 using AnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.AnalyzerStateData;
 using SyntaxNodeAnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.SyntaxNodeAnalyzerStateData;
 using OperationAnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.OperationAnalyzerStateData;
-using CodeBlockAnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.CodeBlockAnalyzerStateData;
 using DeclarationAnalyzerStateData = Microsoft.CodeAnalysis.Diagnostics.AnalysisState.DeclarationAnalyzerStateData;
-
 
 namespace Microsoft.CodeAnalysis.Diagnostics
 {
@@ -35,9 +33,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private readonly Compilation _compilation;
         private readonly AnalyzerOptions _analyzerOptions;
-        private readonly Action<Diagnostic> _addDiagnostic;
-        private readonly Action<Diagnostic, DiagnosticAnalyzer, bool> _addLocalDiagnosticOpt;
-        private readonly Action<Diagnostic, DiagnosticAnalyzer> _addNonLocalDiagnosticOpt;
+        private readonly Action<Diagnostic> _addNonCategorizedDiagnosticOpt;
+        private readonly Action<Diagnostic, DiagnosticAnalyzer, bool> _addCategorizedLocalDiagnosticOpt;
+        private readonly Action<Diagnostic, DiagnosticAnalyzer> _addCategorizedNonLocalDiagnosticOpt;
         private readonly Action<Exception, DiagnosticAnalyzer, Diagnostic> _onAnalyzerException;
         private readonly AnalyzerManager _analyzerManager;
         private readonly Func<DiagnosticAnalyzer, bool> _isCompilerAnalyzer;
@@ -51,7 +49,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="compilation">Compilation to be used in the analysis.</param>
         /// <param name="analyzerOptions">Analyzer options.</param>
-        /// <param name="addDiagnostic">Delegate to add analyzer diagnostics.</param>
+        /// <param name="addNonCategorizedDiagnosticOpt">Optional delegate to add non-categorized analyzer diagnostics.</param>
         /// <param name="onAnalyzerException">
         /// Optional delegate which is invoked when an analyzer throws an exception.
         /// Delegate can do custom tasks such as report the given analyzer exception diagnostic, report a non-fatal watson for the exception, etc.
@@ -66,27 +64,31 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </param>
         /// <param name="shouldSkipAnalysisOnGeneratedCode">Delegate to identify if analysis should be skipped on generated code.</param>
         /// <param name="logExecutionTime">Flag indicating whether we need to log analyzer execution time.</param>
-        /// <param name="addLocalDiagnosticOpt">Optional delegate to add local analyzer diagnostics.</param>
-        /// <param name="addNonLocalDiagnosticOpt">Optional delegate to add non-local analyzer diagnostics.</param>
+        /// <param name="addCategorizedLocalDiagnosticOpt">Optional delegate to add categorized local analyzer diagnostics.</param>
+        /// <param name="addCategorizedNonLocalDiagnosticOpt">Optional delegate to add categorized non-local analyzer diagnostics.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         public static AnalyzerExecutor Create(
             Compilation compilation,
             AnalyzerOptions analyzerOptions,
-            Action<Diagnostic> addDiagnostic,
+            Action<Diagnostic> addNonCategorizedDiagnosticOpt,
             Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException,
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
             AnalyzerManager analyzerManager,
             Func<DiagnosticAnalyzer, bool> shouldSkipAnalysisOnGeneratedCode,
             Func<DiagnosticAnalyzer, object> getAnalyzerGate,
             bool logExecutionTime = false,
-            Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnosticOpt = null,
-            Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnosticOpt = null,
+            Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt = null,
+            Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
+            // We can either report categorized (local/non-local) diagnostics or non-categorized diagnostics.
+            Debug.Assert((addNonCategorizedDiagnosticOpt != null) ^ (addCategorizedLocalDiagnosticOpt != null));
+            Debug.Assert((addCategorizedLocalDiagnosticOpt != null) == (addCategorizedNonLocalDiagnosticOpt != null));
+
             var analyzerExecutionTimeMapOpt = logExecutionTime ? new ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan>() : null;
 
-            return new AnalyzerExecutor(compilation, analyzerOptions, addDiagnostic, onAnalyzerException, isCompilerAnalyzer,
-                analyzerManager, shouldSkipAnalysisOnGeneratedCode, getAnalyzerGate, analyzerExecutionTimeMapOpt, addLocalDiagnosticOpt, addNonLocalDiagnosticOpt, cancellationToken);
+            return new AnalyzerExecutor(compilation, analyzerOptions, addNonCategorizedDiagnosticOpt, onAnalyzerException, isCompilerAnalyzer, 
+                analyzerManager, shouldSkipAnalysisOnGeneratedCode, getAnalyzerGate, analyzerExecutionTimeMapOpt, addCategorizedLocalDiagnosticOpt, addCategorizedNonLocalDiagnosticOpt, cancellationToken);
         }
 
         /// <summary>
@@ -108,43 +110,43 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return new AnalyzerExecutor(
                 compilation: null,
                 analyzerOptions: null,
-                addDiagnostic: null,
+                addNonCategorizedDiagnosticOpt: null,
                 isCompilerAnalyzer: null,
                 shouldSkipAnalysisOnGeneratedCode: _ => false,
                 getAnalyzerGateOpt: null,
                 onAnalyzerException: onAnalyzerException,
                 analyzerManager: analyzerManager,
                 analyzerExecutionTimeMapOpt: null,
-                addLocalDiagnosticOpt: null,
-                addNonLocalDiagnosticOpt: null,
+                addCategorizedLocalDiagnosticOpt: null,
+                addCategorizedNonLocalDiagnosticOpt: null,
                 cancellationToken: cancellationToken);
         }
 
         private AnalyzerExecutor(
             Compilation compilation,
             AnalyzerOptions analyzerOptions,
-            Action<Diagnostic> addDiagnostic,
+            Action<Diagnostic> addNonCategorizedDiagnosticOpt,
             Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException,
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
             AnalyzerManager analyzerManager,
             Func<DiagnosticAnalyzer, bool> shouldSkipAnalysisOnGeneratedCode,
             Func<DiagnosticAnalyzer, object> getAnalyzerGateOpt,
             ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan> analyzerExecutionTimeMapOpt,
-            Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnosticOpt,
-            Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnosticOpt,
+            Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt,
+            Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt,
             CancellationToken cancellationToken)
         {
             _compilation = compilation;
             _analyzerOptions = analyzerOptions;
-            _addDiagnostic = addDiagnostic;
+            _addNonCategorizedDiagnosticOpt = addNonCategorizedDiagnosticOpt;
             _onAnalyzerException = onAnalyzerException;
             _isCompilerAnalyzer = isCompilerAnalyzer;
             _analyzerManager = analyzerManager;
             _shouldSkipAnalysisOnGeneratedCode = shouldSkipAnalysisOnGeneratedCode;
             _getAnalyzerGateOpt = getAnalyzerGateOpt;
             _analyzerExecutionTimeMapOpt = analyzerExecutionTimeMapOpt;
-            _addLocalDiagnosticOpt = addLocalDiagnosticOpt;
-            _addNonLocalDiagnosticOpt = addNonLocalDiagnosticOpt;
+            _addCategorizedLocalDiagnosticOpt = addCategorizedLocalDiagnosticOpt;
+            _addCategorizedNonLocalDiagnosticOpt = addCategorizedNonLocalDiagnosticOpt;
             _cancellationToken = cancellationToken;
         }
 
@@ -155,8 +157,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return this;
             }
 
-            return new AnalyzerExecutor(_compilation, _analyzerOptions, _addDiagnostic, _onAnalyzerException, _isCompilerAnalyzer,
-                _analyzerManager, _shouldSkipAnalysisOnGeneratedCode, _getAnalyzerGateOpt, _analyzerExecutionTimeMapOpt, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt, cancellationToken);
+            return new AnalyzerExecutor(_compilation, _analyzerOptions, _addNonCategorizedDiagnosticOpt, _onAnalyzerException, _isCompilerAnalyzer,
+                _analyzerManager, _shouldSkipAnalysisOnGeneratedCode, _getAnalyzerGateOpt, _analyzerExecutionTimeMapOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt, cancellationToken);
         }
 
         internal Compilation Compilation => _compilation;
@@ -221,8 +223,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     ExecuteCompilationActionsCore(compilationActions, analyzer, analyzerStateOpt);
                     analysisStateOpt?.MarkEventComplete(compilationEvent, analyzer);
+                    }
                 }
-            }
             finally
             {
                 analyzerStateOpt?.ResetToReadyState();
@@ -275,8 +277,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     ExecuteSymbolActionsCore(symbolActions, analyzer, symbol, getTopMostNodeForAnalysis, analyzerStateOpt, isGeneratedCodeSymbol);
                     analysisStateOpt?.MarkSymbolComplete(symbol, analyzer);
+                    }
                 }
-            }
             finally
             {
                 analyzerStateOpt?.ResetToReadyState();
@@ -298,7 +300,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return;
             }
 
-            var addDiagnostic = GetAddDiagnostic(symbol, _compilation, analyzer, _addDiagnostic, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt, getTopMostNodeForAnalysis);
+            var addDiagnostic = GetAddDiagnostic(symbol, analyzer, getTopMostNodeForAnalysis);
 
             foreach (var symbolAction in symbolActions)
             {
@@ -348,8 +350,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     ExecuteSemanticModelActionsCore(semanticModelActions, analyzer, semanticModel, analyzerStateOpt, isGeneratedCode);
                     analysisStateOpt?.MarkEventComplete(compilationUnitCompletedEvent, analyzer);
+                    }
                 }
-            }
             finally
             {
                 analyzerStateOpt?.ResetToReadyState();
@@ -411,8 +413,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     ExecuteSyntaxTreeActionsCore(syntaxTreeActions, analyzer, tree, analyzerStateOpt, isGeneratedCode);
                     analysisStateOpt?.MarkSyntaxAnalysisComplete(tree, analyzer);
+                    }
                 }
-            }
             finally
             {
                 analyzerStateOpt?.ResetToReadyState();
@@ -427,7 +429,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             bool isGeneratedCode)
         {
             if (isGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
-            {
+        {
                 return;
             }
 
@@ -480,7 +482,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             if (ShouldExecuteAction(analyzerStateOpt, operationAction))
             {
-                var operationContext = new OperationAnalysisContext(operation, _analyzerOptions, _addDiagnostic, d => IsSupportedDiagnostic(operationAction.Analyzer, d), semanticModel, _cancellationToken);
+                var operationContext = new OperationAnalysisContext(operation, _analyzerOptions, addDiagnostic, d => IsSupportedDiagnostic(operationAction.Analyzer, d), semanticModel, _cancellationToken);
                 ExecuteAndCatchIfThrows(operationAction.Analyzer, () => operationAction.Action(operationContext));
 
                 analyzerStateOpt?.ProcessedActions.Add(operationAction);
@@ -529,7 +531,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             IEnumerable<OperationBlockStartAnalyzerAction> operationBlockStartActions,
             IEnumerable<OperationBlockAnalyzerAction> operationBlockActions,
             IEnumerable<OperationBlockAnalyzerAction> operationBlockEndActions,
-            DiagnosticAnalyzer analyzer,
+            DiagnosticAnalyzer analyzer, 
             SyntaxNode declaredNode,
             ISymbol declaredSymbol,
             ImmutableArray<IOperation> operationBlocks,
@@ -541,7 +543,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             bool isInGeneratedCode)
         {
             if (isInGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
-            {
+        {
                 return;
             }
 
@@ -579,13 +581,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
            where TBlockAction : AnalyzerAction
            where TNodeAction : AnalyzerAction
            where TNodeStateData : AnalyzerStateData, new()
-        {
+        {            
             Debug.Assert(declaredNode != null);
             Debug.Assert(declaredSymbol != null);
             Debug.Assert(CanHaveExecutableCodeBlock(declaredSymbol));
             Debug.Assert(startActions.Any() || endActions.Any() || actions.Any());
             Debug.Assert(!executableBlocks.IsEmpty);
-
+            
             // Compute the sets of code block end, code block, and stateful node actions.
 
             var blockEndActions = PooledHashSet<TBlockAction>.GetInstance();
@@ -723,7 +725,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                                 () => operationBlockAction.Action(new OperationBlockAnalysisContext(operationBlocks, declaredSymbol, _analyzerOptions, addDiagnostic, isSupportedDiagnostic, semanticModel, _cancellationToken)));
                         }
                     }
-
+                    
                     analyzerStateOpt?.ProcessedActions.Add(blockAction);
                 }
             }
@@ -892,7 +894,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             bool isInGeneratedCode)
         {
             if (isInGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
-            {
+        {
                 return;
             }
 
@@ -1137,12 +1139,21 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return _analyzerManager.IsSupportedDiagnostic(analyzer, diagnostic, _isCompilerAnalyzer, this);
         }
 
-        private static Action<Diagnostic> GetAddDiagnostic(ISymbol contextSymbol, Compilation compilation, DiagnosticAnalyzer analyzer, Action<Diagnostic> addDiagnostic, Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnostic, Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnostic, Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis)
+        private Action<Diagnostic> GetAddDiagnostic(ISymbol contextSymbol, DiagnosticAnalyzer analyzer, Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis)
         {
-            if (addLocalDiagnostic == null)
+            return GetAddDiagnostic(contextSymbol, _compilation, analyzer, _addNonCategorizedDiagnosticOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt, getTopMostNodeForAnalysis);
+        }
+
+        private static Action<Diagnostic> GetAddDiagnostic(ISymbol contextSymbol, Compilation compilation, DiagnosticAnalyzer analyzer, Action<Diagnostic> addNonCategorizedDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt, Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis)
+        {
+            if (addCategorizedLocalDiagnosticOpt == null)
             {
-                return addDiagnostic;
+                Debug.Assert(addNonCategorizedDiagnosticOpt != null);
+                return addNonCategorizedDiagnosticOpt;
             }
+
+            Debug.Assert(addNonCategorizedDiagnosticOpt == null);
+            Debug.Assert(addCategorizedNonLocalDiagnosticOpt != null);
 
             return diagnostic =>
             {
@@ -1155,46 +1166,50 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                             var syntax = getTopMostNodeForAnalysis(contextSymbol, syntaxRef, compilation);
                             if (diagnostic.Location.SourceSpan.IntersectsWith(syntax.FullSpan))
                             {
-                                addLocalDiagnostic(diagnostic, analyzer, false);
+                                addCategorizedLocalDiagnosticOpt(diagnostic, analyzer, false);
                                 return;
                             }
                         }
                     }
                 }
 
-                addNonLocalDiagnostic(diagnostic, analyzer);
+                addCategorizedNonLocalDiagnosticOpt(diagnostic, analyzer);
             };
         }
 
         private Action<Diagnostic> GetAddCompilationDiagnostic(DiagnosticAnalyzer analyzer)
         {
-            if (_addNonLocalDiagnosticOpt == null)
+            if (_addCategorizedNonLocalDiagnosticOpt == null)
             {
-                return _addDiagnostic;
+                return _addNonCategorizedDiagnosticOpt;
             }
 
             return diagnostic =>
             {
-                _addNonLocalDiagnosticOpt(diagnostic, analyzer);
+                _addCategorizedNonLocalDiagnosticOpt(diagnostic, analyzer);
             };
         }
 
         private Action<Diagnostic> GetAddDiagnostic(SyntaxTree tree, DiagnosticAnalyzer analyzer, bool isSyntaxDiagnostic)
         {
-            return GetAddDiagnostic(tree, null, analyzer, isSyntaxDiagnostic, _addDiagnostic, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt);
+            return GetAddDiagnostic(tree, null, analyzer, isSyntaxDiagnostic, _addNonCategorizedDiagnosticOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt);
         }
 
         private Action<Diagnostic> GetAddDiagnostic(SyntaxTree tree, TextSpan? span, DiagnosticAnalyzer analyzer, bool isSyntaxDiagnostic)
         {
-            return GetAddDiagnostic(tree, span, analyzer, false, _addDiagnostic, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt);
+            return GetAddDiagnostic(tree, span, analyzer, false, _addNonCategorizedDiagnosticOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt);
         }
 
-        private static Action<Diagnostic> GetAddDiagnostic(SyntaxTree contextTree, TextSpan? span, DiagnosticAnalyzer analyzer, bool isSyntaxDiagnostic, Action<Diagnostic> addDiagnostic, Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnostic, Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnostic)
+        private static Action<Diagnostic> GetAddDiagnostic(SyntaxTree contextTree, TextSpan? span, DiagnosticAnalyzer analyzer, bool isSyntaxDiagnostic, Action<Diagnostic> addNonCategorizedDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt)
         {
-            if (addLocalDiagnostic == null)
+            if (addCategorizedLocalDiagnosticOpt == null)
             {
-                return addDiagnostic;
+                Debug.Assert(addNonCategorizedDiagnosticOpt != null);
+                return addNonCategorizedDiagnosticOpt;
             }
+
+            Debug.Assert(addNonCategorizedDiagnosticOpt == null);
+            Debug.Assert(addCategorizedNonLocalDiagnosticOpt != null);
 
             return diagnostic =>
             {
@@ -1202,11 +1217,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     contextTree == diagnostic.Location.SourceTree &&
                     (!span.HasValue || span.Value.IntersectsWith(diagnostic.Location.SourceSpan)))
                 {
-                    addLocalDiagnostic(diagnostic, analyzer, isSyntaxDiagnostic);
+                    addCategorizedLocalDiagnosticOpt(diagnostic, analyzer, isSyntaxDiagnostic);
                 }
                 else
                 {
-                    addNonLocalDiagnostic(diagnostic, analyzer);
+                    addCategorizedNonLocalDiagnosticOpt(diagnostic, analyzer);
                 }
             };
         }
@@ -1254,7 +1269,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         private static bool TryStartSyntaxAnalysis(SyntaxTree tree, DiagnosticAnalyzer analyzer, AnalysisScope analysisScope, AnalysisState analysisStateOpt, out AnalyzerStateData analyzerStateOpt)
-        {
+            {
             Debug.Assert(analysisScope.Analyzers.Contains(analyzer));
 
             analyzerStateOpt = null;
@@ -1286,7 +1301,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             if (analysisStateOpt == null)
             {
                 return true;
-            }
+        }
 
             if (analysisStateOpt.TryStartAnalyzingDeclaration(syntaxReference, analyzer, out declarationAnalyzerStateOpt))
             {
