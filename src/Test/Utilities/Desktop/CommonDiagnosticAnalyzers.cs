@@ -660,37 +660,59 @@ namespace Microsoft.CodeAnalysis
         [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
         public class GeneratedCodeAnalyzer : DiagnosticAnalyzer
         {
-            private readonly bool _enableAnalysisOnGeneratedCode, _reportDiagnosticsOnNestedFromContaining;
-            public static readonly DiagnosticDescriptor Descriptor = new DiagnosticDescriptor(
-                "GeneratedCodeAnalyzerId",
+            private readonly bool? _generatedCodeConfiguration;
+            private readonly bool _reportDiagnosticsOnNestedFromContaining;
+
+            public static readonly DiagnosticDescriptor Warning = new DiagnosticDescriptor(
+                "GeneratedCodeAnalyzerWarning",
                 "Title",
                 "GeneratedCodeAnalyzerMessage for '{0}'",
                 "Category",
                 DiagnosticSeverity.Warning,
                 true);
 
-            public GeneratedCodeAnalyzer(bool enableAnalysisOnGeneratedCode, bool reportDiagnosticsOnNestedFromContaining = false)
+            public static readonly DiagnosticDescriptor Error = new DiagnosticDescriptor(
+                "GeneratedCodeAnalyzerError",
+                "Title",
+                "GeneratedCodeAnalyzerMessage for '{0}'",
+                "Category",
+                DiagnosticSeverity.Error,
+                true);
+
+            public static readonly DiagnosticDescriptor Summary = new DiagnosticDescriptor(
+                "GeneratedCodeAnalyzerSummary",
+                "Title2",
+                "GeneratedCodeAnalyzer received callbacks for: '{0}' types and '{1}' files",
+                "Category",
+                DiagnosticSeverity.Warning,
+                true);
+
+            public GeneratedCodeAnalyzer(bool? generatedCodeConfiguration, bool reportDiagnosticsOnNestedFromContaining)
             {
-                _enableAnalysisOnGeneratedCode = enableAnalysisOnGeneratedCode;
-                _reportDiagnosticsOnNestedFromContaining = false;
+                _generatedCodeConfiguration = generatedCodeConfiguration;
+                _reportDiagnosticsOnNestedFromContaining = reportDiagnosticsOnNestedFromContaining;
             }
 
-            public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Descriptor);
+            public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Warning, Error, Summary);
             public override void Initialize(AnalysisContext context)
             {
                 context.RegisterCompilationStartAction(this.OnCompilationStart);
 
-                if (_enableAnalysisOnGeneratedCode)
+                if (_generatedCodeConfiguration.HasValue)
                 {
-                    // Enable analysis on generated code.
-                    context.EnableAnalysisOnGeneratedCode();
+                    // Configure analysis on generated code.
+                    context.ConfigureGeneratedCodeAnalysis(_generatedCodeConfiguration.Value);
                 }
             }
 
             private void OnCompilationStart(CompilationStartAnalysisContext context)
             {
+                var sortedCallbackSymbolNames = new SortedSet<string>();
+                var sortedCallbackTreePaths = new SortedSet<string>();
                 context.RegisterSymbolAction(symbolContext =>
                 {
+                    sortedCallbackSymbolNames.Add(symbolContext.Symbol.Name);
+
                     if (_reportDiagnosticsOnNestedFromContaining)
                     {
                         if (symbolContext.Symbol.ContainingType != null)
@@ -703,24 +725,49 @@ namespace Microsoft.CodeAnalysis
                             var nestedTypes = namedType.GetTypeMembers();
                             foreach (var nestedType in nestedTypes)
                             {
-                                ReportSymbolDiagnosticCore(nestedType, symbolContext.ReportDiagnostic);
+                                ReportSymbolDiagnostics(nestedType, symbolContext.ReportDiagnostic);
                             }
                         }
                     }
 
-                    ReportSymbolDiagnosticCore(symbolContext.Symbol, symbolContext.ReportDiagnostic);
+                    ReportSymbolDiagnostics(symbolContext.Symbol, symbolContext.ReportDiagnostic);
                 }, SymbolKind.NamedType);
 
                 context.RegisterSyntaxTreeAction(treeContext =>
                 {
-                    var diagnostic = Diagnostic.Create(Descriptor, treeContext.Tree.GetRoot().GetFirstToken().GetLocation(), treeContext.Tree.FilePath);
-                    treeContext.ReportDiagnostic(diagnostic);
+                    sortedCallbackTreePaths.Add(treeContext.Tree.FilePath);
+                    ReportTreeDiagnostics(treeContext.Tree, treeContext.ReportDiagnostic);                    
+                });
+
+                context.RegisterCompilationEndAction(endContext =>
+                {
+                    var arg1 = sortedCallbackSymbolNames.Join(",");
+                    var arg2 = sortedCallbackTreePaths.Join(",");
+
+                    // Summary diagnostics about received callbacks.
+                    var diagnostic = Diagnostic.Create(Summary, Location.None, arg1, arg2);
+                    endContext.ReportDiagnostic(diagnostic);
                 });
             }
 
-            private void ReportSymbolDiagnosticCore(ISymbol symbol, Action<Diagnostic> addDiagnostic)
+            private void ReportSymbolDiagnostics(ISymbol symbol, Action<Diagnostic> addDiagnostic)
             {
-                var diagnostic = Diagnostic.Create(Descriptor, symbol.Locations[0], symbol.Name);
+                ReportDiagnosticsCore(addDiagnostic, symbol.Locations[0], symbol.Name);
+            }
+
+            private void ReportTreeDiagnostics(SyntaxTree tree, Action<Diagnostic> addDiagnostic)
+            {
+                ReportDiagnosticsCore(addDiagnostic, tree.GetRoot().GetFirstToken().GetLocation(), tree.FilePath);
+            }
+
+            private void ReportDiagnosticsCore(Action<Diagnostic> addDiagnostic, Location location, params object[] messageArguments)
+            {
+                // warning diagnostic
+                var diagnostic = Diagnostic.Create(Warning, location, messageArguments);
+                addDiagnostic(diagnostic);
+
+                // error diagnostic
+                diagnostic = Diagnostic.Create(Error, location, messageArguments);
                 addDiagnostic(diagnostic);
             }
         }

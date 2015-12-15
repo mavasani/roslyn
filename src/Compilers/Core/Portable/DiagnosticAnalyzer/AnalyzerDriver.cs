@@ -46,9 +46,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ImmutableDictionary<DiagnosticAnalyzer, SemaphoreSlim> _analyzerGateMap = ImmutableDictionary<DiagnosticAnalyzer, SemaphoreSlim>.Empty;
 
         /// <summary>
-        /// Set of analyzers that can analyze and report diagnostics on generated code. 
+        /// Map from analyzers which have explicitly configured generated code analysis to the configuration setting (enable/disable). 
         /// </summary>
-        private ImmutableHashSet<DiagnosticAnalyzer> _generatedCodeAnalyzers = ImmutableHashSet<DiagnosticAnalyzer>.Empty;
+        private ImmutableDictionary<DiagnosticAnalyzer, bool> _generatedCodeConfigurations;
 
         /// <summary>
         /// Set of generated code files.
@@ -123,7 +123,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     this.analyzerActions = await GetAnalyzerActionsAsync(analyzers, analyzerManager, analyzerExecutor).ConfigureAwait(false);
                     _analyzerGateMap = await GetAnalyzerGateMapAsync(analyzers, analyzerManager, analyzerExecutor).ConfigureAwait(false);
-                    _generatedCodeAnalyzers = await GetGeneratedCodeAnalyzersAsync(analyzers, analyzerManager, analyzerExecutor).ConfigureAwait(false);
+                    _generatedCodeConfigurations = await GetGeneratedCodeConfigurationsAsync(analyzers, analyzerManager, analyzerExecutor).ConfigureAwait(false);
                     _generatedCodeFiles = GetGeneratedCodeFiles(analyzerExecutor.Compilation, cancellationToken);
                     _generatedCodeAttribute = analyzerExecutor.Compilation?.GetTypeByMetadataName("System.CodeDom.Compiler.GeneratedCodeAttribute");
 
@@ -183,7 +183,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             else
             {
                 // Add exception diagnostic to regular diagnostic bag.
-                newOnAnalyzerException = (ex, analyzer, diagnostic) => addDiagnostic(diagnostic);
+                newOnAnalyzerException = (ex, analyzer, diagnostic) => addDiagnostic(diagnostic, analyzer);
             }
 
             if (analysisOptions.LogAnalyzerExecutionTime)
@@ -194,7 +194,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             var analyzerExecutor = AnalyzerExecutor.Create(compilation, analysisOptions.Options ?? AnalyzerOptions.Empty, addDiagnostic, newOnAnalyzerException, IsCompilerAnalyzer,
-                analyzerManager, GetAnalyzerGate, IsGeneratedCodeAnalyzer, analysisOptions.LogAnalyzerExecutionTime, addLocalDiagnosticOpt, addNonLocalDiagnosticOpt, cancellationToken);
+                analyzerManager, ShouldSkipAnalysisOnGeneratedCode, GetAnalyzerGate, analysisOptions.LogAnalyzerExecutionTime, addLocalDiagnosticOpt, addNonLocalDiagnosticOpt, cancellationToken);
 
             Initialize(analyzerExecutor, diagnosticQueue, cancellationToken);
         }
@@ -213,9 +213,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return null;
         }
 
-        private bool IsGeneratedCodeAnalyzer(DiagnosticAnalyzer analyzer)
+        private bool ShouldSkipAnalysisOnGeneratedCode(DiagnosticAnalyzer analyzer)
         {
-            return _generatedCodeAnalyzers.Contains(analyzer);
+            // We skip generated code analysis only for analyzers that have explicitly disabled analysis on generated code.
+            bool value;
+            return _generatedCodeConfigurations.TryGetValue(analyzer, out value) && value == false;
+        }
+
+        /// <summary>
+        /// Returns non-null value if the given analyzer has explicitly configured analysis on generated code by invoking <see cref="AnalysisContext.ConfigureGeneratedCodeAnalysis"/>.
+        /// </summary>
+        private bool? GetGeneratedCodeConfiguration(DiagnosticAnalyzer analyzer)
+        {
+            bool value;
+            return _generatedCodeConfigurations.TryGetValue(analyzer, out value) ? value : (bool?)null;
         }
 
         /// <summary>
@@ -455,16 +466,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public ImmutableArray<Diagnostic> DequeueLocalDiagnostics(DiagnosticAnalyzer analyzer, bool syntax, Compilation compilation)
         {
             var diagnostics = syntax ? DiagnosticQueue.DequeueLocalSyntaxDiagnostics(analyzer) : DiagnosticQueue.DequeueLocalSemanticDiagnostics(analyzer);
-            return FilterSuppressedDiagnostics(diagnostics, compilation, suppressInGeneratedCode: !IsGeneratedCodeAnalyzer(analyzer));
+            return FilterSuppressedDiagnostics(diagnostics, analyzer, compilation);
         }
 
         public ImmutableArray<Diagnostic> DequeueNonLocalDiagnostics(DiagnosticAnalyzer analyzer, Compilation compilation)
         {
             var diagnostics = DiagnosticQueue.DequeueNonLocalDiagnostics(analyzer);
-            return FilterSuppressedDiagnostics(diagnostics, compilation, suppressInGeneratedCode: !IsGeneratedCodeAnalyzer(analyzer));
+            return FilterSuppressedDiagnostics(diagnostics, analyzer, compilation);
         }
 
-        private ImmutableArray<Diagnostic> FilterSuppressedDiagnostics(ImmutableArray<Diagnostic> diagnostics, Compilation compilation, bool suppressInGeneratedCode)
+        private ImmutableArray<Diagnostic> FilterSuppressedDiagnostics(ImmutableArray<Diagnostic> diagnostics, DiagnosticAnalyzer analyzer, Compilation compilation)
         {
             if (diagnostics.IsEmpty)
             {
@@ -473,6 +484,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             var suppressMessageState = GetOrCreateCachedCompilationData(compilation).SuppressMessageAttributeState;
             var reportSuppressedDiagnostics = compilation.Options.ReportSuppressedDiagnostics;
+            bool? generatedCodeConfigurationOpt = GetGeneratedCodeConfiguration(analyzer);
             var builder = ImmutableArray.CreateBuilder<Diagnostic>();
             for (var i = 0; i < diagnostics.Length; i++)
             {
@@ -488,10 +500,33 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     continue;
                 }
 
-                if (suppressInGeneratedCode && IsInGeneratedCode(diagnostic.Location, compilation))
+                // Suppress diagnostics in generated code, if applicable.
+                if (generatedCodeConfigurationOpt.HasValue)
                 {
-                    // Diagnostic reported in generated file by a non-generated code analyzer.
-                    continue;
+                    // Analyzer has explicit configuration for generated code analysis.
+                    // If configuration setting = false, then suppress diagnostics with location in generated code.
+                    if (!generatedCodeConfigurationOpt.Value && IsInGeneratedCode(diagnostic.Location, compilation))
+                    {
+                        continue;
+                    }
+                }
+                else if (IsInGeneratedCode(diagnostic.Location, compilation))
+                {
+                    // Analyzer hasn't explicitly configured generated code analysis.
+                    // We only report diagnostics that are critical for the end user, i.e. either the user explicitly marked this rule as error via compilation options OR
+                    // default severity for the rule is error and user has no specific configuration for this rule.
+                    ReportDiagnostic userSetSeverity;
+                    if (compilation.Options.SpecificDiagnosticOptions.TryGetValue(diagnostic.Id, out userSetSeverity))
+                    {
+                        if (userSetSeverity != ReportDiagnostic.Error)
+                        {
+                            continue;
+                        }
+                    }
+                    else if (diagnostic.DefaultSeverity != DiagnosticSeverity.Error)
+                    {
+                        continue;
+                    }
                 }
 
                 builder.Add(diagnostic);
@@ -909,18 +944,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        internal static Action<Diagnostic> GetDiagnosticSink(Action<Diagnostic> addDiagnosticCore, Compilation compilation)
-        {
-            return diagnostic =>
-            {
-                var filteredDiagnostic = GetFilteredDiagnostic(diagnostic, compilation);
-                if (filteredDiagnostic != null)
-                {
-                    addDiagnosticCore(filteredDiagnostic);
-                }
-            };
-        }
-
         internal static Action<Diagnostic, DiagnosticAnalyzer, bool> GetDiagnosticSink(Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnosticCore, Compilation compilation)
         {
             return (diagnostic, analyzer, isSyntaxDiagnostic) =>
@@ -933,14 +956,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             };
         }
 
-        internal static Action<Diagnostic, DiagnosticAnalyzer> GetDiagnosticSink(Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnosticCore, Compilation compilation)
+        internal static Action<Diagnostic, DiagnosticAnalyzer> GetDiagnosticSink(Action<Diagnostic, DiagnosticAnalyzer> addDiagnosticCore, Compilation compilation)
         {
             return (diagnostic, analyzer) =>
             {
                 var filteredDiagnostic = GetFilteredDiagnostic(diagnostic, compilation);
                 if (filteredDiagnostic != null)
                 {
-                    addNonLocalDiagnosticCore(filteredDiagnostic, analyzer);
+                    addDiagnosticCore(filteredDiagnostic, analyzer);
                 }
             };
         }
@@ -991,18 +1014,18 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return builder.ToImmutable();
         }
 
-        private static async Task<ImmutableHashSet<DiagnosticAnalyzer>> GetGeneratedCodeAnalyzersAsync(
+        private static async Task<ImmutableDictionary<DiagnosticAnalyzer, bool>> GetGeneratedCodeConfigurationsAsync(
             ImmutableArray<DiagnosticAnalyzer> analyzers,
             AnalyzerManager analyzerManager,
             AnalyzerExecutor analyzerExecutor)
         {
-            var builder = ImmutableHashSet.CreateBuilder<DiagnosticAnalyzer>();
+            var builder = ImmutableDictionary.CreateBuilder<DiagnosticAnalyzer, bool>();
             foreach (var analyzer in analyzers)
             {
-                var isGeneratedCodeAnalyzer = await analyzerManager.IsGeneratedCodeAnalyzerAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
-                if (isGeneratedCodeAnalyzer)
+                bool? generatedCodeConfiguration = await analyzerManager.GetGeneratedCodeConfigurationAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+                if (generatedCodeConfiguration.HasValue)
                 {
-                    builder.Add(analyzer);
+                    builder.Add(analyzer, generatedCodeConfiguration.Value);
                 }
             }
 
@@ -1051,7 +1074,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return _generatedCodeFiles.Contains(tree);
         }
 
-        protected bool HasAnyGeneratedCodeAnalyzer => _generatedCodeAnalyzers?.Count > 0;
+        protected bool HasAnyGeneratedCodeAnalyzer => _generatedCodeConfigurations?.Count > 0;
 
         internal async Task<AnalyzerActionCounts> GetAnalyzerActionCountsAsync(DiagnosticAnalyzer analyzer, CancellationToken cancellationToken)
         {

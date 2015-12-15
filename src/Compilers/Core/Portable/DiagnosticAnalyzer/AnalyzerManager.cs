@@ -158,12 +158,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Returns true if the given analyzer has enabled analysis on generated code by invoking <see cref="AnalysisContext.EnableAnalysisOnGeneratedCode"/>.
+        /// Returns non-null value if the given analyzer has explicitly configured analysis on generated code by invoking <see cref="AnalysisContext.ConfigureGeneratedCodeAnalysis"/>.
         /// </summary>
-        public async Task<bool> IsGeneratedCodeAnalyzerAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+        public async Task<bool?> GetGeneratedCodeConfigurationAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
         {
             var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
-            return sessionScope.IsGeneratedCodeAnalyzer(analyzer);
+            bool enable;
+            return sessionScope.TryGetGeneratedCodeConfiguration(analyzer, out enable) ? enable : (bool?)null;                
         }
 
         /// <summary>

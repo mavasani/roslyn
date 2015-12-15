@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -94,9 +95,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _scope.EnableConcurrentExecution(_analyzer);
         }
 
-        public override void EnableAnalysisOnGeneratedCode()
+        public override void ConfigureGeneratedCodeAnalysis(bool enable)
         {
-            _scope.EnableAnalysisOnGeneratedCode(_analyzer);
+            _scope.ConfigureGeneratedCodeAnalysis(_analyzer, enable);
         }
     }
 
@@ -237,7 +238,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     {
         private ImmutableArray<CompilationStartAnalyzerAction> _compilationStartActions = ImmutableArray<CompilationStartAnalyzerAction>.Empty;
         private ImmutableHashSet<DiagnosticAnalyzer> _concurrentAnalyzers = ImmutableHashSet<DiagnosticAnalyzer>.Empty;
-        private ImmutableHashSet<DiagnosticAnalyzer> _generatedCodeAnalyzers = ImmutableHashSet<DiagnosticAnalyzer>.Empty;
+        private ConcurrentDictionary<DiagnosticAnalyzer, bool> _generatedCodeConfigurationMap = new ConcurrentDictionary<DiagnosticAnalyzer, bool>();
 
         public ImmutableArray<CompilationStartAnalyzerAction> CompilationStartActions
         {
@@ -249,9 +250,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return _concurrentAnalyzers.Contains(analyzer);
         }
 
-        public bool IsGeneratedCodeAnalyzer(DiagnosticAnalyzer analyzer)
+        public bool TryGetGeneratedCodeConfiguration(DiagnosticAnalyzer analyzer, out bool enabled)
         {
-            return _generatedCodeAnalyzers.Contains(analyzer);
+            return _generatedCodeConfigurationMap.TryGetValue(analyzer, out enabled);
         }
 
         public void RegisterCompilationStartAction(DiagnosticAnalyzer analyzer, Action<CompilationStartAnalysisContext> action)
@@ -266,9 +267,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _concurrentAnalyzers = _concurrentAnalyzers.Add(analyzer);
         }
 
-        public void EnableAnalysisOnGeneratedCode(DiagnosticAnalyzer analyzer)
+        public void ConfigureGeneratedCodeAnalysis(DiagnosticAnalyzer analyzer, bool enable)
         {
-            _generatedCodeAnalyzers = _generatedCodeAnalyzers.Add(analyzer);
+            _generatedCodeConfigurationMap.AddOrUpdate(analyzer, addValue: enable, updateValueFactory: (a, c) => enable);
         }
     }
 

@@ -176,11 +176,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public abstract void EnableConcurrentExecution();
 
         /// <summary>
-        /// Enable analysis of generated code for this analyzer.
-        /// By default, an analyzer will not receive any callbacks for entities in generated code and any diagnostics reported with location in generated code will be suppressed.
-        /// By enabling analysis on generated code, the analyzer can analyze and report diagnostics on generated code.
+        /// Configure analysis of generated user code for this analyzer.
+        /// It is recommended for the analyzer to always invoke this API with the required <paramref name="enable"/> setting.
+        /// Non-configured analyzers will receive callbacks for all entities in generated code, but any non-error diagnostics reported with location in generated code will be suppressed.
+        /// <param name="enable">
+        /// True, if an analyzer wants to analyze and report diagnostics on generated code.
+        /// False, if an analyzer does not want to analyze generated code.
+        /// </param>
         /// </summary>
-        public abstract void EnableAnalysisOnGeneratedCode();
+        public abstract void ConfigureGeneratedCodeAnalysis(bool enable);
     }
 
     /// <summary>

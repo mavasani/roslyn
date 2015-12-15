@@ -42,7 +42,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly AnalyzerManager _analyzerManager;
         private readonly Func<DiagnosticAnalyzer, bool> _isCompilerAnalyzer;
         private readonly Func<DiagnosticAnalyzer, object> _getAnalyzerGateOpt;
-        private readonly Func<DiagnosticAnalyzer, bool> _isGeneratedCodeAnalyzerOpt;
+        private readonly Func<DiagnosticAnalyzer, bool> _shouldSkipAnalysisOnGeneratedCode;
         private readonly ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan> _analyzerExecutionTimeMapOpt;
         private readonly CancellationToken _cancellationToken;
 
@@ -64,7 +64,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// It should return a unique gate object for the given analyzer instance for non-concurrent analyzers, and null otherwise.
         /// All analyzer callbacks for non-concurrent analyzers will be guarded with a lock on the gate.
         /// </param>
-        /// <param name="isGeneratedCodeAnalyzer">Delegate to identify if an analyzer has enabled analysis on generated code.</param>
+        /// <param name="shouldSkipAnalysisOnGeneratedCode">Delegate to identify if analysis should be skipped on generated code.</param>
         /// <param name="logExecutionTime">Flag indicating whether we need to log analyzer execution time.</param>
         /// <param name="addLocalDiagnosticOpt">Optional delegate to add local analyzer diagnostics.</param>
         /// <param name="addNonLocalDiagnosticOpt">Optional delegate to add non-local analyzer diagnostics.</param>
@@ -76,8 +76,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException,
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
             AnalyzerManager analyzerManager,
+            Func<DiagnosticAnalyzer, bool> shouldSkipAnalysisOnGeneratedCode,
             Func<DiagnosticAnalyzer, object> getAnalyzerGate,
-            Func<DiagnosticAnalyzer, bool> isGeneratedCodeAnalyzer,
             bool logExecutionTime = false,
             Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnosticOpt = null,
             Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnosticOpt = null,
@@ -86,7 +86,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var analyzerExecutionTimeMapOpt = logExecutionTime ? new ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan>() : null;
 
             return new AnalyzerExecutor(compilation, analyzerOptions, addDiagnostic, onAnalyzerException, isCompilerAnalyzer,
-                analyzerManager, getAnalyzerGate, isGeneratedCodeAnalyzer, analyzerExecutionTimeMapOpt, addLocalDiagnosticOpt, addNonLocalDiagnosticOpt, cancellationToken);
+                analyzerManager, shouldSkipAnalysisOnGeneratedCode, getAnalyzerGate, analyzerExecutionTimeMapOpt, addLocalDiagnosticOpt, addNonLocalDiagnosticOpt, cancellationToken);
         }
 
         /// <summary>
@@ -110,8 +110,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 analyzerOptions: null,
                 addDiagnostic: null,
                 isCompilerAnalyzer: null,
+                shouldSkipAnalysisOnGeneratedCode: _ => false,
                 getAnalyzerGateOpt: null,
-                isGeneratedCodeAnalyzerOpt: null,
                 onAnalyzerException: onAnalyzerException,
                 analyzerManager: analyzerManager,
                 analyzerExecutionTimeMapOpt: null,
@@ -127,8 +127,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException,
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
             AnalyzerManager analyzerManager,
+            Func<DiagnosticAnalyzer, bool> shouldSkipAnalysisOnGeneratedCode,
             Func<DiagnosticAnalyzer, object> getAnalyzerGateOpt,
-            Func<DiagnosticAnalyzer, bool> isGeneratedCodeAnalyzerOpt,
             ConcurrentDictionary<DiagnosticAnalyzer, TimeSpan> analyzerExecutionTimeMapOpt,
             Action<Diagnostic, DiagnosticAnalyzer, bool> addLocalDiagnosticOpt,
             Action<Diagnostic, DiagnosticAnalyzer> addNonLocalDiagnosticOpt,
@@ -140,8 +140,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _onAnalyzerException = onAnalyzerException;
             _isCompilerAnalyzer = isCompilerAnalyzer;
             _analyzerManager = analyzerManager;
+            _shouldSkipAnalysisOnGeneratedCode = shouldSkipAnalysisOnGeneratedCode;
             _getAnalyzerGateOpt = getAnalyzerGateOpt;
-            _isGeneratedCodeAnalyzerOpt = isGeneratedCodeAnalyzerOpt;
             _analyzerExecutionTimeMapOpt = analyzerExecutionTimeMapOpt;
             _addLocalDiagnosticOpt = addLocalDiagnosticOpt;
             _addNonLocalDiagnosticOpt = addNonLocalDiagnosticOpt;
@@ -156,7 +156,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return new AnalyzerExecutor(_compilation, _analyzerOptions, _addDiagnostic, _onAnalyzerException, _isCompilerAnalyzer,
-                _analyzerManager, _getAnalyzerGateOpt, _isGeneratedCodeAnalyzerOpt, _analyzerExecutionTimeMapOpt, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt, cancellationToken);
+                _analyzerManager, _shouldSkipAnalysisOnGeneratedCode, _getAnalyzerGateOpt, _analyzerExecutionTimeMapOpt, _addLocalDiagnosticOpt, _addNonLocalDiagnosticOpt, cancellationToken);
         }
 
         internal Compilation Compilation => _compilation;
@@ -293,7 +293,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             Debug.Assert(getTopMostNodeForAnalysis != null);
 
-            if (isGeneratedCodeSymbol && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            if (isGeneratedCodeSymbol && _shouldSkipAnalysisOnGeneratedCode(analyzer))
             {
                 return;
             }
@@ -363,7 +363,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             AnalyzerStateData analyzerStateOpt,
             bool isGeneratedCode)
         {
-            if (isGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            if (isGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
             {
                 return;
             }
@@ -426,7 +426,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             AnalyzerStateData analyzerStateOpt,
             bool isGeneratedCode)
         {
-            if (isGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            if (isGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
             {
                 return;
             }
@@ -503,7 +503,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             bool isInGeneratedCode)
             where TLanguageKindEnum : struct
         {
-            if (isInGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            if (isInGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
             {
                 return;
             }
@@ -540,7 +540,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             AnalysisState analysisStateOpt,
             bool isInGeneratedCode)
         {
-            if (isInGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            if (isInGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
             {
                 return;
             }
@@ -771,7 +771,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
            bool isInGeneratedCode)
            where TLanguageKindEnum : struct
         {
-            if (isInGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            if (isInGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
             {
                 return;
             }
@@ -891,7 +891,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             AnalysisState analysisStateOpt,
             bool isInGeneratedCode)
         {
-            if (isInGeneratedCode && ShouldSkipGeneratedCodeForAnalyzer(analyzer))
+            if (isInGeneratedCode && _shouldSkipAnalysisOnGeneratedCode(analyzer))
             {
                 return;
             }
@@ -1308,12 +1308,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return executionTime;
-        }
-
-        private bool ShouldSkipGeneratedCodeForAnalyzer(DiagnosticAnalyzer analyzer)
-        {
-            // We skip analysis of generated code unless the analyzer has explicitly enabled generated code analysis.
-            return _isGeneratedCodeAnalyzerOpt == null || !_isGeneratedCodeAnalyzerOpt(analyzer);
         }
     }
 }
