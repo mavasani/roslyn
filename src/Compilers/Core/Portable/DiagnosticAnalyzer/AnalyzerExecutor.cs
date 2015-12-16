@@ -33,7 +33,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private readonly Compilation _compilation;
         private readonly AnalyzerOptions _analyzerOptions;
-        private readonly Action<Diagnostic> _addNonCategorizedDiagnosticOpt;
+        private readonly Action<Diagnostic, DiagnosticAnalyzer> _addNonCategorizedDiagnosticOpt;
         private readonly Action<Diagnostic, DiagnosticAnalyzer, bool> _addCategorizedLocalDiagnosticOpt;
         private readonly Action<Diagnostic, DiagnosticAnalyzer> _addCategorizedNonLocalDiagnosticOpt;
         private readonly Action<Exception, DiagnosticAnalyzer, Diagnostic> _onAnalyzerException;
@@ -70,7 +70,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public static AnalyzerExecutor Create(
             Compilation compilation,
             AnalyzerOptions analyzerOptions,
-            Action<Diagnostic> addNonCategorizedDiagnosticOpt,
+            Action<Diagnostic, DiagnosticAnalyzer> addNonCategorizedDiagnosticOpt,
             Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException,
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
             AnalyzerManager analyzerManager,
@@ -125,7 +125,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private AnalyzerExecutor(
             Compilation compilation,
             AnalyzerOptions analyzerOptions,
-            Action<Diagnostic> addNonCategorizedDiagnosticOpt,
+            Action<Diagnostic, DiagnosticAnalyzer> addNonCategorizedDiagnosticOpt,
             Action<Exception, DiagnosticAnalyzer, Diagnostic> onAnalyzerException,
             Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer,
             AnalyzerManager analyzerManager,
@@ -1144,19 +1144,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return GetAddDiagnostic(contextSymbol, _compilation, analyzer, _addNonCategorizedDiagnosticOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt, getTopMostNodeForAnalysis);
         }
 
-        private static Action<Diagnostic> GetAddDiagnostic(ISymbol contextSymbol, Compilation compilation, DiagnosticAnalyzer analyzer, Action<Diagnostic> addNonCategorizedDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt, Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis)
+        private static Action<Diagnostic> GetAddDiagnostic(ISymbol contextSymbol, Compilation compilation, DiagnosticAnalyzer analyzer, Action<Diagnostic, DiagnosticAnalyzer> addNonCategorizedDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt, Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis)
         {
-            if (addCategorizedLocalDiagnosticOpt == null)
-            {
-                Debug.Assert(addNonCategorizedDiagnosticOpt != null);
-                return addNonCategorizedDiagnosticOpt;
-            }
-
-            Debug.Assert(addNonCategorizedDiagnosticOpt == null);
-            Debug.Assert(addCategorizedNonLocalDiagnosticOpt != null);
-
             return diagnostic =>
             {
+                if (addCategorizedLocalDiagnosticOpt == null)
+                {
+                    Debug.Assert(addNonCategorizedDiagnosticOpt != null);
+                    addNonCategorizedDiagnosticOpt(diagnostic, analyzer);
+                    return;
+                }
+
+                Debug.Assert(addNonCategorizedDiagnosticOpt == null);
+                Debug.Assert(addCategorizedNonLocalDiagnosticOpt != null);
+
                 if (diagnostic.Location.IsInSource)
                 {
                     foreach (var syntaxRef in contextSymbol.DeclaringSyntaxReferences)
@@ -1179,14 +1180,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private Action<Diagnostic> GetAddCompilationDiagnostic(DiagnosticAnalyzer analyzer)
         {
-            if (_addCategorizedNonLocalDiagnosticOpt == null)
-            {
-                return _addNonCategorizedDiagnosticOpt;
-            }
-
             return diagnostic =>
             {
-                _addCategorizedNonLocalDiagnosticOpt(diagnostic, analyzer);
+                if (_addCategorizedNonLocalDiagnosticOpt == null)
+                {
+                    _addNonCategorizedDiagnosticOpt(diagnostic, analyzer);
+                }
+                else
+                {
+                    _addCategorizedNonLocalDiagnosticOpt(diagnostic, analyzer);
+                }
             };
         }
 
@@ -1200,19 +1203,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return GetAddDiagnostic(tree, span, analyzer, false, _addNonCategorizedDiagnosticOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt);
         }
 
-        private static Action<Diagnostic> GetAddDiagnostic(SyntaxTree contextTree, TextSpan? span, DiagnosticAnalyzer analyzer, bool isSyntaxDiagnostic, Action<Diagnostic> addNonCategorizedDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt)
+        private static Action<Diagnostic> GetAddDiagnostic(SyntaxTree contextTree, TextSpan? span, DiagnosticAnalyzer analyzer, bool isSyntaxDiagnostic, Action<Diagnostic, DiagnosticAnalyzer> addNonCategorizedDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt, Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt)
         {
-            if (addCategorizedLocalDiagnosticOpt == null)
-            {
-                Debug.Assert(addNonCategorizedDiagnosticOpt != null);
-                return addNonCategorizedDiagnosticOpt;
-            }
-
-            Debug.Assert(addNonCategorizedDiagnosticOpt == null);
-            Debug.Assert(addCategorizedNonLocalDiagnosticOpt != null);
-
             return diagnostic =>
             {
+                if (addCategorizedLocalDiagnosticOpt == null)
+                {
+                    Debug.Assert(addNonCategorizedDiagnosticOpt != null);
+                    addNonCategorizedDiagnosticOpt(diagnostic, analyzer);
+                    return;
+                }
+
+                Debug.Assert(addNonCategorizedDiagnosticOpt == null);
+                Debug.Assert(addCategorizedNonLocalDiagnosticOpt != null);
+
                 if (diagnostic.Location.IsInSource &&
                     contextTree == diagnostic.Location.SourceTree &&
                     (!span.HasValue || span.Value.IntersectsWith(diagnostic.Location.SourceSpan)))

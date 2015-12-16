@@ -53,9 +53,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             foreach (var analyzer in analysisScope.Analyzers)
             {
                 // Dequeue reported analyzer diagnostics from the driver and store them in our maps.
-                var syntaxDiagnostics = driver.DequeueLocalDiagnostics(analyzer, syntax: true, compilation: compilation);
-                var semanticDiagnostics = driver.DequeueLocalDiagnostics(analyzer, syntax: false, compilation: compilation);
-                var compilationDiagnostics = driver.DequeueNonLocalDiagnostics(analyzer, compilation);
+                var syntaxDiagnostics = driver.DequeueCategorizedLocalDiagnostics(analyzer, syntax: true, compilation: compilation);
+                var semanticDiagnostics = driver.DequeueCategorizedLocalDiagnostics(analyzer, syntax: false, compilation: compilation);
+                var compilationDiagnostics = driver.DequeueCategorizedNonLocalDiagnostics(analyzer, compilation);
 
                 lock (_gate)
                 {

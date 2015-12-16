@@ -757,7 +757,7 @@ namespace Microsoft.CodeAnalysis
 
             private void ReportTreeDiagnostics(SyntaxTree tree, Action<Diagnostic> addDiagnostic)
             {
-                ReportDiagnosticsCore(addDiagnostic, tree.GetRoot().GetFirstToken().GetLocation(), tree.FilePath);
+                ReportDiagnosticsCore(addDiagnostic, tree.GetRoot().GetLastToken().GetLocation(), tree.FilePath);
             }
 
             private void ReportDiagnosticsCore(Action<Diagnostic> addDiagnostic, Location location, params object[] messageArguments)
