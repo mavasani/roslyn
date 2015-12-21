@@ -21,15 +21,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly object _gate;
 
         /// <summary>
-        /// Per-analyzer analysis state map.
-        /// The integer value points to the index within the <see cref="_analyzerStates"/> array.
+        /// Analyzers to execute.
         /// </summary>
-        private readonly ImmutableDictionary<DiagnosticAnalyzer, int> _analyzerStateMap;
+        private readonly ImmutableArray<DiagnosticAnalyzer> _analyzers;
 
         /// <summary>
-        /// Per-analyzer analysis state.
+        /// Optional per-analyzer analysis state map.
+        /// The integer value points to the index within the <see cref="_analyzerStatesOpt"/> array.
         /// </summary>
-        private readonly ImmutableArray<PerAnalyzerState> _analyzerStates;
+        private readonly ImmutableDictionary<DiagnosticAnalyzer, int> _analyzerStateMapOpt;
+
+        /// <summary>
+        /// Optional per-analyzer analysis state.
+        /// </summary>
+        private readonly ImmutableArray<PerAnalyzerState> _analyzerStatesOpt;
 
         /// <summary>
         /// Compilation events corresponding to source tree, that are not completely processed for all analyzers.
@@ -47,7 +52,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         private ImmutableDictionary<DiagnosticAnalyzer, AnalyzerActionCounts> _lazyAnalyzerActionCountsMap;
 
-
         /// <summary>
         /// Cached semantic model for the compilation trees.
         /// PERF: This cache enables us to re-use semantic model's bound node cache across analyzer execution and diagnostic queries.
@@ -58,10 +62,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly HashSet<CompilationEvent> _pooledEventsWithAnyActionsSet;
         private bool _compilationEndAnalyzed;
 
-        public AnalysisState(ImmutableArray<DiagnosticAnalyzer> analyzers)
+        public AnalysisState(ImmutableArray<DiagnosticAnalyzer> analyzers, bool trackPerAnalyzerState)
         {
             _gate = new object();
-            _analyzerStateMap = CreateAnalyzerStateMap(analyzers, out _analyzerStates);
+            _analyzers = analyzers;
+            _analyzerStateMapOpt = CreateAnalyzerStateMap(analyzers, trackPerAnalyzerState, out _analyzerStatesOpt);
             _pendingSourceEvents = new Dictionary<SyntaxTree, HashSet<CompilationEvent>>();
             _pendingNonSourceEvents = new HashSet<CompilationEvent>();
             _lazyAnalyzerActionCountsMap = null;
@@ -71,8 +76,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _compilationEndAnalyzed = false;
         }
 
-        private static ImmutableDictionary<DiagnosticAnalyzer, int> CreateAnalyzerStateMap(ImmutableArray<DiagnosticAnalyzer> analyzers, out ImmutableArray<PerAnalyzerState> analyzerStates)
+        private static ImmutableDictionary<DiagnosticAnalyzer, int> CreateAnalyzerStateMap(ImmutableArray<DiagnosticAnalyzer> analyzers, bool trackPerAnalyzerState, out ImmutableArray<PerAnalyzerState> analyzerStates)
         {
+            if (!trackPerAnalyzerState)
+            {
+                analyzerStates = default(ImmutableArray<PerAnalyzerState>);
+                return null;
+            }
+
             var analyzerStateDataPool = new ObjectPool<AnalyzerStateData>(() => new AnalyzerStateData());
             var declarationAnalyzerStateDataPool = new ObjectPool<DeclarationAnalyzerStateData>(() => new DeclarationAnalyzerStateData());
 
@@ -92,8 +103,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private PerAnalyzerState GetAnalyzerState(DiagnosticAnalyzer analyzer)
         {
-            var index = _analyzerStateMap[analyzer];
-            return _analyzerStates[index];
+            Debug.Assert(_analyzerStateMapOpt != null);
+            Debug.Assert(_analyzerStateMapOpt.Count == _analyzers.Length);
+
+            Debug.Assert(!_analyzerStatesOpt.IsDefault);
+            Debug.Assert(_analyzerStatesOpt.Length == _analyzers.Length);
+
+            var index = _analyzerStateMapOpt[analyzer];
+            return _analyzerStatesOpt[index];
         }
 
         public async Task OnCompilationEventsGeneratedAsync(ImmutableArray<CompilationEvent> compilationEvents, AnalyzerDriver driver, CancellationToken cancellationToken)
@@ -115,18 +132,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             // Mark the events for analysis for each analyzer.
             Debug.Assert(_pooledEventsWithAnyActionsSet.Count == 0);
-            foreach (var kvp in _analyzerStateMap)
+            foreach (var analyzer in _analyzers)
             {
-                var analyzer = kvp.Key;
-                var analyzerState = _analyzerStates[kvp.Value];
                 var actionCounts = _lazyAnalyzerActionCountsMap[analyzer];
+                var analyzerStateOpt = _analyzerStateMapOpt != null ? GetAnalyzerState(analyzer) : null;
 
                 foreach (var compilationEvent in compilationEvents)
                 {
                     if (HasActionsForEvent(compilationEvent, actionCounts))
                     {
                         _pooledEventsWithAnyActionsSet.Add(compilationEvent);
-                        analyzerState.OnCompilationEventGenerated(compilationEvent, actionCounts);
+                        analyzerStateOpt?.OnCompilationEventGenerated(compilationEvent, actionCounts);
                     }
                 }
             }
@@ -244,7 +260,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             if (_lazyAnalyzerActionCountsMap == null)
             {
                 var builder = ImmutableDictionary.CreateBuilder<DiagnosticAnalyzer, AnalyzerActionCounts>();
-                foreach (var analyzer in _analyzerStateMap.Keys)
+                foreach (var analyzer in _analyzers)
                 {
                     var actionCounts = await driver.GetAnalyzerActionCountsAsync(analyzer, cancellationToken).ConfigureAwait(false);
                     builder.Add(analyzer, actionCounts);
@@ -283,6 +299,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private void OnSymbolDeclaredEventProcessed(SymbolDeclaredCompilationEvent symbolDeclaredEvent, ImmutableArray<DiagnosticAnalyzer> analyzers)
         {
+            Debug.Assert(_analyzerStateMapOpt != null);
+
             foreach (var analyzer in analyzers)
             {
                 var analyzerState = GetAnalyzerState(analyzer);
@@ -296,6 +314,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public void OnCompilationEventProcessed(CompilationEvent compilationEvent, AnalysisScope analysisScope)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                return;
+            }
+
             // Analyze if the symbol and all its declaring syntax references are analyzed.
             var symbolDeclaredEvent = compilationEvent as SymbolDeclaredCompilationEvent;
             if (symbolDeclaredEvent != null)
@@ -304,7 +327,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             // Check if event is fully analyzed for all analyzers.
-            foreach (var analyzerState in _analyzerStates)
+            foreach (var analyzerState in _analyzerStatesOpt)
             {
                 if (!analyzerState.IsEventAnalyzed(compilationEvent))
                 {
@@ -330,9 +353,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private HashSet<CompilationEvent> GetPendingEvents_NoLock(ImmutableArray<DiagnosticAnalyzer> analyzers)
+        private HashSet<CompilationEvent> GetPendingEventsFromAnalyzerState_NoLock(ImmutableArray<DiagnosticAnalyzer> analyzers)
         {
+            Debug.Assert(_analyzerStateMapOpt != null);
+
             var uniqueEvents = _compilationEventsPool.Allocate();
+
             foreach (var analyzer in analyzers)
             {
                 var analyzerState = GetAnalyzerState(analyzer);
@@ -353,12 +379,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             HashSet<CompilationEvent> compilationEventsForTree;
             if (_pendingSourceEvents.TryGetValue(tree, out compilationEventsForTree))
             {
+                if (_analyzerStateMapOpt == null)
+                {
+                    return compilationEventsForTree != null ? compilationEventsForTree.ToImmutableArray() : ImmutableArray<CompilationEvent>.Empty;
+                }
+
                 if (compilationEventsForTree?.Count > 0)
                 {
                     HashSet<CompilationEvent> pendingEvents = null;
                     try
                     {
-                        pendingEvents = GetPendingEvents_NoLock(analyzers);
+                        pendingEvents = GetPendingEventsFromAnalyzerState_NoLock(analyzers);
                         if (pendingEvents.Count > 0)
                         {
                             pendingEvents.IntersectWith(compilationEventsForTree);
@@ -391,13 +422,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private ImmutableArray<CompilationEvent> GetPendingEvents_NoLock(ImmutableArray<DiagnosticAnalyzer> analyzers, bool includeSourceEvents, bool includeNonSourceEvents)
         {
-            HashSet<CompilationEvent> pendingEvents = null, uniqueEvents = null;
+            HashSet<CompilationEvent> pendingEventsFromAnalyzerStateOpt = null, uniqueEvents = null;
             try
             {
-                pendingEvents = GetPendingEvents_NoLock(analyzers);
-                if (pendingEvents.Count == 0)
+                if (_analyzerStateMapOpt != null)
                 {
-                    return ImmutableArray<CompilationEvent>.Empty;
+                    pendingEventsFromAnalyzerStateOpt = GetPendingEventsFromAnalyzerState_NoLock(analyzers);
+                    if (pendingEventsFromAnalyzerStateOpt.Count == 0)
+                    {
+                        return ImmutableArray<CompilationEvent>.Empty;
+                    }
                 }
 
                 uniqueEvents = _compilationEventsPool.Allocate();
@@ -421,12 +455,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     }
                 }
 
-                uniqueEvents.IntersectWith(pendingEvents);
+                if (pendingEventsFromAnalyzerStateOpt != null)
+                {
+                    uniqueEvents.IntersectWith(pendingEventsFromAnalyzerStateOpt);
+                }
+
                 return uniqueEvents.ToImmutableArray();
             }
             finally
             {
-                Free(pendingEvents);
+                Free(pendingEventsFromAnalyzerStateOpt);
                 Free(uniqueEvents);
             }
         }
@@ -441,19 +479,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Returns true if we have any pending syntax analysis for given analysis scope.
+        /// Returns true if we need to execute any syntax tree actions for given analysis scope.
         /// </summary>
-        public bool HasPendingSyntaxAnalysis(AnalysisScope analysisScope)
+        public async Task<bool> NeedsSyntaxAnalysisAsync(AnalysisScope analysisScope, AnalyzerDriver driver, CancellationToken cancellationToken)
         {
             if (analysisScope.IsTreeAnalysis && !analysisScope.IsSyntaxOnlyTreeAnalysis)
             {
                 return false;
             }
 
+            await EnsureAnalyzerActionCountsInitializedAsync(driver, cancellationToken).ConfigureAwait(false);
+
             foreach (var analyzer in analysisScope.Analyzers)
             {
-                var analyzerState = GetAnalyzerState(analyzer);
-                if (analyzerState.HasPendingSyntaxAnalysis(analysisScope.FilterTreeOpt))
+                if (_analyzerStateMapOpt != null)
+                {
+                    var analyzerState = GetAnalyzerState(analyzer);
+                    if (analyzerState.HasPendingSyntaxAnalysis(analysisScope.FilterTreeOpt))
+                    {
+                        return true;
+                    }
+                }
+                else if (_lazyAnalyzerActionCountsMap[analyzer].SyntaxTreeActionsCount > 0)
                 {
                     return true;
                 }
@@ -463,11 +510,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Returns true if we have any pending symbol analysis for given analysis scope.
+        /// Returns true if we have any pending symbol analysis for given analysis scope for any partial symbols.
         /// </summary>
-        public bool HasPendingSymbolAnalysis(AnalysisScope analysisScope)
+        public bool HasPendingSymbolAnalysisForPartialSymbols(AnalysisScope analysisScope)
         {
             Debug.Assert(analysisScope.FilterTreeOpt != null);
+
+            if (_analyzerStateMapOpt == null)
+            {
+                // We are not tracking per-analyzer symbol analysis state, so we should have executed all symbol analysis.
+                return false;
+            }
 
             var symbolDeclaredEvents = GetPendingSymbolDeclaredEvents(analysisScope.FilterTreeOpt);
             foreach (var symbolDeclaredEvent in symbolDeclaredEvents)
@@ -513,6 +566,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </returns>
         public bool TryStartProcessingEvent(CompilationEvent compilationEvent, DiagnosticAnalyzer analyzer, out AnalyzerStateData state)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                state = null;
+                return true;
+            }
+
             return GetAnalyzerState(analyzer).TryStartProcessingEvent(compilationEvent, out state);
         }
 
@@ -521,6 +580,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public void MarkEventComplete(CompilationEvent compilationEvent, DiagnosticAnalyzer analyzer)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                return;
+            }
+
             GetAnalyzerState(analyzer).MarkEventComplete(compilationEvent);
         }
 
@@ -533,6 +597,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </returns>
         public bool TryStartAnalyzingSymbol(ISymbol symbol, DiagnosticAnalyzer analyzer, out AnalyzerStateData state)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                state = null;
+                return true;
+            }
+
             return GetAnalyzerState(analyzer).TryStartAnalyzingSymbol(symbol, out state);
         }
 
@@ -541,6 +611,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public void MarkSymbolComplete(ISymbol symbol, DiagnosticAnalyzer analyzer)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                return;
+            }
+
             GetAnalyzerState(analyzer).MarkSymbolComplete(symbol);
         }
 
@@ -553,23 +628,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </returns>
         public bool TryStartAnalyzingDeclaration(SyntaxReference decl, DiagnosticAnalyzer analyzer, out DeclarationAnalyzerStateData state)
         {
-            return GetAnalyzerState(analyzer).TryStartAnalyzingDeclaration(decl, out state);
-        }
-
-        /// <summary>
-        /// True if the given symbol declaration is fully analyzed.
-        /// </summary>
-        public bool IsDeclarationComplete(SyntaxNode decl)
-        {
-            foreach (var analyzerState in _analyzerStates)
+            if (_analyzerStateMapOpt == null)
             {
-                if (!analyzerState.IsDeclarationComplete(decl))
-                {
-                    return false;
-                }
+                state = null;
+                return true;
             }
 
-            return true;
+            return GetAnalyzerState(analyzer).TryStartAnalyzingDeclaration(decl, out state);
         }
 
         /// <summary>
@@ -577,6 +642,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public void MarkDeclarationComplete(SyntaxReference decl, DiagnosticAnalyzer analyzer)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                return;
+            }
+
             GetAnalyzerState(analyzer).MarkDeclarationComplete(decl);
         }
 
@@ -585,6 +655,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public void MarkDeclarationsComplete(ImmutableArray<SyntaxReference> declarations, IEnumerable<DiagnosticAnalyzer> analyzers)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                return;
+            }
+
             foreach (var analyzer in analyzers)
             {
                 GetAnalyzerState(analyzer).MarkDeclarationsComplete(declarations);
@@ -600,6 +675,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </returns>
         public bool TryStartSyntaxAnalysis(SyntaxTree tree, DiagnosticAnalyzer analyzer, out AnalyzerStateData state)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                state = null;
+                return true;
+            }
+
             return GetAnalyzerState(analyzer).TryStartSyntaxAnalysis(tree, out state);
         }
 
@@ -608,6 +689,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public void MarkSyntaxAnalysisComplete(SyntaxTree tree, DiagnosticAnalyzer analyzer)
         {
+            if (_analyzerStateMapOpt == null)
+            {
+                return;
+            }
+
             GetAnalyzerState(analyzer).MarkSyntaxAnalysisComplete(tree);
         }
     }

@@ -1248,8 +1248,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Debug.Assert(analysisState != null);
 
             CompilationData compilationData;
-            if (!s_compilationDataCache.TryGetValue(compilation, out compilationData) ||
-                !analysisState.IsDeclarationComplete(node))
+            if (!s_compilationDataCache.TryGetValue(compilation, out compilationData))
             {
                 return;
             }

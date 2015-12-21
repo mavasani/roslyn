@@ -22,8 +22,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             private readonly Dictionary<SyntaxNode, DeclarationAnalyzerStateData> _pendingDeclarations = new Dictionary<SyntaxNode, DeclarationAnalyzerStateData>();
             private Dictionary<SyntaxTree, AnalyzerStateData> _lazyPendingSyntaxAnalysisTrees = null;
 
-            private readonly ObjectPool<AnalyzerStateData> _analyzerStateDataPool = new ObjectPool<AnalyzerStateData>(() => new AnalyzerStateData());
-            private readonly ObjectPool<DeclarationAnalyzerStateData> _declarationAnalyzerStateDataPool = new ObjectPool<DeclarationAnalyzerStateData>(() => new DeclarationAnalyzerStateData());
+            private readonly ObjectPool<AnalyzerStateData> _analyzerStateDataPool;
+            private readonly ObjectPool<DeclarationAnalyzerStateData> _declarationAnalyzerStateDataPool;
 
             public PerAnalyzerState(ObjectPool<AnalyzerStateData> analyzerStateDataPool, ObjectPool<DeclarationAnalyzerStateData> declarationAnalyzerStateDataPool)
             {
@@ -142,11 +142,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             public bool TryStartAnalyzingDeclaration(SyntaxReference decl, out DeclarationAnalyzerStateData state)
             {
                 return TryStartProcessingEntity(decl.GetSyntax(), _pendingDeclarations, _declarationAnalyzerStateDataPool, out state);
-            }
-
-            public bool IsDeclarationComplete(SyntaxNode decl)
-            {
-                return IsEntityFullyProcessed(decl, _pendingDeclarations);
             }
 
             public void MarkDeclarationComplete(SyntaxReference decl)

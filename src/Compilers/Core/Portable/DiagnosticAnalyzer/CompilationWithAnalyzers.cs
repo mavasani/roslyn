@@ -126,7 +126,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _analysisOptions = analysisOptions;
             _cancellationToken = cancellationToken;
 
-            _analysisState = new AnalysisState(analyzers);
+            // PERF: Do not track per-analyzer state. This seems to be causing severe performance regressions.
+            //       We will end up re-invoking analysis every time a client asks for diagnostics,
+            //       but the client should ensure no duplicate analysis is being requested to improve their performance.
+            _analysisState = new AnalysisState(analyzers, trackPerAnalyzerState: false);
+
             _analysisResult = new AnalysisResult(analysisOptions.LogAnalyzerExecutionTime, analyzers);
             _driverPool = new ObjectPool<AnalyzerDriver>(() => compilation.AnalyzerForLanguage(analyzers, AnalyzerManager.Instance));
             _executingConcurrentTreeTasksOpt = analysisOptions.ConcurrentAnalysis ? new Dictionary<SyntaxTree, Tuple<Task, CancellationTokenSource>>() : null;
@@ -494,7 +498,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 do
                 {
                     await ComputeAnalyzerDiagnosticsAsync(analysisScope, generateCompilationEvents, getEventQueue, taskToken, cancellationToken).ConfigureAwait(false);
-                } while (_analysisOptions.ConcurrentAnalysis && _analysisState.HasPendingSymbolAnalysis(analysisScope));
+                } while (_analysisOptions.ConcurrentAnalysis && _analysisState.HasPendingSymbolAnalysisForPartialSymbols(analysisScope));
 
                 // Return computed analyzer diagnostics for the given analysis scope.
                 return _analysisResult.GetDiagnostics(analysisScope, getLocalDiagnostics: true, getNonLocalDiagnostics: false);
@@ -671,7 +675,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 Debug.Assert(!driver.WhenInitializedTask.IsCanceled);
 
-                if (eventQueue.Count > 0 || _analysisState.HasPendingSyntaxAnalysis(analysisScope))
+                if (eventQueue.Count > 0 || await _analysisState.NeedsSyntaxAnalysisAsync(analysisScope, driver, cancellationToken).ConfigureAwait(false))
                 {
                     try
                     {
