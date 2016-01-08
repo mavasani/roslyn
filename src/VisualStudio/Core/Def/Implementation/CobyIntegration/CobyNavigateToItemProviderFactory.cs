@@ -135,6 +135,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                         foreach (var result in p.Result)
                         {
                             _cancellationToken.ThrowIfCancellationRequested();
+                            if (result.url?.StartsWith("$MAS") == true)
+                            {
+                                continue;
+                            }
+
                             var matches = patternMatcher.GetMatches(result.name, result.url);
                             if (matches != null)
                             {
