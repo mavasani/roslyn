@@ -2,6 +2,7 @@
   "dependencies": {
     "ManagedEsent": "1.9.2.0",
     "Microsoft.Composition": "1.0.27",
+    "Microsoft.AspNet.WebApi.Client": "5.2.3",
   },
   "frameworks": {
     "net46": { }

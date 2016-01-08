@@ -843,6 +843,7 @@
   "projectFileDependencyGroups": {
     "": [
       "ManagedEsent >= 1.9.2.0",
+      "Microsoft.AspNet.WebApi.Client >= 5.2.3",
       "Microsoft.Composition >= 1.0.27"
     ],
     ".NETFramework,Version=v4.6": []
