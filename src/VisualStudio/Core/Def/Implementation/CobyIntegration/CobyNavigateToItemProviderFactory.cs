@@ -13,6 +13,10 @@ using Microsoft.CodeAnalysis.Shared.Utilities;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Language.NavigateTo.Interfaces;
 using Roslyn.Utilities;
+using System.Linq;
+using Microsoft.CodeAnalysis.Editor.Navigation;
+using Microsoft.CodeAnalysis.Text;
+using System.Collections.Immutable;
 
 namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 {
@@ -112,7 +116,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     var navigateToSearch = Logger.LogBlock(FunctionId.CobyNavigateTo_Search, _cancellationToken);
                     var asyncToken = _asyncListener.BeginAsyncOperation(GetType() + ".Search");
 
-                    _progress.AddItems(1);
+                    _progress.AddItems(2);
 
                     // make sure we run actual search from other thread. and let this thread return to caller as soon as possible.
                     var dummy = Task.Run(() => Search(navigateToSearch, asyncToken), _cancellationToken);
@@ -120,14 +124,22 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 
                 private void Search(IDisposable navigateToSearch, IAsyncToken asyncToken)
                 {
-                    var searchTask = CobyServices.SearchAsync(Consts.CodeBase, CobyServices.EntityTypes.File, _searchPattern, _cancellationToken);
-
-                    var reportTask = searchTask.SafeContinueWith(p =>
+                    var fileSearchTask = CobyServices.SearchAsync(Consts.CodeBase, CobyServices.EntityTypes.File, _searchPattern, _cancellationToken).SafeContinueWith(p =>
                     {
+                        if (p.Result == null)
+                        {
+                            return;
+                        }
+
+                        var patternMatcher = new PatternMatcher(_searchPattern);
                         foreach (var result in p.Result)
                         {
                             _cancellationToken.ThrowIfCancellationRequested();
-                            ReportMatchResult(result);
+                            var matches = patternMatcher.GetMatches(result.name, result.url);
+                            if (matches != null)
+                            {
+                                ReportMatchResult(result, matches);
+                            }
                         }
 
                         _progress.ItemCompleted();
@@ -136,7 +148,36 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     TaskContinuationOptions.ExecuteSynchronously,
                     TaskScheduler.Default);
 
-                    reportTask.SafeContinueWith(_ =>
+                    var symbolSearchTask = CobyServices.SearchAsync(Consts.CodeBase, CobyServices.EntityTypes.Symbol, _searchPattern, _cancellationToken).SafeContinueWith(p =>
+                    {
+                        if (p.Result == null)
+                        {
+                            return;
+                        }
+
+                        var patternMatcher = new PatternMatcher(_searchPattern);
+                        foreach (var result in p.Result)
+                        {
+                            _cancellationToken.ThrowIfCancellationRequested();
+                            if (result.resultType == "local" || result.resultType == "parameter")
+                            {
+                                continue;
+                            }
+
+                            var matches = patternMatcher.GetMatches(result.name, result.fullName);
+                            if (matches != null)
+                            {
+                                ReportMatchResult(result, matches);
+                            }
+                        }
+
+                        _progress.ItemCompleted();
+                    },
+                    _cancellationToken,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+                    Task.WhenAll(fileSearchTask, symbolSearchTask).SafeContinueWith(_ =>
                     {
                         _callback.Done();
                         navigateToSearch.Dispose();
@@ -147,18 +188,87 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     TaskScheduler.Default);
                 }
 
-                private void ReportMatchResult(CobyServices.SearchResult result)
+                private void ReportMatchResult(CobyServices.SearchResult result, IEnumerable<PatternMatch> matches)
                 {
-                    //var navigateToItem = new NavigateToItem(
-                    //    result.Name,
-                    //    result.Kind,
-                    //    "csharp",
-                    //    result.SecondarySort,
-                    //    result,
-                    //    result.MatchKind,
-                    //    result.IsCaseSensitive,
-                    //    _displayFactory);
-                    //_callback.AddItem(navigateToItem);
+                    var matchKind = GetNavigateToMatchKind(matches);
+
+                    var navigateToItem = new NavigateToItem(
+                        result.name,
+                        result.resultType,
+                        "csharp",
+                        result.url,
+                        new SearchResult(result, matchKind, new NavigableItem(result)),
+                        matchKind,
+                        result.resultType == "file" ? false : true,
+                        _displayFactory);
+
+                    _callback.AddItem(navigateToItem);
+                }
+
+                private static MatchKind GetNavigateToMatchKind(IEnumerable<PatternMatch> matchResult)
+                {
+                    // We may have matched the target string in multiple ways, but we'll answer with the
+                    // "most optimistic" answer
+                    if (matchResult.Any(r => r.Kind == PatternMatchKind.Exact))
+                    {
+                        return MatchKind.Exact;
+                    }
+
+                    if (matchResult.Any(r => r.Kind == PatternMatchKind.Prefix))
+                    {
+                        return MatchKind.Prefix;
+                    }
+
+                    if (matchResult.Any(r => r.Kind == PatternMatchKind.Substring))
+                    {
+                        return MatchKind.Substring;
+                    }
+
+                    return MatchKind.Regular;
+                }
+
+                private class NavigableItem : INavigableItem
+                {
+                    private readonly CobyServices.SearchResult _result;
+
+                    public NavigableItem(CobyServices.SearchResult result)
+                    {
+                        _result = result;
+                    }
+
+                    public bool DisplayFileLocation => true;
+
+                    public string DisplayString => _result.name;
+
+                    public Glyph Glyph => _result.resultType == "file" ? Glyph.CSharpFile : Glyph.ClassPublic;
+
+                    public Document Document => null;
+
+                    public TextSpan SourceSpan => new TextSpan(0, 0);
+
+                    public ImmutableArray<INavigableItem> ChildItems => ImmutableArray<INavigableItem>.Empty;
+                }
+
+                private class SearchResult : INavigateToSearchResult
+                {
+                    public string AdditionalInformation => _result.resultType + " " + (_result.fullName ?? _result.url);
+                    public string Name => _result.name;
+                    public string Summary => string.Empty;
+                    public string Kind => _result.resultType;
+                    public string SecondarySort => _result.url;
+                    public bool IsCaseSensitive => _result.resultType == "file" ? false : true;
+
+                    public MatchKind MatchKind { get; }
+                    public INavigableItem NavigableItem { get; }
+
+                    private readonly CobyServices.SearchResult _result;
+
+                    public SearchResult(CobyServices.SearchResult result, MatchKind matchKind, INavigableItem navigableItem)
+                    {
+                        _result = result;
+                        MatchKind = matchKind;
+                        NavigableItem = navigableItem;
+                    }
                 }
             }
         }
