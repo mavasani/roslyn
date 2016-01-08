@@ -10,11 +10,11 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.NavigateTo
 {
     internal partial class NavigateToItemProvider : INavigateToItemProvider
     {
-        private readonly Workspace _workspace;
-        private readonly IAsynchronousOperationListener _asyncListener;
-        private readonly ItemDisplayFactory _displayFactory;
+        protected readonly Workspace _workspace;
+        protected readonly IAsynchronousOperationListener _asyncListener;
+        protected readonly ItemDisplayFactory _displayFactory;
 
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        protected CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
         public NavigateToItemProvider(
             Workspace workspace,
@@ -42,7 +42,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.NavigateTo
             _displayFactory.Dispose();
         }
 
-        public void StartSearch(INavigateToCallback callback, string searchValue)
+        public virtual void StartSearch(INavigateToCallback callback, string searchValue)
         {
             this.StopSearch();
 

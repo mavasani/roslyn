@@ -8,7 +8,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.NavigateTo
 {
     internal partial class NavigateToItemProvider
     {
-        private class ItemDisplayFactory : INavigateToItemDisplayFactory, IDisposable
+        protected class ItemDisplayFactory : INavigateToItemDisplayFactory, IDisposable
         {
             private readonly NavigateToIconFactory _iconFactory;
 

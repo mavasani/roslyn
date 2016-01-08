@@ -19,6 +19,7 @@ namespace Microsoft.CodeAnalysis.Shared.TestHooks
         public const string KeywordHighlighting = "KeywordHighlighting";
         public const string LineSeparators = "LineSeparators";
         public const string NavigateTo = "NavigateTo";
+        public const string CobyNavigateTo = "CobyNavigateTo";
         public const string NavigationBar = "NavigationBar";
         public const string Outlining = "Outlining";
         public const string QuickInfo = "QuickInfo";

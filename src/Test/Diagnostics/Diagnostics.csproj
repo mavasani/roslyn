@@ -82,6 +82,7 @@
     <Compile Include="Waiters\AutomaticCompletionWaiter.cs" />
     <Compile Include="Waiters\AutomaticEndConstructCorrectionWaiter.cs" />
     <Compile Include="Waiters\BraceHighlightingWaiter.cs" />
+    <Compile Include="Waiters\CobyNavigateToWaiter.cs" />
     <Compile Include="Waiters\ClassificationWaiter.cs" />
     <Compile Include="Waiters\CompletionSetWaiter.cs" />
     <Compile Include="Waiters\DesignerAttributeWaiter.cs" />
