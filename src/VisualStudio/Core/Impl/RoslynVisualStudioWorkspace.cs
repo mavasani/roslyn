@@ -12,6 +12,7 @@ using Microsoft.CodeAnalysis.Editor.Undo;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.GeneratedCodeRecognition;
 using Microsoft.VisualStudio.LanguageServices.Implementation;
+using Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration;
 using Microsoft.VisualStudio.LanguageServices.Implementation.CodeModel;
 using Microsoft.VisualStudio.LanguageServices.Implementation.Interop;
 using Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectBrowser.Lists;
@@ -39,6 +40,9 @@ namespace Microsoft.VisualStudio.LanguageServices
                 backgroundWork: WorkspaceBackgroundWork.ParseAndCompile)
         {
             PrimaryWorkspace.Register(this);
+
+            // REVIEW: this is completely a hack.
+            CobyWorkspace.Create(this.Services.HostServices, serviceProvider);
 
             InitializeStandardVisualStudioWorkspace(serviceProvider, saveEventsService);
 

@@ -60,6 +60,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             return true;
         }
 
+        // REVIEW: since Roslyn is built onto of Workspace model and Coby is flattened model I can't use Roslyn's navigate to as it is.
+        //         removed anything related to solution from roslyn implementation.
         private partial class CobyNavigateToItemProvider : NavigateToItemProvider
         {
             public CobyNavigateToItemProvider(Workspace workspace, IGlyphService glyphService, IAsynchronousOperationListener asyncListener) :
@@ -78,6 +80,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 }
 
                 var searcher = new Searcher(
+                    (CobyWorkspace)_workspace,
                     _asyncListener,
                     _displayFactory,
                     callback,
@@ -89,6 +92,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 
             private class Searcher
             {
+                private readonly CobyWorkspace _workspace;
                 private readonly ItemDisplayFactory _displayFactory;
                 private readonly INavigateToCallback _callback;
                 private readonly string _searchPattern;
@@ -97,12 +101,14 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 private readonly CancellationToken _cancellationToken;
 
                 public Searcher(
+                    CobyWorkspace workspace,
                     IAsynchronousOperationListener asyncListener,
                     ItemDisplayFactory displayFactory,
                     INavigateToCallback callback,
                     string searchPattern,
                     CancellationToken cancellationToken)
                 {
+                    _workspace = workspace;
                     _displayFactory = displayFactory;
                     _callback = callback;
                     _searchPattern = searchPattern;
@@ -116,6 +122,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     var navigateToSearch = Logger.LogBlock(FunctionId.CobyNavigateTo_Search, _cancellationToken);
                     var asyncToken = _asyncListener.BeginAsyncOperation(GetType() + ".Search");
 
+                    // 1 for file, 1 for symbol.
                     _progress.AddItems(2);
 
                     // make sure we run actual search from other thread. and let this thread return to caller as soon as possible.
@@ -124,8 +131,10 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 
                 private void Search(IDisposable navigateToSearch, IAsyncToken asyncToken)
                 {
+                    // REVIEW: searching semantic between roslyn and coby are different.
                     var fileSearchTask = CobyServices.SearchAsync(Consts.CodeBase, CobyServices.EntityTypes.File, _searchPattern, _cancellationToken).SafeContinueWith(p =>
                     {
+                        // no result
                         if (p.Result == null)
                         {
                             return;
@@ -137,6 +146,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                             _cancellationToken.ThrowIfCancellationRequested();
                             if (result.url?.StartsWith("$MAS") == true)
                             {
+                                // don't put MAS result
                                 continue;
                             }
 
@@ -166,6 +176,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                             _cancellationToken.ThrowIfCancellationRequested();
                             if (result.resultType == "local" || result.resultType == "parameter")
                             {
+                                // REVIEW: local symbol information is pulluting results, also making result really big.
+                                //         search should have a way to ask specific set of symbol types.
+                                //         also, in case there is really big dataset for search, it should provide a way to get data in chunk (paging)
+                                //
+                                //         also, I can't figure out whether symbol is from metadata as source or not without actually get information about the file.
+                                //         so symbol from metadata as source will be included here as well.
                                 continue;
                             }
 
@@ -197,12 +213,19 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 {
                     var matchKind = GetNavigateToMatchKind(matches);
 
+                    // REVIEW: coby currently doesnt have any information whether a symbol is from csharp or vb.
+                    //         so it is not possible without actually download all file information whether a symbol is from a file or not.
+                    //         so for now, I put "csharp" for everything. any symbol from vb will be completely broken.
+                    //
+                    //         data inconsitency between Coby and Roslyn is fine as long as it has enough data to convert between them.
+                    //         currently, coby provide so little data, so not such it can do. 
+                    //         ex) no fully qualified name, contaiing assembly, symbol modifiers and etc
                     var navigateToItem = new NavigateToItem(
                         result.name,
                         result.resultType,
-                        "csharp",
+                        "csharp", // completely wrong for vb but there is no way to know whether a symbol in search result is from vb or csharp.
                         result.url,
-                        new SearchResult(result, matchKind, new NavigableItem(result)),
+                        new SearchResult(result, matchKind, new NavigableItem(_workspace, result)),
                         matchKind,
                         result.resultType == "file" ? false : true,
                         _displayFactory);
@@ -234,10 +257,14 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 
                 private class NavigableItem : INavigableItem
                 {
+                    private readonly CobyWorkspace _workspace;
                     private readonly CobyServices.SearchResult _result;
 
-                    public NavigableItem(CobyServices.SearchResult result)
+                    private TextSpan? _sourceSpan;
+
+                    public NavigableItem(CobyWorkspace workspace, CobyServices.SearchResult result)
                     {
+                        _workspace = workspace;
                         _result = result;
                     }
 
@@ -245,11 +272,45 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 
                     public string DisplayString => _result.name;
 
+                    // REVIEW: we dont have enough informatino to show right glyph. ex) private, internal, extension method and etc
                     public Glyph Glyph => _result.resultType == "file" ? Glyph.CSharpFile : Glyph.ClassPublic;
 
-                    public Document Document => null;
+                    // dynamically add document to the workspace
+                    public Document Document => _workspace.GetOrCreateDocument(_result.compoundUrl, _result.compoundUrl.filePath ?? _result.fileName ?? _result.name);
 
-                    public TextSpan SourceSpan => new TextSpan(0, 0);
+                    public TextSpan SourceSpan
+                    {
+                        get
+                        {
+                            // REVIEW: this is expensive, but there is no other way in current coby design. we need stream based point as well as linecolumn based range.
+                            if (_sourceSpan.HasValue)
+                            {
+                                return _sourceSpan.Value;
+                            }
+
+                            if (_result.range.Equals(default(CobyServices.Range)))
+                            {
+                                _sourceSpan = new TextSpan(0, 0);
+                            }
+                            else
+                            {
+                                // REVIEW: this is bad.
+                                var text = Document.State.GetText(CancellationToken.None);
+                                if (text?.Length == 0)
+                                {
+                                    return new TextSpan(0, 0);
+                                }
+
+                                // Coby is 1 based. Roslyn is 0 based.
+                                _sourceSpan = text.Lines.GetTextSpan(
+                                    new LinePositionSpan(
+                                        new LinePosition(Math.Max(_result.range.startLineNumber - 1, 0), Math.Max(_result.range.startColumn - 1, 0)),
+                                        new LinePosition(Math.Max(_result.range.endLineNumber - 1, 0), Math.Max(_result.range.endColumn - 1, 0))));
+                            }
+
+                            return _sourceSpan.Value;
+                        }
+                    }
 
                     public ImmutableArray<INavigableItem> ChildItems => ImmutableArray<INavigableItem>.Empty;
                 }

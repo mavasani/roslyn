@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis.Editor;
 using Microsoft.CodeAnalysis.SolutionCrawler;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.VisualStudio.Editor;
+using Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
@@ -232,6 +233,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
                         // We already added it, so we will keep it excluded from the misc files workspace
                         return;
                     }
+
+                    // REVIEW: again, complete hack. require proper service to check this.
+                    if (CobyWorkspace.Instance.Contains(moniker))
+                    {
+                        return;
+                    }
                 }
 
                 var parseOptions = languageInformation.ParseOptions;
@@ -278,6 +285,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
             HostProject hostProject;
 
             if (_fileTrackingMetadataAsSourceService.TryRemoveDocumentFromWorkspace(moniker))
+            {
+                return true;
+            }
+
+            // REVIEW: again, complete hack to make things just work
+            if (CobyWorkspace.Instance.TryCloseDocument(moniker))
             {
                 return true;
             }

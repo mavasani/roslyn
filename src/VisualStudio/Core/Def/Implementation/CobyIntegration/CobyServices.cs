@@ -10,6 +10,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 {
     /// <summary>
     /// service to ask Coby.
+    /// 
+    /// REVIEW: we need API to get entity from symbol without knowing id. 
+    ///         also, we need a service to find out code base from given symbol to properly support GoToDefinition from Roslyn world. (gotodef from roslyn file not coby file)
     /// </summary>
     internal static class CobyServices
     {
