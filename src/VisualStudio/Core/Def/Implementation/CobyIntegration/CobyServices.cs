@@ -52,6 +52,21 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             }
         }
 
+        public static async Task<FileResult> GetFileEntityAsync(string codeBase, string uid, CancellationToken cancellationToken)
+        {
+            using (var client = CreateClient())
+            {
+                var url = $"api/ArcusGraphEntities?codeBase={WebUtility.UrlEncode(codeBase)}&uid={WebUtility.UrlEncode(uid)}";
+                var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                return await response.Content.ReadAsAsync<FileResult>().ConfigureAwait(false);
+            }
+        }
+
         public static async Task<SourceResult> GetContentAsync(string codeBase, string repository, string branch, string filePath, CancellationToken cancellationToken)
         {
             using (var client = CreateClient())

@@ -38,6 +38,7 @@
     <Compile Include="Implementation\AnalyzerDependency\IgnorableAssemblyNamePrefixList.cs" />
     <Compile Include="Implementation\CobyIntegration\CobyNavigateToItemProviderFactory.cs" />
     <Compile Include="Implementation\CobyIntegration\CobyServices.cs" />
+    <Compile Include="Implementation\CobyIntegration\CobyTagger.cs" />
     <Compile Include="Implementation\CobyIntegration\CobyWorkspace.cs" />
     <Compile Include="Implementation\CobyIntegration\Consts.cs" />
     <Compile Include="Implementation\CompilationErrorTelemetry\CompilationErrorTelemetryIncrementalAnalyzer.cs" />

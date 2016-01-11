@@ -23,7 +23,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
         private static CobyWorkspace s_instance = null;
 
         private readonly object _gate = new object();
-        private readonly Dictionary<string, DocumentId> _map = new Dictionary<string, DocumentId>();
+        private readonly Dictionary<string, Data> _map = new Dictionary<string, Data>();
 
         // Coby Service doesnt have concept of project. just create one ourselves.
         private readonly ProjectId _primaryProjectId = ProjectId.CreateNewId("primaryProjectId");
@@ -65,17 +65,17 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             {
                 // REVIEW: in this prototype, file ever created never goes away. need to think about lifetime management.
                 //         currently, best way will be making cobyworkspace not singleton but something one create when needed and let it go once no longer needed for a feature.
-                DocumentId id;
-                if (_map.TryGetValue(url.fileUid, out id))
+                Data data;
+                if (_map.TryGetValue(url.fileUid, out data))
                 {
-                    return CurrentSolution.GetDocument(id);
+                    return CurrentSolution.GetDocument(data.Id);
                 }
 
-                id = DocumentId.CreateNewId(_primaryProjectId, url.filePath);
+                var id = DocumentId.CreateNewId(_primaryProjectId, url.filePath);
                 var loader = new CobyTextLoader(url);
                 OnDocumentAdded(DocumentInfo.Create(id, name, loader: loader, filePath: GetFilePath(url.fileUid), isGenerated: true));
 
-                _map.Add(url.fileUid, id);
+                _map.Add(url.fileUid, new Data(id, url));
 
                 return CurrentSolution.GetDocument(id);
             }
@@ -96,27 +96,27 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 
                 lock (_gate)
                 {
-                    DocumentId id;
-                    if (!_map.TryGetValue(fileUid, out id))
+                    Data data;
+                    if (!_map.TryGetValue(fileUid, out data))
                     {
                         // REVIEW: how?
                         return false;
                     }
 
-                    if (!IsDocumentOpen(id))
+                    if (!IsDocumentOpen(data.Id))
                     {
                         // REVIEW; How?
                         return false;
                     }
 
                     // REIVEW: currently we never delete document once opened in the VS.
-                    var document = CurrentSolution.GetDocument(id);
+                    var document = CurrentSolution.GetDocument(data.Id);
 
                     // REVIEW: oh, bad.
                     var text = document.GetTextAsync().WaitAndGetResult(CancellationToken.None);
                     var version = document.GetTextVersionAsync().WaitAndGetResult(CancellationToken.None);
 
-                    OnDocumentClosed(id, TextLoader.From(TextAndVersion.Create(text, version, document.FilePath)));
+                    OnDocumentClosed(data.Id, TextLoader.From(TextAndVersion.Create(text, version, document.FilePath)));
                     return true;
                 }
             }
@@ -128,6 +128,20 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
         {
             // REVIEW: we basically consider everything as csharp file.
             return Path.Combine(Path.GetTempPath(), "Coby", Consts.CodeBase, fileUid) + ".cs";
+        }
+
+        public static CobyServices.CompoundUrl GetCompoundUrl(Document document)
+        {
+            var fileUid = Path.GetFileNameWithoutExtension(document.FilePath);
+            var workspace = document.Project.Solution.Workspace as CobyWorkspace;
+
+            Data data;
+            if (workspace._map.TryGetValue(fileUid, out data))
+            {
+                return data.Url;
+            }
+
+            return default(CobyServices.CompoundUrl);
         }
 
         public override void OpenDocument(DocumentId documentId, bool activate = true)
@@ -186,6 +200,18 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             File.WriteAllText(document.FilePath, document.State.GetText(CancellationToken.None).ToString());
 
             new FileInfo(document.FilePath).IsReadOnly = true;
+        }
+
+        private class Data
+        {
+            public DocumentId Id { get; }
+            public CobyServices.CompoundUrl Url { get; }
+
+            public Data(DocumentId id, CobyServices.CompoundUrl url)
+            {
+                Id = id;
+                Url = url;
+            }
         }
 
         private class CobyTextLoader : TextLoader
