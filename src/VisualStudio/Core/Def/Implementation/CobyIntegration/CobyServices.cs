@@ -67,6 +67,21 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             }
         }
 
+        public static async Task<SymbolResult> GetSymbolEntityAsync(string codeBase, string uid, CancellationToken cancellationToken)
+        {
+            using (var client = CreateClient())
+            {
+                var url = $"api/ArcusGraphEntities?codeBase={WebUtility.UrlEncode(codeBase)}&uid={WebUtility.UrlEncode(uid)}";
+                var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                return await response.Content.ReadAsAsync<SymbolResult>().ConfigureAwait(false);
+            }
+        }
+
         public static async Task<SourceResult> GetContentAsync(string codeBase, string repository, string branch, string filePath, CancellationToken cancellationToken)
         {
             using (var client = CreateClient())
@@ -143,6 +158,18 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             public string displayName;
             public string mimeType;
             public string contents;
+        }
+
+        public class SymbolResult
+        {
+            public string uid;
+            public string name;
+            public string type;
+            public string fileUid;
+            public int lineStart;
+            public int lineEnd;
+            public int columnStart;
+            public int columnEnd;
         }
 
         public class FileResult

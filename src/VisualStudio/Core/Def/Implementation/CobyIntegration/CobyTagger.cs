@@ -16,6 +16,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.CodeAnalysis.Classification;
+using Roslyn.Utilities;
 
 namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 {
@@ -120,7 +121,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     }
 
                     var url = CobyWorkspace.GetCompoundUrl(document);
-                    var result = CobyServices.GetFileEntityAsync(Consts.CodeBase, url.fileUid, CancellationToken.None).Result;
+                    var result = CobyServices.GetFileEntityAsync(Consts.CodeBase, url.fileUid, CancellationToken.None).WaitAndGetResult(CancellationToken.None);
                     if (result == null)
                     {
                         return Array.Empty<ITagSpan<IClassificationTag>>();

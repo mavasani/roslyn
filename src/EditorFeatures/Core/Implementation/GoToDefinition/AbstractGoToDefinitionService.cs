@@ -46,6 +46,15 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.GoToDefinition
 
         public bool TryGoToDefinition(Document document, int position, CancellationToken cancellationToken)
         {
+            var service = document.Project.Solution.Workspace.Services.GetService<IGoToDefinitionServiceInternal>();
+            if (service != null)
+            {
+                if (service.TryGoToDefinition(document, position, cancellationToken))
+                {
+                    return true;
+                }
+            }
+
             var symbol = FindSymbolAsync(document, position, cancellationToken).WaitAndGetResult(cancellationToken);
 
             if (symbol != null)
