@@ -32,6 +32,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 return false;
             }
 
+            // REVIEW: all of these WaitAndGetResult is really bad thing to do.
             var text = document.GetTextAsync(cancellationToken).WaitAndGetResult(cancellationToken);
 
             var zeroBasedPosition = text.Lines.GetLinePosition(position);
