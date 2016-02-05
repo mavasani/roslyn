@@ -234,7 +234,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             AddToEventsMap_NoLock(compilationEvents, filterTreeOpt);
 
             // Mark the events for analysis for each analyzer.
-            List<ISymbol> newPartialSymbols = null;
+            ArrayBuilder<ISymbol> newPartialSymbols = null;
             Debug.Assert(_pooledEventsWithAnyActionsSet.Count == 0);
             foreach (var kvp in _analyzerStateMap)
             {
@@ -252,13 +252,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                         if (symbolDeclaredEvent?.DeclaringSyntaxReferences.Length > 1)
                         {
                             if (_partialSymbolsWithGeneratedSourceEvents.Contains(symbolDeclaredEvent.Symbol))
-                            {
-                                // already processed.
-                                continue;
-                            }
+                        {
+                            // already processed.
+                            continue;
+                        }
                             else
                             {
-                                newPartialSymbols = newPartialSymbols ?? new List<ISymbol>();
+                                newPartialSymbols = newPartialSymbols ?? ArrayBuilder<ISymbol>.GetInstance();
                                 newPartialSymbols.Add(symbolDeclaredEvent.Symbol);
                             }
                         }
@@ -280,6 +280,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             if (newPartialSymbols != null)
             {
                 _partialSymbolsWithGeneratedSourceEvents.AddAll(newPartialSymbols);
+                newPartialSymbols.Free();
             }
         }
 

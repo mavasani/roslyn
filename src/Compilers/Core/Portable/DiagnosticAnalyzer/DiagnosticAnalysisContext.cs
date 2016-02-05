@@ -133,14 +133,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// but cannot itself report any <see cref="Diagnostic"/>s.
         /// </summary>
         /// <param name="action">Action to be executed at the start of semantic analysis of an operation block.</param>
-        public abstract void RegisterOperationBlockStartAction(Action<OperationBlockStartAnalysisContext> action);
+        public virtual void RegisterOperationBlockStartAction(Action<OperationBlockStartAnalysisContext> action)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary> 
         /// Register an action to be executed after semantic analysis of a method body or an expression appearing outside a method body. 
         /// An operation block action reports <see cref="Diagnostic"/>s about operation blocks. 
         /// </summary> 
         /// <param name="action">Action to be executed for an operation block.</param> 
-        public abstract void RegisterOperationBlockAction(Action<OperationBlockAnalysisContext> action);
+        public virtual void RegisterOperationBlockAction(Action<OperationBlockAnalysisContext> action)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Register an action to be executed at completion of semantic analysis of an <see cref="IOperation"/> with an appropriate Kind.
@@ -161,7 +167,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="action">Action to be executed at completion of semantic analysis of an <see cref="IOperation"/>.</param>
         /// <param name="operationKinds">Action will be executed only if an <see cref="IOperation"/>'s Kind matches one of the operation kind values.</param>
-        public abstract void RegisterOperationAction(Action<OperationAnalysisContext> action, ImmutableArray<OperationKind> operationKinds);
+        public virtual void RegisterOperationAction(Action<OperationAnalysisContext> action, ImmutableArray<OperationKind> operationKinds)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Enable concurrent execution of analyzer actions registered by this analyzer.
@@ -173,14 +182,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// For example, end actions registered on any analysis unit (compilation, code block, operation block, etc.) are by definition semantically dependent on analysis from non-end actions registered on the same analysis unit.
         /// Hence, end actions are never executed concurrently with non-end actions operating on the same analysis unit.
         /// </remarks>
-        public abstract void EnableConcurrentExecution();
+        public virtual void EnableConcurrentExecution()
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Configure analysis mode of generated code for this analyzer.
         /// Non-configured analyzers will default to <see cref="GeneratedCodeAnalysisFlags.Default"/> mode for generated code.
         /// It is recommended for the analyzer to always invoke this API with the required <see cref="GeneratedCodeAnalysisFlags"/> setting.
         /// </summary>
-        public abstract void ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags analysisMode);
+        public virtual void ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags analysisMode)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     /// <summary>
@@ -325,14 +340,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// but cannot itself report any <see cref="Diagnostic"/>s.
         /// </summary>
         /// <param name="action">Action to be executed at the start of semantic analysis of an operation block.</param>
-        public abstract void RegisterOperationBlockStartAction(Action<OperationBlockStartAnalysisContext> action);
+        public virtual void RegisterOperationBlockStartAction(Action<OperationBlockStartAnalysisContext> action)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary> 
         /// Register an action to be executed after semantic analysis of a method body or an expression appearing outside a method body. 
         /// An operation block action reports <see cref="Diagnostic"/>s about operation blocks. 
         /// </summary> 
         /// <param name="action">Action to be executed for an operation block.</param> 
-        public abstract void RegisterOperationBlockAction(Action<OperationBlockAnalysisContext> action);
+        public virtual void RegisterOperationBlockAction(Action<OperationBlockAnalysisContext> action)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Register an action to be executed at completion of parsing of a code document.
@@ -383,7 +404,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="action">Action to be executed at completion of semantic analysis of an <see cref="IOperation"/>.</param>
         /// <param name="operationKinds">Action will be executed only if an <see cref="IOperation"/>'s Kind matches one of the operation kind values.</param>
-        public abstract void RegisterOperationAction(Action<OperationAnalysisContext> action, ImmutableArray<OperationKind> operationKinds);
+        public virtual void RegisterOperationAction(Action<OperationAnalysisContext> action, ImmutableArray<OperationKind> operationKinds)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     /// <summary>
@@ -905,6 +929,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     public struct SyntaxNodeAnalysisContext
     {
         private readonly SyntaxNode _node;
+        private readonly ISymbol _containingSymbol;
         private readonly SemanticModel _semanticModel;
         private readonly AnalyzerOptions _options;
         private readonly Action<Diagnostic> _reportDiagnostic;
@@ -914,31 +939,47 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <summary>
         /// <see cref="SyntaxNode"/> that is the subject of the analysis.
         /// </summary>
-        public SyntaxNode Node { get { return _node; } }
+        public SyntaxNode Node => _node;
+
+        /// <summary>
+        /// <see cref="ISymbol"/> for the declaration containing the syntax node.
+        /// </summary>
+        public ISymbol ContainingSymbol => _containingSymbol;
 
         /// <summary>
         /// <see cref="CodeAnalysis.SemanticModel"/> that can provide semantic information about the <see cref="SyntaxNode"/>.
         /// </summary>
-        public SemanticModel SemanticModel { get { return _semanticModel; } }
+        public SemanticModel SemanticModel => _semanticModel;
+
+        /// <summary>
+        /// <see cref="CodeAnalysis.Compilation"/> containing the <see cref="SyntaxNode"/>.
+        /// </summary>
+        public Compilation Compilation => _semanticModel?.Compilation;
 
         /// <summary>
         /// Options specified for the analysis.
         /// </summary>
-        public AnalyzerOptions Options { get { return _options; } }
+        public AnalyzerOptions Options => _options;
 
         /// <summary>
         /// Token to check for requested cancellation of the analysis.
         /// </summary>
-        public CancellationToken CancellationToken { get { return _cancellationToken; } }
+        public CancellationToken CancellationToken => _cancellationToken;
 
-        public SyntaxNodeAnalysisContext(SyntaxNode node, SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
+        public SyntaxNodeAnalysisContext(SyntaxNode node, ISymbol containingSymbol, SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
         {
             _node = node;
+            _containingSymbol = containingSymbol;
             _semanticModel = semanticModel;
             _options = options;
             _reportDiagnostic = reportDiagnostic;
             _isSupportedDiagnostic = isSupportedDiagnostic;
             _cancellationToken = cancellationToken;
+        }
+
+        public SyntaxNodeAnalysisContext(SyntaxNode node, SemanticModel semanticModel, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
+           : this(node, null, semanticModel, options, reportDiagnostic, isSupportedDiagnostic, cancellationToken)
+        {
         }
 
         /// <summary>
@@ -962,7 +1003,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     public struct OperationAnalysisContext
     {
         private readonly IOperation _operation;
-        private readonly SemanticModel _semanticModelOpt;
+        private readonly ISymbol _containingSymbol;
+        private readonly Compilation _compilation;
         private readonly AnalyzerOptions _options;
         private readonly Action<Diagnostic> _reportDiagnostic;
         private readonly Func<Diagnostic, bool> _isSupportedDiagnostic;
@@ -974,6 +1016,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public IOperation Operation => _operation;
 
         /// <summary>
+        /// <see cref="ISymbol"/> for the declaration containing the operation.
+        /// </summary>
+        public ISymbol ContainingSymbol => _containingSymbol;
+
+        /// <summary>
+        /// <see cref="CodeAnalysis.Compilation"/> containing the <see cref="IOperation"/>.
+        /// </summary>
+        public Compilation Compilation => _compilation;
+
+        /// <summary>
         /// Options specified for the analysis.
         /// </summary>
         public AnalyzerOptions Options => _options;
@@ -983,17 +1035,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public CancellationToken CancellationToken => _cancellationToken;
 
-        internal Compilation Compilation => _semanticModelOpt?.Compilation;
-
-        public OperationAnalysisContext(IOperation operation, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
-            : this(operation, options, reportDiagnostic, isSupportedDiagnostic, semanticModel: null, cancellationToken: cancellationToken)
-        {
-        }
-
-        internal OperationAnalysisContext(IOperation operation, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, SemanticModel semanticModel, CancellationToken cancellationToken)
+        public OperationAnalysisContext(IOperation operation, ISymbol containingSymbol, Compilation compilation, AnalyzerOptions options, Action<Diagnostic> reportDiagnostic, Func<Diagnostic, bool> isSupportedDiagnostic, CancellationToken cancellationToken)
         {
             _operation = operation;
-            _semanticModelOpt = semanticModel;
+            _containingSymbol = containingSymbol;
+            _compilation = compilation;
             _options = options;
             _reportDiagnostic = reportDiagnostic;
             _isSupportedDiagnostic = isSupportedDiagnostic;
@@ -1006,7 +1052,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="diagnostic"><see cref="Diagnostic"/> to be reported.</param>
         public void ReportDiagnostic(Diagnostic diagnostic)
         {
-            DiagnosticAnalysisContextHelpers.VerifyArguments(diagnostic, _semanticModelOpt?.Compilation, _isSupportedDiagnostic);
+            DiagnosticAnalysisContextHelpers.VerifyArguments(diagnostic, _compilation, _isSupportedDiagnostic);
             lock (_reportDiagnostic)
             {
                 _reportDiagnostic(diagnostic);
