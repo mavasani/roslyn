@@ -646,7 +646,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 }
                 finally
                 {
-                    if (driver.WhenInitializedTask.IsCanceled)
+                    if (!cancellationToken.IsCancellationRequested && driver.WhenInitializedTask.IsCanceled)
                     {
                         // If the initialization task was cancelled, we retry again with our own cancellation token.
                         // This can happen if the task that started the initialization was cancelled by the callee, and the new request picked up this driver instance.
