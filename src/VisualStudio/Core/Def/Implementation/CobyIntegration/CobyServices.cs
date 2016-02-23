@@ -5,6 +5,11 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
+using System.Linq;
+using Roslyn.Utilities;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
+using System.Collections.Immutable;
 
 namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 {
@@ -16,17 +21,17 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
     /// </summary>
     internal static class CobyServices
     {
-        public static class EntityTypes
+        public enum SearchType
         {
-            public const string File = "File";
-            public const string Symbol = "Symbol";
+            File,
+            Symbol
         }
 
-        public static async Task<IEnumerable<SymbolReference>> GetEntityReferencesAsync(string codeBase, string uid, CancellationToken cancellationToken)
+        public static async Task<IEnumerable<SymbolReference>> GetEntityReferencesAsync(string repo, string id, CancellationToken cancellationToken)
         {
             using (var client = CreateClient())
             {
-                var url = $"api/ArcusGraphReferences?codeBase={WebUtility.UrlEncode(codeBase)}&uid={WebUtility.UrlEncode(uid)}";
+                var url = $"api/v1.0/reference?repo={WebUtility.UrlEncode(repo)}&id={WebUtility.UrlEncode(id)}";
                 var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -37,100 +42,87 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             }
         }
 
-        public static async Task<IEnumerable<FileResult>> GetFileEntitiesAsync(string codeBase, string entityType, string repository, string branch, string filePath, CancellationToken cancellationToken)
+        public static async Task<FileResponse> GetFileEntityAsync(string repo, string filePath, CancellationToken cancellationToken)
         {
             using (var client = CreateClient())
             {
-                var url = $"api/ArcusGraphEntities?codeBase={WebUtility.UrlEncode(codeBase)}&entityType={WebUtility.UrlEncode(entityType)}&repository={WebUtility.UrlEncode(repository)}&version={WebUtility.UrlEncode(branch)}&filePath={WebUtility.UrlEncode(filePath)}";
+                var url = $"api/v1.0/entities?repo={WebUtility.UrlEncode(repo)}&filePath={WebUtility.UrlEncode(filePath)}";
                 var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
                     return null;
                 }
 
-                return await response.Content.ReadAsAsync<IEnumerable<FileResult>>().ConfigureAwait(false);
+                // REVIEW: How can we have multiple files with same ID in the repo?
+                var fileResponses = await response.Content.ReadAsAsync<List<FileResponse>>().ConfigureAwait(false);
+                return fileResponses.FirstOrDefault();
             }
         }
 
-        public static async Task<FileResult> GetFileEntityAsync(string codeBase, string uid, CancellationToken cancellationToken)
+        public static async Task<SourceResponse> GetContentBySymbolIdAsync(string repo, string symbolId, CancellationToken cancellationToken)
         {
             using (var client = CreateClient())
             {
-                var url = $"api/ArcusGraphEntities?codeBase={WebUtility.UrlEncode(codeBase)}&uid={WebUtility.UrlEncode(uid)}";
+                var url = $"api/v1.0/source?repo={WebUtility.UrlEncode(repo)}&symbolId={WebUtility.UrlEncode(symbolId)}";
                 var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
                     return null;
                 }
 
-                return await response.Content.ReadAsAsync<FileResult>().ConfigureAwait(false);
+                return await response.Content.ReadAsAsync<SourceResponse>().ConfigureAwait(false);
             }
         }
 
-        public static async Task<SymbolResult> GetSymbolEntityAsync(string codeBase, string uid, CancellationToken cancellationToken)
+        public static async Task<SourceResponse> GetContentByFileIdAsync(string repo, string fileId, CancellationToken cancellationToken)
         {
             using (var client = CreateClient())
             {
-                var url = $"api/ArcusGraphEntities?codeBase={WebUtility.UrlEncode(codeBase)}&uid={WebUtility.UrlEncode(uid)}";
+                var url = $"api/v1.0/source?repo={WebUtility.UrlEncode(repo)}&fileId={WebUtility.UrlEncode(fileId)}";
                 var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
                     return null;
                 }
 
-                return await response.Content.ReadAsAsync<SymbolResult>().ConfigureAwait(false);
+                return await response.Content.ReadAsAsync<SourceResponse>().ConfigureAwait(false);
             }
         }
 
-        public static async Task<SourceResult> GetContentAsync(string codeBase, string repository, string branch, string filePath, CancellationToken cancellationToken)
+        public static async Task<SourceResponse> GetContentByFilePathAsync(string repo, string version, string filePath, CancellationToken cancellationToken)
         {
             using (var client = CreateClient())
             {
-                var url = $"api/CobySource?codeBase={WebUtility.UrlEncode(codeBase)}&repository={WebUtility.UrlEncode(repository)}&branch={WebUtility.UrlEncode(branch)}&filePath={WebUtility.UrlEncode(filePath)}";
+                var url = $"api/v1.0/source?repo={WebUtility.UrlEncode(repo)}&branch={WebUtility.UrlEncode(version)}&filePath={WebUtility.UrlEncode(filePath)}";
                 var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
                     return null;
                 }
 
-                return await response.Content.ReadAsAsync<SourceResult>().ConfigureAwait(false);
+                return await response.Content.ReadAsAsync<SourceResponse>().ConfigureAwait(false);
             }
         }
 
-        public static async Task<SourceResult> GetContentAsync(string codeBase, string fileUid, CancellationToken cancellationToken)
+        public static async Task<IEnumerable<SearchResponse>> SearchAsync(string repo, SearchType searchType, string term, CancellationToken cancellationToken)
         {
             using (var client = CreateClient())
             {
-                var url = $"api/CobySource?codeBase={WebUtility.UrlEncode(codeBase)}&fileUid={WebUtility.UrlEncode(fileUid)}";
+                var url = $"api/v1.0/search?repo={WebUtility.UrlEncode(repo)}&searchType={WebUtility.UrlEncode(searchType.ToString())}&term={WebUtility.UrlEncode(term)}";
                 var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
                     return null;
                 }
 
-                return await response.Content.ReadAsAsync<SourceResult>().ConfigureAwait(false);
-            }
-        }
-
-        public static async Task<IEnumerable<SearchResult>> SearchAsync(string codeBase, string entityType, string term, CancellationToken cancellationToken)
-        {
-            using (var client = CreateClient())
-            {
-                var url = $"api/CobySearch?codeBase={WebUtility.UrlEncode(codeBase)}&entityType={WebUtility.UrlEncode(entityType)}&term={WebUtility.UrlEncode(term)}";
-                var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode)
-                {
-                    return null;
-                }
-
-                return await response.Content.ReadAsAsync<IEnumerable<SearchResult>>().ConfigureAwait(false);
+                return await response.Content.ReadAsAsync<IEnumerable<SearchResponse>>().ConfigureAwait(false);
             }
         }
 
         private static HttpClient CreateClient()
         {
             var client = new HttpClient();
-            client.BaseAddress = new Uri("https://cobyservices.cloudapp.net");
+            client.BaseAddress = new Uri("https://semanticstoreservice20160104030741.azurewebsites.net");
 
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -138,7 +130,91 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             return client;
         }
 
-        public class SearchResult
+        public static bool IsVisualBasicProject(CompoundUrl url)
+        {
+            var extension = PathUtilities.GetExtension(url.filePath);
+            return extension != null && extension.Equals(".vb", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsFileResult(SearchResponse response)
+        {
+            return response.resultType == "file";
+        }
+
+        public static Task<FileResponse> GetFileEntityAsync(Document document, CancellationToken cancellationToken)
+        {
+            Contract.ThrowIfFalse(document.Project.Solution.Workspace is CobyWorkspace);
+
+            var url = CobyWorkspace.GetCompoundUrl(document);
+            return GetFileEntityAsync(Consts.Repo, url.filePath, CancellationToken.None);
+        }
+
+        public static Annotation GetMatchingAnnotation(Document document, int position, CancellationToken cancellationToken)
+        {
+            Contract.ThrowIfFalse(document.Project.Solution.Workspace is CobyWorkspace);
+
+            var fileResult = GetFileEntityAsync(document, cancellationToken).WaitAndGetResult(cancellationToken);
+            if (fileResult == null)
+            {
+                return null;
+            }
+
+            return GetMatchingAnnotation(document, position, fileResult, cancellationToken);
+        }
+
+        public static Annotation GetMatchingAnnotation(Document document, int position, FileResponse fileResult, CancellationToken cancellationToken)
+        {
+            Contract.ThrowIfFalse(document.Project.Solution.Workspace is CobyWorkspace);
+            Contract.ThrowIfNull(fileResult);
+
+            // REVIEW: all of these WaitAndGetResult is really bad thing to do.
+            var text = document.GetTextAsync(cancellationToken).WaitAndGetResult(cancellationToken);
+
+            var zeroBasedPosition = text.Lines.GetLinePosition(position);
+            var oneBasedPosition = new LinePosition(zeroBasedPosition.Line + 1, zeroBasedPosition.Character + 1);
+
+            Func<IEnumerable<Annotation>, Annotation> getMatchingAnnotation = annotations =>
+                annotations.FirstOrDefault(a => new LinePosition(a.range.startLineNumber, a.range.startColumn) <= oneBasedPosition && oneBasedPosition <= new LinePosition(a.range.endLineNumber, a.range.endColumn));
+
+            return getMatchingAnnotation(fileResult.referenceAnnotation) ?? getMatchingAnnotation(fileResult.declarationAnnotation);
+        }
+
+        public static TextSpan GetSourceSpan(SymbolReference referenceResponse, Func<Document> getDocument)
+        {
+            return GetSourceSpan(referenceResponse.trange, getDocument);
+        }
+
+        public static TextSpan GetSourceSpan(SourceResponse sourceResponse, Func<Document> getDocument)
+        {
+            return GetSourceSpan((sourceResponse?.range).GetValueOrDefault(), getDocument);
+        }
+
+        public static TextSpan GetSourceSpan(Range range, Func<Document> getDocument)
+        {
+            // REVIEW: this is expensive, but there is no other way in current coby design. we need stream based point as well as linecolumn based range.
+            if (range.Equals(default(Range)))
+            {
+                return new TextSpan(0, 0);
+            }
+            else
+            {
+                // REVIEW: this is bad.
+                var document = getDocument();
+                var text = document.State.GetText(CancellationToken.None);
+                if (text?.Length == 0)
+                {
+                    return new TextSpan(0, 0);
+                }
+
+                // Coby is 1 based. Roslyn is 0 based.
+                return text.Lines.GetTextSpan(
+                    new LinePositionSpan(
+                        new LinePosition(Math.Max(range.startLineNumber - 1, 0), Math.Max(range.startColumn - 1, 0)),
+                        new LinePosition(Math.Max(range.endLineNumber - 1, 0), Math.Max(range.endColumn - 1, 0))));
+            }
+        }
+
+        public class SearchResponse
         {
             public string id;
             public string name;
@@ -151,30 +227,19 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             public string tags;
         }
 
-        public class SourceResult
+        public class SourceResponse
         {
             public string url;
             public CompoundUrl compoundUrl;
+            public Range range;
             public string displayName;
             public string mimeType;
-            public string contents;
+            public string contents;            
         }
 
-        public class SymbolResult
+        public class FileResponse
         {
-            public string uid;
-            public string name;
-            public string type;
-            public string fileUid;
-            public int lineStart;
-            public int lineEnd;
-            public int columnStart;
-            public int columnEnd;
-        }
-
-        public class FileResult
-        {
-            public string uid;
+            public string id;
             public string filePath;
             public string repository;
             public string version;

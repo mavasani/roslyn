@@ -12,8 +12,8 @@ Namespace Microsoft.CodeAnalysis.Editor.VisualBasic.FindReferences
         Inherits AbstractFindReferencesService
 
         <ImportingConstructor>
-        Protected Sub New(<ImportMany> presenters As IEnumerable(Of IReferencedSymbolsPresenter))
-            MyBase.New(presenters)
+        Protected Sub New(<ImportMany> referencedSymbolsPresenters As IEnumerable(Of IReferencedSymbolsPresenter), <ImportMany> navigableItemsPresenters As IEnumerable(Of INavigableItemsPresenter))
+            MyBase.New(referencedSymbolsPresenters, navigableItemsPresenters)
         End Sub
     End Class
 End Namespace

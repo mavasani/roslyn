@@ -15,11 +15,13 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.FindReferences
 {
     internal abstract class AbstractFindReferencesService : IFindReferencesService
     {
-        private readonly IEnumerable<IReferencedSymbolsPresenter> _presenters;
+        private readonly IEnumerable<IReferencedSymbolsPresenter> _referenceSymbolPresenters;
+        private readonly IEnumerable<INavigableItemsPresenter> _navigableItemPresenters;
 
-        protected AbstractFindReferencesService(IEnumerable<IReferencedSymbolsPresenter> presenters)
+        protected AbstractFindReferencesService(IEnumerable<IReferencedSymbolsPresenter> referenceSymbolPresenters, IEnumerable<INavigableItemsPresenter> navigableItemPresenters)
         {
-            _presenters = presenters;
+            _referenceSymbolPresenters = referenceSymbolPresenters;
+            _navigableItemPresenters = navigableItemPresenters;
         }
 
         private async Task<Tuple<IEnumerable<ReferencedSymbol>, Solution>> FindReferencedSymbolsAsync(Document document, int position, IWaitContext waitContext)
@@ -76,13 +78,55 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.FindReferences
         {
             var cancellationToken = waitContext.CancellationToken;
 
-            var result = this.FindReferencedSymbolsAsync(document, position, waitContext).WaitAndGetResult(cancellationToken);
+            Tuple<IEnumerable<ReferencedSymbol>, Solution> result = null;
+            var service = document.Project.Solution.Workspace.Services.GetService<IFindReferencesServiceInternal>();
+            if (service != null && _navigableItemPresenters != null && _navigableItemPresenters.Any())
+            {
+                var navigableItems = service.FindReferencesAsync(document, position, cancellationToken).WaitAndGetResult(cancellationToken);
+
+                cancellationToken.ThrowIfCancellationRequested();
+                if (navigableItems != null)
+                {
+                    if (DisplayReferences(navigableItems))
+                    {
+                        return true;
+                    }
+
+                    result = Tuple.Create(SpecializedCollections.EmptyEnumerable<ReferencedSymbol>(), document.Project.Solution);
+                }
+            }
+
+            if (result == null)
+            {
+                result = this.FindReferencedSymbolsAsync(document, position, waitContext).WaitAndGetResult(cancellationToken);
+            }
+
+            return DisplayReferences(result);
+        }
+
+        private bool DisplayReferences(Tuple<IEnumerable<ReferencedSymbol>, Solution> result)
+        {
             if (result != null && result.Item1 != null)
             {
                 var searchSolution = result.Item2;
-                foreach (var presenter in _presenters)
+                foreach (var presenter in _referenceSymbolPresenters)
                 {
                     presenter.DisplayResult(searchSolution, result.Item1);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool DisplayReferences(IEnumerable<INavigableItem> result)
+        {
+            if (result != null && result.Any())
+            {
+                var title = result.First().DisplayString;
+                foreach (var presenter in _navigableItemPresenters)
+                {
+                    presenter.DisplayResult(title, result);
                     return true;
                 }
             }

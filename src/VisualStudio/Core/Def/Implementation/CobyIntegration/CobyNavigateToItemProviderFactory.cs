@@ -132,7 +132,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 private void Search(IDisposable navigateToSearch, IAsyncToken asyncToken)
                 {
                     // REVIEW: searching semantic between roslyn and coby are different.
-                    var fileSearchTask = CobyServices.SearchAsync(Consts.CodeBase, CobyServices.EntityTypes.File, _searchPattern, _cancellationToken).SafeContinueWith(p =>
+                    var fileSearchTask = CobyServices.SearchAsync(Consts.Repo, CobyServices.SearchType.File, _searchPattern, _cancellationToken).SafeContinueWith(p =>
                     {
                         // no result
                         if (p.Result == null)
@@ -160,45 +160,46 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                         _progress.ItemCompleted();
                     },
                     _cancellationToken,
-                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion,
                     TaskScheduler.Default);
 
-                    var symbolSearchTask = CobyServices.SearchAsync(Consts.CodeBase, CobyServices.EntityTypes.Symbol, _searchPattern, _cancellationToken).SafeContinueWith(p =>
-                    {
-                        if (p.Result == null)
-                        {
-                            return;
-                        }
+                    //var symbolSearchTask = CobyServices.SearchAsync(Consts.Repo, CobyServices.SearchType.Symbol, _searchPattern, _cancellationToken).SafeContinueWith(p =>
+                    //{
+                    //    if (p.Result == null)
+                    //    {
+                    //        return;
+                    //    }
 
-                        var patternMatcher = new PatternMatcher(_searchPattern);
-                        foreach (var result in p.Result)
-                        {
-                            _cancellationToken.ThrowIfCancellationRequested();
-                            if (result.resultType == "local" || result.resultType == "parameter")
-                            {
-                                // REVIEW: local symbol information is pulluting results, also making result really big.
-                                //         search should have a way to ask specific set of symbol types.
-                                //         also, in case there is really big dataset for search, it should provide a way to get data in chunk (paging)
-                                //
-                                //         also, I can't figure out whether symbol is from metadata as source or not without actually get information about the file.
-                                //         so symbol from metadata as source will be included here as well.
-                                continue;
-                            }
+                    //    var patternMatcher = new PatternMatcher(_searchPattern);
+                    //    foreach (var result in p.Result)
+                    //    {
+                    //        _cancellationToken.ThrowIfCancellationRequested();
+                    //        if (result.resultType == "local" || result.resultType == "parameter")
+                    //        {
+                    //            // REVIEW: local symbol information is pulluting results, also making result really big.
+                    //            //         search should have a way to ask specific set of symbol types.
+                    //            //         also, in case there is really big dataset for search, it should provide a way to get data in chunk (paging)
+                    //            //
+                    //            //         also, I can't figure out whether symbol is from metadata as source or not without actually get information about the file.
+                    //            //         so symbol from metadata as source will be included here as well.
+                    //            continue;
+                    //        }
 
-                            var matches = patternMatcher.GetMatches(result.name, result.fullName);
-                            if (matches != null)
-                            {
-                                ReportMatchResult(result, matches);
-                            }
-                        }
+                    //        var matches = patternMatcher.GetMatches(result.name, result.fullName);
+                    //        if (matches != null)
+                    //        {
+                    //            ReportMatchResult(result, matches);
+                    //        }
+                    //    }
 
-                        _progress.ItemCompleted();
-                    },
-                    _cancellationToken,
-                    TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default);
+                    //    _progress.ItemCompleted();
+                    //},
+                    //_cancellationToken,
+                    //TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion,
+                    //TaskScheduler.Default);
 
-                    Task.WhenAll(fileSearchTask, symbolSearchTask).SafeContinueWith(_ =>
+                    //Task.WhenAll(fileSearchTask, symbolSearchTask).SafeContinueWith(_ =>
+                    fileSearchTask.SafeContinueWith(_ =>
                     {
                         _callback.Done();
                         navigateToSearch.Dispose();
@@ -209,9 +210,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     TaskScheduler.Default);
                 }
 
-                private void ReportMatchResult(CobyServices.SearchResult result, IEnumerable<PatternMatch> matches)
+                private void ReportMatchResult(CobyServices.SearchResponse result, IEnumerable<PatternMatch> matches)
                 {
                     var matchKind = GetNavigateToMatchKind(matches);
+                    var language = CobyServices.IsVisualBasicProject(result.compoundUrl) ? LanguageNames.VisualBasic : LanguageNames.CSharp;
+                    var searchResult = new SearchResult(result, matchKind, new NavigableItem(_workspace, result));
+                    var isCaseSensitive = CobyServices.IsFileResult(result) ? false : true;
 
                     // REVIEW: coby currently doesnt have any information whether a symbol is from csharp or vb.
                     //         so it is not possible without actually download all file information whether a symbol is from a file or not.
@@ -223,11 +227,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     var navigateToItem = new NavigateToItem(
                         result.name,
                         result.resultType,
-                        "csharp", // completely wrong for vb but there is no way to know whether a symbol in search result is from vb or csharp.
+                        language,
                         result.url,
-                        new SearchResult(result, matchKind, new NavigableItem(_workspace, result)),
+                        searchResult,
                         matchKind,
-                        result.resultType == "file" ? false : true,
+                        isCaseSensitive,
                         _displayFactory);
 
                     _callback.AddItem(navigateToItem);
@@ -258,14 +262,17 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 private class NavigableItem : INavigableItem
                 {
                     private readonly CobyWorkspace _workspace;
-                    private readonly CobyServices.SearchResult _result;
+                    private readonly CobyServices.SearchResponse _result;
+                    private readonly Task<CobyServices.SourceResponse> _sourceResponseTask;
 
-                    private TextSpan? _sourceSpan;
+                    private CobyServices.SourceResponse _lazySourceResponse;
+                    private TextSpan? _lazySourceSpan;
 
-                    public NavigableItem(CobyWorkspace workspace, CobyServices.SearchResult result)
+                    public NavigableItem(CobyWorkspace workspace, CobyServices.SearchResponse result)
                     {
                         _workspace = workspace;
                         _result = result;
+                        _sourceResponseTask = CobyServices.IsFileResult(result) ? null : CobyServices.GetContentBySymbolIdAsync(Consts.Repo, _result.id, CancellationToken.None);
                     }
 
                     public bool DisplayFileLocation => true;
@@ -273,42 +280,44 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     public string DisplayString => _result.name;
 
                     // REVIEW: we dont have enough informatino to show right glyph. ex) private, internal, extension method and etc
-                    public Glyph Glyph => _result.resultType == "file" ? Glyph.CSharpFile : Glyph.ClassPublic;
+                    public Glyph Glyph => CobyServices.IsFileResult(_result) ?
+                        (CobyServices.IsVisualBasicProject(_result.compoundUrl) ? Glyph.BasicFile : Glyph.CSharpFile) :
+                        Glyph.ClassPublic;
 
                     // dynamically add document to the workspace
-                    public Document Document => _workspace.GetOrCreateDocument(_result.compoundUrl, _result.compoundUrl.filePath ?? _result.fileName ?? _result.name);
+                    public Document Document
+                    {
+                        get
+                        {
+                            EnsureSourceReponse();
+                            return _sourceResponseTask != null ? _workspace.GetOrCreateDocument(_lazySourceResponse) : _workspace.GetOrCreateDocument(_result);
+                        }
+                    }
+
+                    private void EnsureSourceReponse()
+                    {
+                        if (!CobyServices.IsFileResult(_result) && _lazySourceResponse == null)
+                        {
+                            _lazySourceResponse = _sourceResponseTask?.WaitAndGetResult(CancellationToken.None);
+                        }
+                    }
+
+                    private void EnsureSourceReponseAndSpan()
+                    {
+                        EnsureSourceReponse();
+
+                        if (!_lazySourceSpan.HasValue)
+                        {
+                            _lazySourceSpan = CobyServices.GetSourceSpan(_lazySourceResponse, () => Document);
+                        }
+                    }
 
                     public TextSpan SourceSpan
                     {
                         get
                         {
-                            // REVIEW: this is expensive, but there is no other way in current coby design. we need stream based point as well as linecolumn based range.
-                            if (_sourceSpan.HasValue)
-                            {
-                                return _sourceSpan.Value;
-                            }
-
-                            if (_result.range.Equals(default(CobyServices.Range)))
-                            {
-                                _sourceSpan = new TextSpan(0, 0);
-                            }
-                            else
-                            {
-                                // REVIEW: this is bad.
-                                var text = Document.State.GetText(CancellationToken.None);
-                                if (text?.Length == 0)
-                                {
-                                    return new TextSpan(0, 0);
-                                }
-
-                                // Coby is 1 based. Roslyn is 0 based.
-                                _sourceSpan = text.Lines.GetTextSpan(
-                                    new LinePositionSpan(
-                                        new LinePosition(Math.Max(_result.range.startLineNumber - 1, 0), Math.Max(_result.range.startColumn - 1, 0)),
-                                        new LinePosition(Math.Max(_result.range.endLineNumber - 1, 0), Math.Max(_result.range.endColumn - 1, 0))));
-                            }
-
-                            return _sourceSpan.Value;
+                            EnsureSourceReponseAndSpan();
+                            return _lazySourceSpan.Value;
                         }
                     }
 
@@ -322,14 +331,14 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     public string Summary => string.Empty;
                     public string Kind => _result.resultType;
                     public string SecondarySort => _result.url;
-                    public bool IsCaseSensitive => _result.resultType == "file" ? false : true;
+                    public bool IsCaseSensitive => CobyServices.IsFileResult(_result) ? false : true;
 
                     public MatchKind MatchKind { get; }
                     public INavigableItem NavigableItem { get; }
 
-                    private readonly CobyServices.SearchResult _result;
+                    private readonly CobyServices.SearchResponse _result;
 
-                    public SearchResult(CobyServices.SearchResult result, MatchKind matchKind, INavigableItem navigableItem)
+                    public SearchResult(CobyServices.SearchResponse result, MatchKind matchKind, INavigableItem navigableItem)
                     {
                         _result = result;
                         MatchKind = matchKind;

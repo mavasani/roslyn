@@ -121,7 +121,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                     }
 
                     var url = CobyWorkspace.GetCompoundUrl(document);
-                    var result = CobyServices.GetFileEntityAsync(Consts.CodeBase, url.fileUid, CancellationToken.None).WaitAndGetResult(CancellationToken.None);
+                    var result = CobyServices.GetFileEntityAsync(Consts.Repo, url.filePath, CancellationToken.None).WaitAndGetResult(CancellationToken.None);
                     if (result == null)
                     {
                         return Array.Empty<ITagSpan<IClassificationTag>>();
@@ -129,8 +129,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 
                     CachedSnapshot = snapshot;
                     CachedTags = new TagSpanIntervalTree<IClassificationTag>(
-                        snapshot.TextBuffer, SpanTrackingMode.EdgeExclusive, result.referenceAnnotation.Where(a => a.symbolType == "type").Select(a => new TagSpan<IClassificationTag>(
-                           GetTextSpan(a, snapshot), new ClassificationTag(_owner._typeMap.GetClassificationType(ClassificationTypeNames.ClassName)))));
+                        snapshot.TextBuffer, SpanTrackingMode.EdgeExclusive, GetTagSpans(result.referenceAnnotation, snapshot));
                 }
 
                 if (this.CachedTags == null)
@@ -141,11 +140,40 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 return this.CachedTags.GetIntersectingTagSpans(spans);
             }
 
-            private SnapshotSpan GetTextSpan(CobyServices.ReferenceAnnotation annotation, ITextSnapshot snapshot)
+            private static SnapshotSpan GetTextSpan(CobyServices.ReferenceAnnotation annotation, ITextSnapshot snapshot)
             {
                 var range = annotation.range;
                 var span = TextSpan.FromBounds(snapshot.GetPosition(Math.Max(range.startLineNumber - 1, 0), Math.Max(range.startColumn - 1, 0)), snapshot.GetPosition(Math.Max(range.endLineNumber - 1, 0), Math.Max(range.endColumn - 1, 0)));
                 return span.ToSnapshotSpan(snapshot);
+            }
+
+            private IEnumerable<TagSpan<IClassificationTag>> GetTagSpans(IEnumerable<CobyServices.ReferenceAnnotation> annotations, ITextSnapshot snapshot)
+            {
+                foreach (var annotation in annotations)
+                {
+                    var span = GetTextSpan(annotation, snapshot);
+                    var classificationType = GetClassificationType(annotation);
+                    if (classificationType == null)
+                    {
+                        continue;
+                    }
+
+                    var classificationTag = new ClassificationTag(_owner._typeMap.GetClassificationType(ClassificationTypeNames.ClassName));
+                    yield return new TagSpan<IClassificationTag>(span, classificationTag);
+                }
+            }
+
+            private static string GetClassificationType(CobyServices.ReferenceAnnotation annotation)
+            {
+                // REVIEW: Coby should also return named type kind for better classification.
+                switch (annotation.symbolType.ToLowerInvariant())
+                {
+                    case "namedtype":
+                        return ClassificationTypeNames.ClassName;
+
+                    default:
+                        return null;
+                }
             }
         }
     }

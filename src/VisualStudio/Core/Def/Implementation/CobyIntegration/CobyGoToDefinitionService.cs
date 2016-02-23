@@ -25,33 +25,25 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 return false;
             }
 
-            var url = CobyWorkspace.GetCompoundUrl(document);
-            var fileResult = CobyServices.GetFileEntityAsync(Consts.CodeBase, url.fileUid, CancellationToken.None).WaitAndGetResult(cancellationToken);
-            if (fileResult == null)
-            {
-                return false;
-            }
-
-            // REVIEW: all of these WaitAndGetResult is really bad thing to do.
-            var text = document.GetTextAsync(cancellationToken).WaitAndGetResult(cancellationToken);
-
-            var zeroBasedPosition = text.Lines.GetLinePosition(position);
-            var oneBasedPosition = new LinePosition(zeroBasedPosition.Line + 1, zeroBasedPosition.Character + 1);
-
-            var annotation = fileResult.referenceAnnotation.FirstOrDefault(a => new LinePosition(a.range.startLineNumber, a.range.startColumn) <= oneBasedPosition && oneBasedPosition < new LinePosition(a.range.endLineNumber, a.range.endColumn));
+            var annotation = CobyServices.GetMatchingAnnotation(document, position, cancellationToken);
             if (annotation == null)
             {
                 return false;
             }
 
-            var symbolResult = CobyServices.GetSymbolEntityAsync(Consts.CodeBase, annotation.symbolId, cancellationToken).WaitAndGetResult(cancellationToken);
-            var targetDocument = workspace.GetOrCreateDocument(new CobyServices.CompoundUrl() { fileUid = symbolResult.fileUid }, symbolResult.name);
+            var sourceResponse = CobyServices.GetContentBySymbolIdAsync(Consts.Repo, annotation.symbolId, cancellationToken).WaitAndGetResult(cancellationToken);
+            if (sourceResponse == null)
+            {
+                return false;
+            }
+
+            var targetDocument = workspace.GetOrCreateDocument(sourceResponse);
 
             var targetText = targetDocument.GetTextAsync(cancellationToken).WaitAndGetResult(cancellationToken);
             var targetSpan = targetText.Lines.GetTextSpan(
                                     new LinePositionSpan(
-                                        new LinePosition(Math.Max(symbolResult.lineStart - 1, 0), Math.Max(symbolResult.columnStart - 1, 0)),
-                                        new LinePosition(Math.Max(symbolResult.lineEnd - 1, 0), Math.Max(symbolResult.columnEnd - 1, 0))));
+                                        new LinePosition(Math.Max(sourceResponse.range.startLineNumber - 1, 0), Math.Max(sourceResponse.range.startColumn - 1, 0)),
+                                        new LinePosition(Math.Max(sourceResponse.range.endLineNumber - 1, 0), Math.Max(sourceResponse.range.endColumn - 1, 0))));
 
             var navigationService = workspace.Services.GetService<IDocumentNavigationService>();
 

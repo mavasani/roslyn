@@ -26,10 +26,13 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
         private readonly Dictionary<string, Data> _map = new Dictionary<string, Data>();
 
         // Coby Service doesnt have concept of project. just create one ourselves.
-        private readonly ProjectId _primaryProjectId = ProjectId.CreateNewId("primaryProjectId");
+        private readonly ProjectId _primaryCSharpProjectId = ProjectId.CreateNewId("primaryCSharpProjectId");
+        private readonly ProjectId _primaryVisualBasicProjectId = ProjectId.CreateNewId("primaryVisualBasicProjectId");
 
         private readonly IServiceProvider _serviceProvider;
         private readonly IVsEditorAdaptersFactoryService _editorAdaptersFactory;
+
+        private static readonly string _cobyTempPath = Path.Combine(Path.GetTempPath(), "Coby");
 
         public static void Create(HostServices host, IServiceProvider serviceProvider)
         {
@@ -52,30 +55,67 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             // 
             // also, since we can't determine whether a symbol is from csharp or vb without actually getting whole file, this jsut drop support for VB and 
             // consider everything as CSharp. this means, VB will simply not work.
-            this.OnProjectAdded(ProjectInfo.Create(_primaryProjectId, VersionStamp.Create(), "PrimaryProject", "PrimaryProject", LanguageNames.CSharp));
+            this.OnProjectAdded(ProjectInfo.Create(_primaryCSharpProjectId, VersionStamp.Create(), "MiscellaneousCSharpNugetFilesProject", "MiscellaneousCSharpNugetFilesProject", LanguageNames.CSharp));
+            this.OnProjectAdded(ProjectInfo.Create(_primaryVisualBasicProjectId, VersionStamp.Create(), "MiscellaneousVisualBasicNugetFilesProject", "MiscellaneousVisualBasicNugetFilesProject", LanguageNames.VisualBasic));
         }
 
         public override bool CanApplyChange(ApplyChangesKind feature) => false;
         public override bool CanOpenDocuments => true;
         internal override bool CanChangeActiveContextDocument => false;
 
-        public Document GetOrCreateDocument(CobyServices.CompoundUrl url, string name)
+        public Document GetOrCreateDocument(CobyServices.SourceResponse sourceResponse)
+        {
+            if (sourceResponse == null)
+            {
+                return null;
+            }
+
+            return GetOrCreateDocument(sourceResponse.compoundUrl,
+                sourceResponse.compoundUrl.filePath,
+                ct => Task.FromResult(SourceText.From(sourceResponse.contents ?? string.Empty)));
+        }
+
+        public Document GetOrCreateDocument(CobyServices.SearchResponse searchResponse)
+        {
+            if (searchResponse == null)
+            {
+                return null;
+            }
+
+            var url = searchResponse.compoundUrl;
+            var name = url.filePath ?? searchResponse.fileName ?? searchResponse.name;
+            Func<CancellationToken, Task<SourceText>> getSourceTextTask = (CancellationToken ct) => Task.Run(async () =>
+            {
+                var sourceResult = await CobyServices.GetContentByFileIdAsync(Consts.Repo, searchResponse.id, ct).ConfigureAwait(false);
+                return SourceText.From(sourceResult?.contents ?? string.Empty);
+            });
+
+            return GetOrCreateDocument(searchResponse.compoundUrl, name, getSourceTextTask);
+        }
+
+        private Document GetOrCreateDocument(CobyServices.CompoundUrl url, string name, Func<CancellationToken, Task<SourceText>> getSourceTextTask)
         {
             lock (_gate)
             {
+                var filePath = GetFilePath(url);
+
                 // REVIEW: in this prototype, file ever created never goes away. need to think about lifetime management.
                 //         currently, best way will be making cobyworkspace not singleton but something one create when needed and let it go once no longer needed for a feature.
                 Data data;
-                if (_map.TryGetValue(url.fileUid, out data))
+                if (_map.TryGetValue(filePath, out data))
                 {
                     return CurrentSolution.GetDocument(data.Id);
                 }
 
-                var id = DocumentId.CreateNewId(_primaryProjectId, url.filePath);
-                var loader = new CobyTextLoader(url);
-                OnDocumentAdded(DocumentInfo.Create(id, name, loader: loader, filePath: GetFilePath(url.fileUid), isGenerated: true));
+                // File name returned by coby search contains the full relative path in the repo, we want just the file name.
+                name = PathUtilities.GetFileName(name);
 
-                _map.Add(url.fileUid, new Data(id, url));
+                var projectId = CobyServices.IsVisualBasicProject(url) ? _primaryVisualBasicProjectId : _primaryCSharpProjectId;
+                var id = DocumentId.CreateNewId(projectId, url.filePath);
+                var loader = new CobyTextLoader(getSourceTextTask);
+                OnDocumentAdded(DocumentInfo.Create(id, name, loader: loader, filePath: filePath, isGenerated: true));
+
+                _map.Add(filePath, new Data(id, url));
 
                 return CurrentSolution.GetDocument(id);
             }
@@ -84,20 +124,17 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
         public bool Contains(string moniker)
         {
             // REVIEW: really bad way to check.
-            return moniker?.StartsWith(Path.Combine(Path.GetTempPath(), "Coby", Consts.CodeBase)) == true;
+            return moniker?.StartsWith(Path.Combine(Path.GetTempPath(), "Coby", Consts.Repo)) == true;
         }
 
         public bool TryCloseDocument(string moniker)
         {
             if (Contains(moniker))
             {
-                // REVIEW: shouldn't ever do this. but, for prototyping, not worth doing proper book keeing...
-                var fileUid = Path.GetFileNameWithoutExtension(moniker);
-
                 lock (_gate)
                 {
                     Data data;
-                    if (!_map.TryGetValue(fileUid, out data))
+                    if (!_map.TryGetValue(moniker, out data))
                     {
                         // REVIEW: how?
                         return false;
@@ -124,19 +161,24 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
             return false;
         }
 
-        private string GetFilePath(string fileUid)
+        internal string GetDisplayPath(Document document)
         {
-            // REVIEW: we basically consider everything as csharp file.
-            return Path.Combine(Path.GetTempPath(), "Coby", Consts.CodeBase, fileUid) + ".cs";
+            return document.FilePath.Substring(_cobyTempPath.Length);
+        }
+
+        private string GetFilePath(CobyServices.CompoundUrl url)
+        {
+            var repo = url.repository.Replace('~', PathUtilities.DirectorySeparatorChar);
+            var filePath = url.filePath.Replace('/', PathUtilities.DirectorySeparatorChar);
+            return Path.Combine(_cobyTempPath, repo, filePath);
         }
 
         public static CobyServices.CompoundUrl GetCompoundUrl(Document document)
         {
-            var fileUid = Path.GetFileNameWithoutExtension(document.FilePath);
             var workspace = document.Project.Solution.Workspace as CobyWorkspace;
 
             Data data;
-            if (workspace._map.TryGetValue(fileUid, out data))
+            if (workspace._map.TryGetValue(document.FilePath, out data))
             {
                 return data.Url;
             }
@@ -216,11 +258,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
 
         private class CobyTextLoader : TextLoader
         {
-            private readonly CobyServices.CompoundUrl _url;
-
-            public CobyTextLoader(CobyServices.CompoundUrl url)
+            private readonly Func<CancellationToken, Task<SourceText>> _getSourceTextTask;
+            
+            public CobyTextLoader(Func<CancellationToken, Task<SourceText>> getSourceTextTask)
             {
-                _url = url;
+                _getSourceTextTask = getSourceTextTask;
             }
 
             public override async Task<TextAndVersion> LoadTextAndVersionAsync(Workspace workspace, DocumentId documentId, CancellationToken cancellationToken)
@@ -228,8 +270,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.CobyIntegration
                 // REVIEW: no concept of versioning in coby.
                 var version = VersionStamp.Create();
 
-                var sourceResult = await CobyServices.GetContentAsync(Consts.CodeBase, _url.fileUid, cancellationToken).ConfigureAwait(false);
-                return TextAndVersion.Create(SourceText.From(sourceResult?.contents ?? string.Empty), version);
+                var task = _getSourceTextTask(cancellationToken);
+                var sourceText = await task.ConfigureAwait(false);
+                return TextAndVersion.Create(sourceText, version);
             }
         }
     }
