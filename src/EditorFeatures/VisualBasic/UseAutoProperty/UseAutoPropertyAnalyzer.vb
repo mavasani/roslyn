@@ -8,9 +8,8 @@ Imports Microsoft.CodeAnalysis.UseAutoProperty
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 
 Namespace Microsoft.CodeAnalysis.Editor.VisualBasic.UseAutoProperty
-    ' https://github.com/dotnet/roslyn/issues/5408
-    '<Export>
-    '<DiagnosticAnalyzer(LanguageNames.VisualBasic)>
+    <Export>
+    <DiagnosticAnalyzer(LanguageNames.VisualBasic)>
     Friend Class UseAutoPropertyAnalyzer
         Inherits AbstractUseAutoPropertyAnalyzer(Of PropertyBlockSyntax, FieldDeclarationSyntax, ModifiedIdentifierSyntax, ExpressionSyntax)
 
@@ -40,7 +39,7 @@ Namespace Microsoft.CodeAnalysis.Editor.VisualBasic.UseAutoProperty
                 Dim memberAccessExpression = DirectCast(expression, MemberAccessExpressionSyntax)
                 Return memberAccessExpression.Expression.Kind() = SyntaxKind.MeExpression AndAlso
                     memberAccessExpression.Name.Kind() = SyntaxKind.IdentifierName
-            ElseIf expression.IsKind(SyntaxKind.IdentifierName)
+            ElseIf expression.IsKind(SyntaxKind.IdentifierName) Then
                 Return True
             End If
 

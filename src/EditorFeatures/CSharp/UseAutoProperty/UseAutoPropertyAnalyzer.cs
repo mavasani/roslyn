@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
 using System.Linq;
@@ -12,10 +13,9 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Editor.CSharp.UseAutoProperty
 {
-    // https://github.com/dotnet/roslyn/issues/5408
-    //[Export]
-    //[DiagnosticAnalyzer(LanguageNames.CSharp)]
-    internal class UseAutoPropertyAnalyzer : AbstractUseAutoPropertyAnalyzer<PropertyDeclarationSyntax, FieldDeclarationSyntax, VariableDeclaratorSyntax, ExpressionSyntax>
+    [Export]
+    [DiagnosticAnalyzer(LanguageNames.CSharp)]
+    internal class UseAutoPropertyAnalyzer : AbstractUseAutoPropertyAnalyzer<PropertyDeclarationSyntax, FieldDeclarationSyntax, VariableDeclaratorSyntax, ExpressionSyntax>, IBuiltInAnalyzer
     {
         protected override bool SupportsReadOnlyProperties(Compilation compilation)
         {
@@ -136,6 +136,11 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UseAutoProperty
             return fieldDeclaration.Declaration.Variables.Count == 1
                 ? fieldDeclaration
                 : (SyntaxNode)variableDeclarator;
+        }
+
+        public DiagnosticAnalyzerCategory GetAnalyzerCategory()
+        {
+            return DiagnosticAnalyzerCategory.SemanticSpanAnalysis;
         }
     }
 }
