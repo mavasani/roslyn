@@ -25,6 +25,7 @@
     <RoslynDiagnosticsNugetPackageVersion>1.2.0-beta1</RoslynDiagnosticsNugetPackageVersion>
     <RoslynDiagnosticsPropsFilePath>$(NuGetPackageRoot)\Microsoft.Net.RoslynDiagnostics\$(RoslynDiagnosticsNugetPackageVersion)\build\Microsoft.Net.RoslynDiagnostics.props</RoslynDiagnosticsPropsFilePath>
     <RoslynBuildUtilFilePath>$(NuGetPackageRoot)\Roslyn.Build.Util\0.9.3-portable\lib\dotnet\Roslyn.MSBuild.Util.dll</RoslynBuildUtilFilePath>
+    <StyleCopAnalyzersNugetPackageVersion>1.0.0</StyleCopAnalyzersNugetPackageVersion>
     <AdditionalFileItemNames>$(AdditionalFileItemNames);PublicAPI</AdditionalFileItemNames>
   </PropertyGroup>
 
@@ -151,6 +152,12 @@
     <Import Project="$(RoslynDiagnosticsPropsFilePath)"
             Condition="Exists('$(RoslynDiagnosticsPropsFilePath)') And ('$(UseRoslynAnalyzers)' == 'true')" />
   </ImportGroup>
+
+  <ItemGroup Condition="'$(ProjectLanguage)' == 'CSharp' And Exists('$(NuGetPackageRoot)\StyleCop.Analyzers\$(StyleCopAnalyzersNugetPackageVersion)') And ('$(UseRoslynAnalyzers)' == 'true')">
+    <Analyzer Include="$(NuGetPackageRoot)\StyleCop.Analyzers\$(StyleCopAnalyzersNugetPackageVersion)\analyzers\dotnet\cs\StyleCop.Analyzers.dll" />
+    <Analyzer Include="$(NuGetPackageRoot)\StyleCop.Analyzers\$(StyleCopAnalyzersNugetPackageVersion)\analyzers\dotnet\cs\StyleCop.Analyzers.CodeFixes.dll" />
+    <Analyzer Include="$(NuGetPackageRoot)\StyleCop.Analyzers\$(StyleCopAnalyzersNugetPackageVersion)\analyzers\dotnet\cs\Newtonsoft.Json.dll" />
+  </ItemGroup>
 
   <!-- Otherwise, use the task from the bootstrap location. This is necessary
        to support new properties on the build task. -->
