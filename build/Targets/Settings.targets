@@ -80,6 +80,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!-- Willow based install sets VSCMD_VER (full VS version) -->
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == '' And '$(VSCMD_VER)' != ''">$(VSCMD_VER.Substring(0, $(VSCMD_VER.IndexOf('.')))).0</VisualStudioVersion>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">14.0</VisualStudioVersion>
   </PropertyGroup>
 
