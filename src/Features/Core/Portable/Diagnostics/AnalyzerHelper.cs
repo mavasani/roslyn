@@ -1,10 +1,15 @@
 // Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Immutable;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using Microsoft.CodeAnalysis.ErrorReporting;
 using Microsoft.CodeAnalysis.Options;
 using Roslyn.Utilities;
+using static Roslyn.Utilities.PortableShim;
+using SystemMetadataReader = System.Reflection.Metadata.MetadataReader;
 
 namespace Microsoft.CodeAnalysis.Diagnostics
 {

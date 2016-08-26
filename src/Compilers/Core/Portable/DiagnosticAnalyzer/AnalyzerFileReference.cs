@@ -35,9 +35,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private string _lazyDisplay;
         private object _lazyIdentity;
+        private Guid _lazyMvid;
         private Assembly _lazyAssembly;
 
         public event EventHandler<AnalyzerLoadFailureEventArgs> AnalyzerLoadFailed;
+        public event EventHandler<EventArgs> AnalyzerAssemblyLoaded;
 
         /// <summary>
         /// Creates an AnalyzerFileReference with the given <paramref name="fullPath"/> and <paramref name="assemblyLoader"/>.
@@ -85,7 +87,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 if (_lazyDisplay == null)
                 {
-                    InitializeDisplayAndId();
+                    InitializeDisplayAndIdAndMVID();
                 }
 
                 return _lazyDisplay;
@@ -98,14 +100,26 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 if (_lazyIdentity == null)
                 {
-                    InitializeDisplayAndId();
+                    InitializeDisplayAndIdAndMVID();
                 }
 
                 return _lazyIdentity;
             }
         }
 
-        private void InitializeDisplayAndId()
+        private Guid Mvid
+        {
+            get
+            {
+                if (_lazyMvid == default(Guid))
+                {
+                    InitializeDisplayAndIdAndMVID();
+                }
+
+                return _lazyMvid;
+            }
+        }
+        private void InitializeDisplayAndIdAndMVID()
         {
             try
             {
@@ -115,14 +129,18 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 {
                     var metadataReader = reader.GetMetadataReader();
                     var assemblyIdentity = metadataReader.ReadAssemblyIdentityOrThrow();
+                    var mvidHandle = metadataReader.GetModuleDefinition().Mvid;
+                    var fileMvid = metadataReader.GetGuid(mvidHandle);
                     _lazyDisplay = assemblyIdentity.Name;
                     _lazyIdentity = assemblyIdentity;
+                    _lazyMvid = fileMvid;
                 }
             }
             catch
             {
                 _lazyDisplay = Path.GetFileNameWithoutExtension(_fullPath);
                 _lazyIdentity = _lazyDisplay;
+                _lazyMvid = Guid.Empty;
             }
         }
 
@@ -551,7 +569,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             if (_lazyAssembly == null)
             {
-                _lazyAssembly = _assemblyLoader.LoadFromPath(_fullPath);
+                if (Interlocked.CompareExchange(ref _lazyAssembly, _assemblyLoader.LoadFromPath(_fullPath), null) == null)
+                {
+                    AnalyzerAssemblyLoaded?.Invoke(this, new EventArgs());
+                }
             }
 
             return _lazyAssembly;
