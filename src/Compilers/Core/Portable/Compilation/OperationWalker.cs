@@ -299,6 +299,13 @@ namespace Microsoft.CodeAnalysis.Semantics
             Visit(operation.IfFalseValue);
         }
 
+        public override void VisitSwitchChoiceExpression(ISwitchChoiceExpression operation)
+        {
+            Visit(operation.SwitchExpression);
+            VisitArray(operation.SwitchLabels);
+            VisitArray(operation.SwitchValues);
+        }
+
         public override void VisitNullCoalescingExpression(INullCoalescingExpression operation)
         {
             Visit(operation.PrimaryOperand);

@@ -120,6 +120,20 @@ Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax.Identifier.get -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax.Update(Microsoft.CodeAnalysis.SyntaxToken identifier) -> Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax.WithIdentifier(Microsoft.CodeAnalysis.SyntaxToken identifier) -> Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.AddLabelsArguments(params Microsoft.CodeAnalysis.CSharp.Syntax.ArgumentSyntax[] items) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.AddValuesArguments(params Microsoft.CodeAnalysis.CSharp.Syntax.ArgumentSyntax[] items) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.ColonToken.get -> Microsoft.CodeAnalysis.SyntaxToken
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.Expression.get -> Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.Labels.get -> Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.QuestionColonToken.get -> Microsoft.CodeAnalysis.SyntaxToken
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.Update(Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax expression, Microsoft.CodeAnalysis.SyntaxToken questionColonToken, Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax labels, Microsoft.CodeAnalysis.SyntaxToken colonToken, Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax values) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.Values.get -> Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.WithColonToken(Microsoft.CodeAnalysis.SyntaxToken colonToken) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.WithExpression(Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax expression) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.WithLabels(Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax labels) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.WithQuestionColonToken(Microsoft.CodeAnalysis.SyntaxToken questionColonToken) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.WithValues(Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax values) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax.Expression.get -> Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax.ThrowKeyword.get -> Microsoft.CodeAnalysis.SyntaxToken
@@ -166,9 +180,11 @@ Microsoft.CodeAnalysis.CSharp.SyntaxKind.ForEachVariableStatement = 8929 -> Micr
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.IsPatternExpression = 8657 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.LocalFunctionStatement = 8830 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.ParenthesizedVariableDesignation = 8928 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
+Microsoft.CodeAnalysis.CSharp.SyntaxKind.QuestionColonToken = 8284 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.RefExpression = 9050 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.RefType = 9051 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.SingleVariableDesignation = 8927 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
+Microsoft.CodeAnalysis.CSharp.SyntaxKind.SwitchExpression = 8658 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.ThrowExpression = 9052 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.TupleElement = 8925 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.TupleExpression = 8926 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
@@ -196,6 +212,7 @@ override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitParenthesizedVa
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitRefExpression(Microsoft.CodeAnalysis.CSharp.Syntax.RefExpressionSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitRefType(Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitSingleVariableDesignation(Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
+override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitSwitchExpression(Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitThrowExpression(Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitTupleElement(Microsoft.CodeAnalysis.CSharp.Syntax.TupleElementSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitTupleExpression(Microsoft.CodeAnalysis.CSharp.Syntax.TupleExpressionSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
@@ -244,6 +261,8 @@ override Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax.Accept(Microsoft.Cod
 override Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax.Accept<TResult>(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult> visitor) -> TResult
 override Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax.Accept(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor visitor) -> void
 override Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax.Accept<TResult>(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult> visitor) -> TResult
+override Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.Accept(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor visitor) -> void
+override Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax.Accept<TResult>(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult> visitor) -> TResult
 override Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax.Accept(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor visitor) -> void
 override Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax.Accept<TResult>(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult> visitor) -> TResult
 override Microsoft.CodeAnalysis.CSharp.Syntax.TupleElementSyntax.Accept(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor visitor) -> void
@@ -296,6 +315,9 @@ static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.RefExpression(Microsoft.CodeA
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.RefType(Microsoft.CodeAnalysis.CSharp.Syntax.TypeSyntax type) -> Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.RefType(Microsoft.CodeAnalysis.SyntaxToken refKeyword, Microsoft.CodeAnalysis.CSharp.Syntax.TypeSyntax type) -> Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.SingleVariableDesignation(Microsoft.CodeAnalysis.SyntaxToken identifier) -> Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax
+static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.SwitchExpression(Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax expression) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.SwitchExpression(Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax expression, Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax labels, Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax values) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
+static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.SwitchExpression(Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax expression, Microsoft.CodeAnalysis.SyntaxToken questionColonToken, Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax labels, Microsoft.CodeAnalysis.SyntaxToken colonToken, Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax values) -> Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.ThrowExpression(Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax expression) -> Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.ThrowExpression(Microsoft.CodeAnalysis.SyntaxToken throwKeyword, Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax expression) -> Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.TupleElement(Microsoft.CodeAnalysis.CSharp.Syntax.TypeSyntax type) -> Microsoft.CodeAnalysis.CSharp.Syntax.TupleElementSyntax
@@ -318,6 +340,7 @@ virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitParenthesizedVari
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitRefExpression(Microsoft.CodeAnalysis.CSharp.Syntax.RefExpressionSyntax node) -> void
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitRefType(Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax node) -> void
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitSingleVariableDesignation(Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax node) -> void
+virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitSwitchExpression(Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax node) -> void
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitThrowExpression(Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax node) -> void
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitTupleElement(Microsoft.CodeAnalysis.CSharp.Syntax.TupleElementSyntax node) -> void
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitTupleExpression(Microsoft.CodeAnalysis.CSharp.Syntax.TupleExpressionSyntax node) -> void
@@ -335,6 +358,7 @@ virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitParenthe
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitRefExpression(Microsoft.CodeAnalysis.CSharp.Syntax.RefExpressionSyntax node) -> TResult
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitRefType(Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax node) -> TResult
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitSingleVariableDesignation(Microsoft.CodeAnalysis.CSharp.Syntax.SingleVariableDesignationSyntax node) -> TResult
+virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitSwitchExpression(Microsoft.CodeAnalysis.CSharp.Syntax.SwitchExpressionSyntax node) -> TResult
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitThrowExpression(Microsoft.CodeAnalysis.CSharp.Syntax.ThrowExpressionSyntax node) -> TResult
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitTupleElement(Microsoft.CodeAnalysis.CSharp.Syntax.TupleElementSyntax node) -> TResult
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitTupleExpression(Microsoft.CodeAnalysis.CSharp.Syntax.TupleExpressionSyntax node) -> TResult

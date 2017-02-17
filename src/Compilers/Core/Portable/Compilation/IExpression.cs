@@ -994,6 +994,29 @@ namespace Microsoft.CodeAnalysis.Semantics
     }
 
     /// <summary>
+    /// Represents a C# switch operator.
+    /// </summary>
+    /// <remarks>
+    /// This interface is reserved for implementation by its associated APIs. We reserve the right to
+    /// change it in the future.
+    /// </remarks>
+    public interface ISwitchChoiceExpression : IOperation
+    {
+        /// <summary>
+        /// Switch expression to be tested.
+        /// </summary>
+        IOperation SwitchExpression { get; }
+        /// <summary>
+        /// List of labels to compare the switch expression against.
+        /// </summary>
+        ImmutableArray<IOperation> SwitchLabels { get; }
+        /// <summary>
+        /// List of values corresponding to the labels.
+        /// </summary>
+        ImmutableArray<IOperation> SwitchValues { get; }
+    }
+
+    /// <summary>
     /// Represents a null-coalescing expression.
     /// </summary>
     /// <remarks>

@@ -270,6 +270,11 @@ namespace Microsoft.CodeAnalysis.Semantics
             DefaultVisit(operation);
         }
 
+        public virtual void VisitSwitchChoiceExpression(ISwitchChoiceExpression operation)
+        {
+            DefaultVisit(operation);
+        }
+
         public virtual void VisitNullCoalescingExpression(INullCoalescingExpression operation)
         {
             DefaultVisit(operation);
@@ -666,6 +671,11 @@ namespace Microsoft.CodeAnalysis.Semantics
         }
 
         public virtual TResult VisitConditionalChoiceExpression(IConditionalChoiceExpression operation, TArgument argument)
+        {
+            return DefaultVisit(operation, argument);
+        }
+
+        public virtual TResult VisitSwitchChoiceExpression(ISwitchChoiceExpression operation, TArgument argument)
         {
             return DefaultVisit(operation, argument);
         }

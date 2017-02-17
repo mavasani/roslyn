@@ -74,7 +74,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         MinusEqualsToken = 8281,
         CaretEqualsToken = 8282,
         PercentEqualsToken = 8283,
-
+        QuestionColonToken = 8284,
+      
         // Keywords
         BoolKeyword = 8304,
         ByteKeyword = 8305,
@@ -330,6 +331,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         InterpolatedStringExpression = 8655,
         ImplicitElementAccess = 8656,
         IsPatternExpression = 8657,
+        SwitchExpression = 8658,
 
         // binary expressions
         AddExpression = 8668,

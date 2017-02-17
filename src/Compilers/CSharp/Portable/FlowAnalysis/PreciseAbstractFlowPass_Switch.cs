@@ -125,6 +125,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             VisitLabel(label, node);
         }
 
+        public override BoundNode VisitSwitchOperator(BoundSwitchOperator node)
+        {
+            return null;
+        }
+
         #endregion implementation for the old-style (no-patterns) variation of the switch statement.
 
         #region implementation for the pattern-matching variation of the switch statement.

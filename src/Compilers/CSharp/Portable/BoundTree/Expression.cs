@@ -1218,6 +1218,27 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
+    internal partial class BoundSwitchOperator : ISwitchChoiceExpression
+    {
+        protected override OperationKind ExpressionKind => OperationKind.ConditionalChoiceExpression;
+
+        public IOperation SwitchExpression => throw new NotImplementedException();
+
+        public ImmutableArray<IOperation> SwitchLabels => throw new NotImplementedException();
+
+        public ImmutableArray<IOperation> SwitchValues => throw new NotImplementedException();
+
+        public override void Accept(OperationVisitor visitor)
+        {
+            visitor.VisitSwitchChoiceExpression(this);
+        }
+
+        public override TResult Accept<TArgument, TResult>(OperationVisitor<TArgument, TResult> visitor, TArgument argument)
+        {
+            return visitor.VisitSwitchChoiceExpression(this, argument);
+        }
+    }
+
     internal partial class BoundNullCoalescingOperator : INullCoalescingExpression
     {
         IOperation INullCoalescingExpression.PrimaryOperand => this.LeftOperand;

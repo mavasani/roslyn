@@ -496,7 +496,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return BindNullCoalescingOperator((BinaryExpressionSyntax)node, diagnostics);
                 case SyntaxKind.ConditionalAccessExpression:
                     return BindConditionalAccessExpression((ConditionalAccessExpressionSyntax)node, diagnostics);
-
+                
                 case SyntaxKind.MemberBindingExpression:
                     return BindMemberBindingExpression((MemberBindingExpressionSyntax)node, invoked, indexed, diagnostics);
 
@@ -531,6 +531,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case SyntaxKind.ConditionalExpression:
                     return BindConditionalOperator((ConditionalExpressionSyntax)node, diagnostics);
+
+                case SyntaxKind.SwitchExpression:
+                    return BindSwitchOperator((SwitchExpressionSyntax)node, diagnostics);
 
                 case SyntaxKind.NumericLiteralExpression:
                 case SyntaxKind.StringLiteralExpression:

@@ -434,6 +434,15 @@
     <Field Name="ConstantValueOpt" Type="ConstantValue" Null="allow"/>
   </Node>
 
+  <Node Name="BoundSwitchOperator" Base="BoundExpression">
+    <!-- Non-null type is required for this node kind -->
+    <Field Name="Type" Type="TypeSymbol" Override="true" Null="disallow"/>
+
+    <Field Name="Expression" Type="BoundExpression"/>
+    <Field Name="Labels" Type="ImmutableArray&lt;BoundExpression&gt;"/>
+    <Field Name="Values" Type="ImmutableArray&lt;BoundExpression&gt;"/>
+  </Node>
+
   <Node Name="BoundArrayAccess" Base="BoundExpression">
     <!-- Non-null type is required for this node kind -->
     <Field Name="Type" Type="TypeSymbol" Override="true" Null="disallow"/>
