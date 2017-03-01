@@ -122,7 +122,7 @@
     <comment>An optional longer localizable description of the diagnostic.</comment>
   </data>
   <data name="SymbolAnalyzerMessageFormat" xml:space="preserve">
-    <value>Type '{0}' has one or more members with the same name, considering renaming the type or the members.</value>
+    <value>Symbol '{0}' has the same name as its containing type, considering renaming the type or the members.</value>
     <comment>The format-able message the diagnostic displays.</comment>
   </data>
   <data name="SymbolAnalyzerTitle" xml:space="preserve">
@@ -223,6 +223,18 @@
   </data>
   <data name="CompilationStartedAnalyzerWithCompilationWideAnalysisTitle" xml:space="preserve">
     <value>Secure types must not implement interfaces with unsecure methods</value>
+    <comment>The title of the diagnostic.</comment>
+  </data>
+  <data name="AnalyzerDescription" xml:space="preserve">
+    <value>Do not declare members with same name as any outer type.</value>
+    <comment>An optional longer localizable description of the diagnostic.</comment>
+  </data>
+  <data name="AnalyzerMessageFormat" xml:space="preserve">
+    <value>Symbol '{0}' has the same name as one of its outer type, considering renaming the type or the symbol.</value>
+    <comment>The format-able message the diagnostic displays.</comment>
+  </data>
+  <data name="AnalyzerTitle" xml:space="preserve">
+    <value>Do not declare members with same name as any outer type</value>
     <comment>The title of the diagnostic.</comment>
   </data>
 </root>

@@ -18,12 +18,12 @@ namespace CSharpAnalyzers
     public class SymbolAnalyzer : DiagnosticAnalyzer
     {
         #region Descriptor fields
+        public const string DiagnosticId = "CSharpAnalyzers";
+        internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof(Resources));
+        internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
+        internal static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof(Resources));
 
-        internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.SymbolAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
-        internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.SymbolAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
-        internal static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.SymbolAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
-        
-        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticIds.SymbolAnalyzerRuleId, Title, MessageFormat, DiagnosticCategories.Stateless, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
+        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, DiagnosticCategories.Stateless, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
 
         #endregion
 
@@ -31,21 +31,31 @@ namespace CSharpAnalyzers
 
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSymbolAction(AnalyzeSymbol, SymbolKind.NamedType);
-        }
-
-        private static void AnalyzeSymbol(SymbolAnalysisContext context)
-        {
-            var namedTypeSymbol = (INamedTypeSymbol)context.Symbol;
-
-            // Find just those named type symbols that have members with the same name as the named type.
-            if (namedTypeSymbol.GetMembers(namedTypeSymbol.Name).Any())
+            context.RegisterSymbolAction(symbolContext =>
             {
-                // For all such symbols, report a diagnostic.
-                var diagnostic = Diagnostic.Create(Rule, namedTypeSymbol.Locations[0], namedTypeSymbol.Name);
+                var symbolName = symbolContext.Symbol.Name;
 
-                context.ReportDiagnostic(diagnostic);
-            }
+                // Skip the immediate containing type, CS0542 already covers this case.
+                var outerType = symbolContext.Symbol.ContainingType?.ContainingType;
+                while (outerType != null)
+                {
+                    // Check if the current outer type has the same name as the given member.
+                    if (symbolName.Equals(outerType.Name))
+                    {
+                        // For all such symbols, report a diagnostic.
+                        var diagnostic = Diagnostic.Create(Rule, symbolContext.Symbol.Locations[0], symbolContext.Symbol.Name);
+                        symbolContext.ReportDiagnostic(diagnostic);
+                        return;
+                    }
+
+                    outerType = outerType.ContainingType;
+                }                
+            },
+            SymbolKind.NamedType,
+            SymbolKind.Method,
+            SymbolKind.Field,
+            SymbolKind.Event,
+            SymbolKind.Property);
         }
     }
 }

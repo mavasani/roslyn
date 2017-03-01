@@ -19,7 +19,7 @@
     <IncludeDebugSymbolsInLocalVSIXDeployment>false</IncludeDebugSymbolsInLocalVSIXDeployment>
     <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
     <CopyOutputSymbolsToOutputDirectory>false</CopyOutputSymbolsToOutputDirectory>
-    <VSSDKTargetPlatformRegRootSuffix>Roslyn</VSSDKTargetPlatformRegRootSuffix>
+    <VSSDKTargetPlatformRegRootSuffix>RoslynDev</VSSDKTargetPlatformRegRootSuffix>
     <NoWarn>$(NoWarn);2008</NoWarn>
     <RoslynProjectType>Vsix</RoslynProjectType>
   </PropertyGroup>
@@ -28,7 +28,7 @@
   <PropertyGroup>
     <StartAction>Program</StartAction>
     <StartProgram>$(DevEnvDir)devenv.exe</StartProgram>
-    <StartArguments>/rootsuffix Roslyn</StartArguments>
+    <StartArguments>/rootsuffix RoslynDev</StartArguments>
   </PropertyGroup>
   <ItemGroup>
     <None Include="source.extension.vsixmanifest">
