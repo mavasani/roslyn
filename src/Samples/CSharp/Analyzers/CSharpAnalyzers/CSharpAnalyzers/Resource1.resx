@@ -118,15 +118,15 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AnalyzerDescription" xml:space="preserve">
-    <value>Declare explicit type for local declarations.</value>
+    <value>Secure types must not implement interfaces with unsecure methods.</value>
     <comment>An optional longer localizable description of the diagnostic.</comment>
   </data>
   <data name="AnalyzerMessageFormat" xml:space="preserve">
-    <value>Local '{0}' is implicitly typed. Consider specifying its type explicitly in the declaration.</value>
+    <value>Type '{0}' is a secure type as it implements interface '{1}', but it also implements interface '{2}' which has unsecure method(s).</value>
     <comment>The format-able message the diagnostic displays.</comment>
   </data>
   <data name="AnalyzerTitle" xml:space="preserve">
-    <value>Declare explicit type for local declarations.</value>
+    <value>Secure types must not implement interfaces with unsecure methods.</value>
     <comment>The title of the diagnostic.</comment>
   </data>
 </root>

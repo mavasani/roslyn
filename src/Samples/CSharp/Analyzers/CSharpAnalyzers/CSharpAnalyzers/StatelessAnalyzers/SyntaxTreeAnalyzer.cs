@@ -2,7 +2,9 @@
 
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace CSharpAnalyzers
@@ -20,7 +22,7 @@ namespace CSharpAnalyzers
         internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.SyntaxTreeAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
         internal static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.SyntaxTreeAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
         
-        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticIds.SyntaxTreeAnalyzerRuleId, Title, MessageFormat, DiagnosticCategories.Stateless, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
+        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor("CSharpAnalyzer", Title, MessageFormat, DiagnosticCategories.Stateless, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
 
         #endregion
 
@@ -28,18 +30,26 @@ namespace CSharpAnalyzers
 
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeAction(AnalyzeSyntaxTree);
-        }
-
-        private static void AnalyzeSyntaxTree(SyntaxTreeAnalysisContext context)
-        {
-            // Find source files with documentation comment diagnostics turned off.
-            if (context.Tree.Options.DocumentationMode != DocumentationMode.Diagnose)
+            context.RegisterSyntaxTreeAction(syntaxTreeContext =>
             {
-                // For all such files, produce a diagnostic.
-                var diagnostic = Diagnostic.Create(Rule, Location.None, Path.GetFileName(context.Tree.FilePath));
-                context.ReportDiagnostic(diagnostic);
-            }
+                // Iterate through all statements in the tree.
+                var root = syntaxTreeContext.Tree.GetRoot(syntaxTreeContext.CancellationToken);
+                foreach (var statement in root.DescendantNodes().OfType<StatementSyntax>())
+                {
+                    // Skip analyzing block statements.
+                    if (statement is BlockSyntax)
+                    {
+                        continue;
+                    }
+
+                    // Report issue for all statements that are nested within a statement, but not inside a block statement.
+                    if (statement.Parent is StatementSyntax && !(statement.Parent is BlockSyntax))
+                    {
+                        var diagnostic = Diagnostic.Create(Rule, statement.GetFirstToken().GetLocation());
+                        syntaxTreeContext.ReportDiagnostic(diagnostic);
+                    }
+                }
+            });
         }
     }
 }

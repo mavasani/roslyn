@@ -17,22 +17,22 @@ namespace CSharpAnalyzers.Test
             var test = @"
 namespace MyNamespace
 {
-    public class UnsecureMethodAttribute : System.Attribute { }
+    public class InsecureMethodAttribute : System.Attribute { }
 
     public interface ISecureType { }
 
-    public interface IUnsecureInterface
+    public interface IInsecureInterface
     {
-        [UnsecureMethodAttribute]
+        [InsecureMethodAttribute]
         void F();
     }
 
-    class MyInterfaceImpl1 : IUnsecureInterface
+    class MyInterfaceImpl1 : IInsecureInterface
     {
         public void F() {}
     }
 
-    class MyInterfaceImpl2 : IUnsecureInterface, ISecureType
+    class MyInterfaceImpl2 : IInsecureInterface, ISecureType
     {
         public void F() {}
     }
@@ -45,7 +45,7 @@ namespace MyNamespace
             var expected = new DiagnosticResult
             {
                 Id = DiagnosticIds.CompilationStartedAnalyzerWithCompilationWideAnalysisRuleId,
-                Message = string.Format(Resources.CompilationStartedAnalyzerWithCompilationWideAnalysisMessageFormat, "MyInterfaceImpl2", CompilationStartedAnalyzerWithCompilationWideAnalysis.SecureTypeInterfaceName, "IUnsecureInterface"),
+                Message = string.Format(Resources.CompilationStartedAnalyzerWithCompilationWideAnalysisMessageFormat, "MyInterfaceImpl2", CompilationStartedAnalyzerWithCompilationWideAnalysis.SecureTypeInterfaceName, "IInsecureInterface"),
                 Severity = DiagnosticSeverity.Warning,
                 Locations =
                     new[]

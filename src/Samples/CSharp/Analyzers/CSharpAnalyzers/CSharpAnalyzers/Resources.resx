@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="SymbolAnalyzerDescription" xml:space="preserve">
-    <value>Do not declare members with same name as containing type.</value>
+    <value>Do not declare members with same name as any outer type.</value>
     <comment>An optional longer localizable description of the diagnostic.</comment>
   </data>
   <data name="SymbolAnalyzerMessageFormat" xml:space="preserve">
@@ -178,15 +178,15 @@
     <comment>The title of the diagnostic.</comment>
   </data>
   <data name="SyntaxTreeAnalyzerDescription" xml:space="preserve">
-    <value>Do not suppress documentation comment diagnostics.</value>
+    <value>Enclose statement within curly braces</value>
     <comment>An optional longer localizable description of the diagnostic.</comment>
   </data>
   <data name="SyntaxTreeAnalyzerMessageFormat" xml:space="preserve">
-    <value>Enable documentation comment diagnostics on source file '{0}'.</value>
+    <value>'{' brace expected</value>
     <comment>The format-able message the diagnostic displays.</comment>
   </data>
   <data name="SyntaxTreeAnalyzerTitle" xml:space="preserve">
-    <value>Do not suppress documentation comment diagnostics</value>
+    <value>Enclose statement within curly braces</value>
     <comment>The title of the diagnostic.</comment>
   </data>
   <data name="CodeBlockStartedAnalyzerDescription" xml:space="preserve">

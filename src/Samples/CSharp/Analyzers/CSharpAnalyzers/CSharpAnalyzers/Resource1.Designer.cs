@@ -62,7 +62,7 @@ namespace CSharpAnalyzers {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Declare explicit type for local declarations..
+        ///   Looks up a localized string similar to Secure types must not implement interfaces with unsecure methods..
         /// </summary>
         internal static string AnalyzerDescription {
             get {
@@ -71,7 +71,7 @@ namespace CSharpAnalyzers {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Local &apos;{0}&apos; is implicitly typed. Consider specifying its type explicitly in the declaration..
+        ///   Looks up a localized string similar to Type &apos;{0}&apos; is a secure type as it implements interface &apos;{1}&apos;, but it also implements interface &apos;{2}&apos; which has unsecure method(s)..
         /// </summary>
         internal static string AnalyzerMessageFormat {
             get {
@@ -80,7 +80,7 @@ namespace CSharpAnalyzers {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Declare explicit type for local declarations..
+        ///   Looks up a localized string similar to Secure types must not implement interfaces with unsecure methods..
         /// </summary>
         internal static string AnalyzerTitle {
             get {

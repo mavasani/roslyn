@@ -17,6 +17,7 @@ namespace CSharpAnalyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class SymbolAnalyzer : DiagnosticAnalyzer
     {
+
         #region Descriptor fields
         public const string DiagnosticId = "CSharpAnalyzers";
         internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof(Resources));
@@ -49,13 +50,29 @@ namespace CSharpAnalyzers
                     }
 
                     outerType = outerType.ContainingType;
-                }                
+                }
             },
             SymbolKind.NamedType,
             SymbolKind.Method,
             SymbolKind.Field,
             SymbolKind.Event,
             SymbolKind.Property);
+        }
+    }
+}
+
+namespace ClassLibrary
+{
+    public class OuterClass
+    {
+        public class NestedClass
+        {
+            public class InnerClass
+            {
+                public class NestedClass
+                {
+                }
+            }
         }
     }
 }

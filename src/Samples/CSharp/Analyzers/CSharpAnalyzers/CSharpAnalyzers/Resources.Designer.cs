@@ -251,7 +251,7 @@ namespace CSharpAnalyzers {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Do not declare members with same name as containing type..
+        ///   Looks up a localized string similar to Do not declare members with same name as any outer type..
         /// </summary>
         internal static string SymbolAnalyzerDescription {
             get {
@@ -305,7 +305,7 @@ namespace CSharpAnalyzers {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Do not suppress documentation comment diagnostics..
+        ///   Looks up a localized string similar to Enclose statement within curly braces.
         /// </summary>
         internal static string SyntaxTreeAnalyzerDescription {
             get {
@@ -314,7 +314,7 @@ namespace CSharpAnalyzers {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Enable documentation comment diagnostics on source file &apos;{0}&apos;..
+        ///   Looks up a localized string similar to &apos;{&apos; brace expected.
         /// </summary>
         internal static string SyntaxTreeAnalyzerMessageFormat {
             get {
@@ -323,7 +323,7 @@ namespace CSharpAnalyzers {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Do not suppress documentation comment diagnostics.
+        ///   Looks up a localized string similar to Enclose statement within curly braces.
         /// </summary>
         internal static string SyntaxTreeAnalyzerTitle {
             get {

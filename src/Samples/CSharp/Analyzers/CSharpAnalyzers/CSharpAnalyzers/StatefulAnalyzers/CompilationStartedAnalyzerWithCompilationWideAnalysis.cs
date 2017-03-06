@@ -13,18 +13,18 @@ namespace CSharpAnalyzers
     /// <para>
     /// Analysis scenario:
     /// (a) You have an interface, which is a well-known secure interface, i.e. it is a marker for all secure types in an assembly.
-    /// (b) You have a method level attribute which marks the owning method as unsecure. An interface which has any member with such an attribute, must be considered unsecure.
-    /// (c) We want to report diagnostics for types implementing the well-known secure interface that also implement any unsecure interface.
+    /// (b) You have a method level attribute which marks the owning method as insecure. An interface which has any member with such an attribute, must be considered insecure.
+    /// (c) We want to report diagnostics for types implementing the well-known secure interface that also implement any insecure interface.
     /// 
     /// Analyzer performs compilation-wide analysis to detect such violating types and reports diagnostics for them in the compilation end action.
     /// </para>
     /// <para>
     /// The analyzer performs this analysis by registering:
     /// (a) A compilation start action, which initializes per-compilation state:
-    ///     (i) Immutable state: We fetch and store the type symbols for the well-known secure interface type and unsecure method attribute type in the compilation.
-    ///     (ii) Mutable state: We maintain a set of all types implementing well-known secure interface type and set of all interface types with an unsecure method.
-    /// (b) A compilation symbol action, which identifies all named types that implement the well-known secure interface, and all method symbols that have the unsecure method attribute.
-    /// (c) A compilation end action which reports diagnostics for types implementing the well-known secure interface that also implementing any unsecure interface.
+    ///     (i) Immutable state: We fetch and store the type symbols for the well-known secure interface type and insecure method attribute type in the compilation.
+    ///     (ii) Mutable state: We maintain a set of all types implementing well-known secure interface type and set of all interface types with an insecure method.
+    /// (b) A compilation symbol action, which identifies all named types that implement the well-known secure interface, and all method symbols that have the insecure method attribute.
+    /// (c) A compilation end action which reports diagnostics for types implementing the well-known secure interface that also implementing any insecure interface.
     /// </para>
     /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -36,11 +36,11 @@ namespace CSharpAnalyzers
         internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.CompilationStartedAnalyzerWithCompilationWideAnalysisMessageFormat), Resources.ResourceManager, typeof(Resources));
         internal static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.CompilationStartedAnalyzerWithCompilationWideAnalysisDescription), Resources.ResourceManager, typeof(Resources));
         
-        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticIds.CompilationStartedAnalyzerWithCompilationWideAnalysisRuleId, Title, MessageFormat, DiagnosticCategories.Stateful, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
+        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor("CSharpAnalyzers", Title, MessageFormat, DiagnosticCategories.Stateful, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
 
         #endregion
 
-        public const string UnsecureMethodAttributeName = "MyNamespace.UnsecureMethodAttribute";
+        public const string InsecureMethodAttributeName = "MyNamespace.InsecureMethodAttribute";
         public const string SecureTypeInterfaceName = "MyNamespace.ISecureType";
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
@@ -49,9 +49,9 @@ namespace CSharpAnalyzers
         {
             context.RegisterCompilationStartAction(compilationContext =>
             {
-                // Check if the attribute type marking unsecure methods is defined.
-                var unsecureMethodAttributeType = compilationContext.Compilation.GetTypeByMetadataName(UnsecureMethodAttributeName);
-                if (unsecureMethodAttributeType == null)
+                // Check if the attribute type marking Insecure methods is defined.
+                var InsecureMethodAttributeType = compilationContext.Compilation.GetTypeByMetadataName(InsecureMethodAttributeName);
+                if (InsecureMethodAttributeType == null)
                 {
                     return;
                 }
@@ -64,7 +64,7 @@ namespace CSharpAnalyzers
                 }
 
                 // Initialize state in the start action.
-                var analyzer = new CompilationAnalyzer(unsecureMethodAttributeType, secureTypeInterfaceType);
+                var analyzer = new CompilationAnalyzer(InsecureMethodAttributeType, secureTypeInterfaceType);
 
                 // Register an intermediate non-end action that accesses and modifies the state.
                 compilationContext.RegisterSymbolAction(analyzer.AnalyzeSymbol, SymbolKind.NamedType, SymbolKind.Method);
@@ -78,7 +78,7 @@ namespace CSharpAnalyzers
         {
             #region Per-Compilation immutable state
 
-            private readonly INamedTypeSymbol _unsecureMethodAttributeType;
+            private readonly INamedTypeSymbol _insecureMethodAttributeType;
             private readonly INamedTypeSymbol _secureTypeInterfaceType;
 
             #endregion
@@ -91,21 +91,21 @@ namespace CSharpAnalyzers
             private List<INamedTypeSymbol> _secureTypes;
 
             /// <summary>
-            /// Set of unsecure interface types in the compilation that have methods with an attribute of <see cref="_unsecureMethodAttributeType"/>.
+            /// Set of insecure interface types in the compilation that have methods with an attribute of <see cref="_insecureMethodAttributeType"/>.
             /// </summary>
-            private HashSet<INamedTypeSymbol> _interfacesWithUnsecureMethods;
+            private HashSet<INamedTypeSymbol> _interfacesWithInsecureMethods;
             
             #endregion
 
             #region State intialization
 
-            public CompilationAnalyzer(INamedTypeSymbol unsecureMethodAttributeType, INamedTypeSymbol secureTypeInterfaceType)
+            public CompilationAnalyzer(INamedTypeSymbol insecureMethodAttributeType, INamedTypeSymbol secureTypeInterfaceType)
             {
-                _unsecureMethodAttributeType = unsecureMethodAttributeType;
+                _insecureMethodAttributeType = insecureMethodAttributeType;
                 _secureTypeInterfaceType = secureTypeInterfaceType;
 
                 _secureTypes = null;
-                _interfacesWithUnsecureMethods = null;
+                _interfacesWithInsecureMethods = null;
             }
 
             #endregion
@@ -128,13 +128,13 @@ namespace CSharpAnalyzers
                         break;
 
                     case SymbolKind.Method:
-                        // Check if this is an interface method with "_unsecureMethodAttributeType" attribute.
+                        // Check if this is an interface method with "_insecureMethodAttributeType" attribute.
                         var method = (IMethodSymbol)context.Symbol;
                         if (method.ContainingType.TypeKind == TypeKind.Interface &&
-                            method.GetAttributes().Any(a => a.AttributeClass.Equals(_unsecureMethodAttributeType)))
+                            method.GetAttributes().Any(a => a.AttributeClass.Equals(_insecureMethodAttributeType)))
                         {
-                            _interfacesWithUnsecureMethods = _interfacesWithUnsecureMethods ?? new HashSet<INamedTypeSymbol>();
-                            _interfacesWithUnsecureMethods.Add(method.ContainingType);
+                            _interfacesWithInsecureMethods = _interfacesWithInsecureMethods ?? new HashSet<INamedTypeSymbol>();
+                            _interfacesWithInsecureMethods.Add(method.ContainingType);
                         }
 
                         break;
@@ -147,7 +147,7 @@ namespace CSharpAnalyzers
 
             public void CompilationEndAction(CompilationAnalysisContext context)
             {
-                if (_interfacesWithUnsecureMethods == null || _secureTypes == null)
+                if (_interfacesWithInsecureMethods == null || _secureTypes == null)
                 {
                     // No violating types.
                     return;
@@ -156,11 +156,11 @@ namespace CSharpAnalyzers
                 // Report diagnostic for violating named types.
                 foreach (var secureType in _secureTypes)
                 {
-                    foreach (var unsecureInterface in _interfacesWithUnsecureMethods)
+                    foreach (var insecureInterface in _interfacesWithInsecureMethods)
                     {
-                        if (secureType.AllInterfaces.Contains(unsecureInterface))
+                        if (secureType.AllInterfaces.Contains(insecureInterface))
                         {
-                            var diagnostic = Diagnostic.Create(Rule, secureType.Locations[0], secureType.Name, SecureTypeInterfaceName, unsecureInterface.Name);
+                            var diagnostic = Diagnostic.Create(Rule, secureType.Locations[0], secureType.Name, SecureTypeInterfaceName, insecureInterface.Name);
                             context.ReportDiagnostic(diagnostic);
 
                             break;

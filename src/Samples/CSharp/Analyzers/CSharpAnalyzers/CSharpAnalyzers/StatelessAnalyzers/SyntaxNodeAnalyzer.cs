@@ -24,7 +24,7 @@ namespace CSharpAnalyzers
         internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.SyntaxNodeAnalyzerTitle), Resources.ResourceManager, typeof(Resources));
         internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.SyntaxNodeAnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
         internal static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.SyntaxNodeAnalyzerDescription), Resources.ResourceManager, typeof(Resources));
-        
+
         internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticIds.SyntaxNodeAnalyzerRuleId, Title, MessageFormat, DiagnosticCategories.Stateless, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
 
         #endregion
@@ -59,3 +59,6 @@ namespace CSharpAnalyzers
         }
     }
 }
+
+
+
