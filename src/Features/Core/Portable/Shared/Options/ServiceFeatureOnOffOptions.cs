@@ -18,6 +18,10 @@ namespace Microsoft.CodeAnalysis.Shared.Options
             "ServiceFeaturesOnOff", "Closed File Diagnostic", defaultValue: null,
             storageLocations: new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.Closed File Diagnostic"));
 
+        public static readonly PerLanguageOption<bool> OptionalVSIXAnalyzers = new PerLanguageOption<bool>(
+            nameof(ServiceFeatureOnOffOptions), nameof(OptionalVSIXAnalyzers), defaultValue: true,
+            storageLocations: new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.OptionalVSIXAnalyzers"));
+
         public static bool IsClosedFileDiagnosticsEnabled(Project project)
         {
             return IsClosedFileDiagnosticsEnabled(project.Solution.Options, project.Language);
@@ -34,6 +38,11 @@ namespace Microsoft.CodeAnalysis.Shared.Options
             }
 
             return option.Value;
+        }
+
+        public static bool AreOptionalVsixAnalyzersSuppressed(Project project)
+        {
+            return !project.Solution.Workspace.Options.GetOption(OptionalVSIXAnalyzers, project.Language);
         }
     }
 }

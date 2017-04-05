@@ -682,6 +682,15 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Enable _live execution of optional Vsix analyzers.
+        /// </summary>
+        internal static string Optional_VSIX_Analyzers {
+            get {
+                return ResourceManager.GetString("Optional_VSIX_Analyzers", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Performance.
         /// </summary>
         internal static string Performance {

@@ -135,6 +135,9 @@
   <data name="Enable_full_solution_analysis" xml:space="preserve">
     <value>Enable full solution _analysis</value>
   </data>
+  <data name="Optional_VSIX_Analyzers" xml:space="preserve">
+    <value>Enable _live execution of optional Vsix analyzers</value>
+  </data>
   <data name="Show_procedure_line_separators" xml:space="preserve">
     <value>_Show procedure line separators</value>
   </data>

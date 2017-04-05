@@ -353,6 +353,15 @@ Namespace Microsoft.VisualStudio.LanguageServices.VisualBasic
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to Enable _live execution of optional Vsix analyzers.
+        '''</summary>
+        Friend Shared ReadOnly Property Optional_VSIX_Analyzers() As String
+            Get
+                Return ResourceManager.GetString("Optional_VSIX_Analyzers", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to Performance.
         '''</summary>
         Friend Shared ReadOnly Property Performance() As String

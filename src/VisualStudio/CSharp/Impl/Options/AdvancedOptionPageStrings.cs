@@ -14,6 +14,11 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
             get { return CSharpVSResources.Enable_full_solution_analysis; }
         }
 
+        public static string Option_OptionalVSIXAnalyzers
+        {
+            get { return CSharpVSResources.Optional_VSIX_Analyzers; }
+        }
+
         public static string Option_RenameTrackingPreview => CSharpVSResources.Show_preview_for_rename_tracking;
         public static string Option_Split_string_literals_on_enter => CSharpVSResources.Split_string_literals_on_enter;
 

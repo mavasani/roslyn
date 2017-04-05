@@ -75,6 +75,8 @@
                               Content="{x:Static local:AdvancedOptionPageStrings.Option_GenerateXmlDocCommentsForTripleApostrophes}" />
                     <CheckBox x:Name="ClosedFileDiagnostics"
                               Content="{x:Static local:AdvancedOptionPageStrings.Option_ClosedFileDiagnostics}" />
+                    <CheckBox x:Name="OptionalVSIXAnalyzers"
+                              Content="{x:Static local:AdvancedOptionPageStrings.Option_OptionalVSIXAnalyzers}" />
                     <CheckBox x:Name="RenameTrackingPreview"
                               Content="{x:Static local:AdvancedOptionPageStrings.Option_RenameTrackingPreview}" />
                 </StackPanel>

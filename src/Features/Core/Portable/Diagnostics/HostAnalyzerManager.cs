@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis.Diagnostics.Log;
+using Microsoft.CodeAnalysis.Shared.Options;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Diagnostics
@@ -64,7 +65,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <summary>
         /// map from host diagnostic analyzer to package name it came from
         /// </summary>
-        private ImmutableDictionary<DiagnosticAnalyzer, string> _hostDiagnosticAnalyzerPackageNameMap;
+        private ImmutableDictionary<DiagnosticAnalyzer, (string name, bool isOptional)> _hostDiagnosticAnalyzerPackageNameAndIsOptionalMap;
 
         /// <summary>
         /// map to compiler diagnostic analyzer descriptor.
@@ -99,7 +100,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             _compilerDiagnosticAnalyzerMap = ImmutableDictionary<string, DiagnosticAnalyzer>.Empty;
             _compilerDiagnosticAnalyzerDescriptorMap = ImmutableDictionary<DiagnosticAnalyzer, HashSet<string>>.Empty;
-            _hostDiagnosticAnalyzerPackageNameMap = ImmutableDictionary<DiagnosticAnalyzer, string>.Empty;
+            _hostDiagnosticAnalyzerPackageNameAndIsOptionalMap = ImmutableDictionary<DiagnosticAnalyzer, (string name, bool isOptional)>.Empty;
             _descriptorCache = new ConditionalWeakTable<DiagnosticAnalyzer, IReadOnlyCollection<DiagnosticDescriptor>>();
 
             DiagnosticAnalyzerLogger.LogWorkspaceAnalyzers(hostAnalyzerReferences);
@@ -160,6 +161,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public bool IsAnalyzerSuppressed(DiagnosticAnalyzer analyzer, Project project)
         {
+            if (ServiceFeatureOnOffOptions.AreOptionalVsixAnalyzersSuppressed(project) &&
+                _hostDiagnosticAnalyzerPackageNameAndIsOptionalMap.TryGetValue(analyzer, out var value) &&
+                value.isOptional)
+            {
+                return true;
+            }
+
             var options = project.CompilationOptions;
             if (options == null || IsCompilerDiagnosticAnalyzer(project.Language, analyzer))
             {
@@ -275,12 +283,26 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public string GetDiagnosticAnalyzerPackageName(string language, DiagnosticAnalyzer analyzer)
         {
             var map = GetHostDiagnosticAnalyzersPerReference(language);
-            if (_hostDiagnosticAnalyzerPackageNameMap.TryGetValue(analyzer, out var name))
+            if (_hostDiagnosticAnalyzerPackageNameAndIsOptionalMap.TryGetValue(analyzer, out (string name, bool isOptional) nameAndIsOptional))
             {
-                return name;
+                return nameAndIsOptional.name;
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Get the value of the flag IsOptionBased in the vsix manifest which Host <see cref="DiagnosticAnalyzer"/> is from.
+        /// </summary>
+        public bool GetDiagnosticAnalyzerIsOptional(string language, DiagnosticAnalyzer analyzer)
+        {
+            var map = GetHostDiagnosticAnalyzersPerReference(language);
+            if (_hostDiagnosticAnalyzerPackageNameAndIsOptionalMap.TryGetValue(analyzer, out (string name, bool isOptional) nameAndIsOptional))
+            {
+                return nameAndIsOptional.isOptional;
+            }
+
+            return false;
         }
 
         private ImmutableDictionary<object, AnalyzerReference> CreateProjectAnalyzerReferencesMap(Project project)
@@ -316,7 +338,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             Contract.ThrowIfNull(language);
 
-            var nameMap = CreateAnalyzerPathToPackageNameMap();
+            ImmutableDictionary<string, (string name, bool isOptional)> nameAndIsOptionalMap = CreateAnalyzerPathToPackageNameAndIsOptionalMap();
 
             var builder = ImmutableDictionary.CreateBuilder<object, ImmutableArray<DiagnosticAnalyzer>>();
             foreach (var kv in _hostAnalyzerReferencesMap)
@@ -332,7 +354,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 UpdateCompilerAnalyzerMapIfNeeded(language, analyzers);
 
-                UpdateDiagnosticAnalyzerToPackageNameMap(nameMap, reference, analyzers);
+                UpdateDiagnosticAnalyzerToPackageNameMap(nameAndIsOptionalMap, reference, analyzers);
 
                 // there can't be duplication since _hostAnalyzerReferenceMap is already de-duplicated.
                 builder.Add(referenceIdentity, analyzers);
@@ -342,7 +364,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         private void UpdateDiagnosticAnalyzerToPackageNameMap(
-            ImmutableDictionary<string, string> nameMap,
+            ImmutableDictionary<string, (string name, bool isOptional)> nameAndIsOptionalMap,
             AnalyzerReference reference,
             ImmutableArray<DiagnosticAnalyzer> analyzers)
         {
@@ -352,20 +374,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return;
             }
 
-            if (!nameMap.TryGetValue(fileReference.FullPath, out var name))
+            if (!nameAndIsOptionalMap.TryGetValue(fileReference.FullPath, out (string name, bool isOptional) nameAndIsOptional))
             {
                 return;
             }
 
             foreach (var analyzer in analyzers)
             {
-                ImmutableInterlocked.GetOrAdd(ref _hostDiagnosticAnalyzerPackageNameMap, analyzer, _ => name);
+                ImmutableInterlocked.GetOrAdd(ref _hostDiagnosticAnalyzerPackageNameAndIsOptionalMap, analyzer, _ => nameAndIsOptional);
             }
         }
 
-        private ImmutableDictionary<string, string> CreateAnalyzerPathToPackageNameMap()
+        private ImmutableDictionary<string, (string name, bool isOptional)> CreateAnalyzerPathToPackageNameAndIsOptionalMap()
         {
-            var builder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.OrdinalIgnoreCase);
+            var builder = ImmutableDictionary.CreateBuilder<string, (string name, bool isOptional)>(StringComparer.OrdinalIgnoreCase);
             foreach (var package in _hostDiagnosticAnalyzerPackages)
             {
                 if (string.IsNullOrEmpty(package.Name))
@@ -373,11 +395,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     continue;
                 }
 
-                foreach (var assembly in package.Assemblies)
+                foreach (var assemblyAndIsOptional in package.AssembliesWithOptionalFlag)
                 {
-                    if (!builder.ContainsKey(assembly))
+                    if (!builder.ContainsKey(assemblyAndIsOptional.Assembly))
                     {
-                        builder.Add(assembly, package.Name);
+                        builder.Add(assemblyAndIsOptional.Assembly, (package.Name, assemblyAndIsOptional.IsOptional));
                     }
                 }
             }
@@ -464,7 +486,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             Contract.ThrowIfNull(hostAnalyzerAssemblyLoader);
 
-            var analyzerAssemblies = analyzerPackages.SelectMany(p => p.Assemblies);
+            var analyzerAssemblies = analyzerPackages.SelectMany(p => p.AssembliesWithOptionalFlag.Select(assemblyWithIsOptional => assemblyWithIsOptional.Assembly));
 
             var builder = ImmutableArray.CreateBuilder<AnalyzerReference>();
             foreach (var analyzerAssembly in analyzerAssemblies.Distinct(StringComparer.OrdinalIgnoreCase))

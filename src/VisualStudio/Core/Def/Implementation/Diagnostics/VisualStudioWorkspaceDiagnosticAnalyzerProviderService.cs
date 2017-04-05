@@ -7,8 +7,10 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Editor.Shared.Options;
 using Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem;
 using Microsoft.VisualStudio.Shell;
 using Roslyn.Utilities;
@@ -26,9 +28,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Diagnostics
         public const string MicrosoftCodeAnalysisVisualBasic = "Microsoft.CodeAnalysis.VisualBasic.dll";
 
         private const string AnalyzerContentTypeName = "Microsoft.VisualStudio.Analyzer";
+        private const string AnalyzerIsOptionBasedAttributeName = "IsOptionBased";
 
+        private readonly VisualStudioWorkspaceImpl _workspace;
         private readonly ImmutableArray<HostDiagnosticAnalyzerPackage> _hostDiagnosticAnalyzerInfo;
-
+        
         /// <summary>
         /// Loader for VSIX-based analyzers.
         /// </summary>
@@ -36,8 +40,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Diagnostics
 
         [ImportingConstructor]
         public VisualStudioWorkspaceDiagnosticAnalyzerProviderService(
+            VisualStudioWorkspaceImpl workspace,
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider)
         {
+            _workspace = workspace;
+
             var dte = (EnvDTE.DTE)serviceProvider.GetService(typeof(EnvDTE.DTE));
 
             // Microsoft.VisualStudio.ExtensionManager is non-versioned, so we need to dynamically load it, depending on the version of VS we are running on
@@ -96,7 +103,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Diagnostics
                 var extension_HeaderType_LocalizedNameProperty = extension_HeaderType.GetRuntimeProperty("LocalizedName");
                 var name = extension_HeaderType_LocalizedNameProperty.GetValue(extension_Header) as string;
 
-                var assemblies = ImmutableArray.CreateBuilder<string>();
+                var assemblies = ImmutableArray.CreateBuilder<(string assembly, bool isOptional)>();
 
                 // var extension_Content = extension.Content;
                 var extensionType_ContentProperty = extensionType.GetRuntimeProperty("Content");
@@ -116,7 +123,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Diagnostics
                         continue;
                     }
 
-                    assemblies.Add(assembly);
+                    var isOptional = IsOptionBasedAnalyzer(content);
+                    assemblies.Add((assembly, isOptional));
                 }
 
                 builder.Add(new HostDiagnosticAnalyzerPackage(name, assemblies.ToImmutable()));
@@ -137,8 +145,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Diagnostics
         {
             foreach (var package in packages)
             {
-                if (package.Assemblies.Any(a => a?.EndsWith(MicrosoftCodeAnalysisCSharp, StringComparison.OrdinalIgnoreCase) == true) &&
-                    package.Assemblies.Any(a => a?.EndsWith(MicrosoftCodeAnalysisVisualBasic, StringComparison.OrdinalIgnoreCase) == true))
+                if (package.AssembliesWithOptionalFlag.Any(a => a.Assembly?.EndsWith(MicrosoftCodeAnalysisCSharp, StringComparison.OrdinalIgnoreCase) == true) &&
+                    package.AssembliesWithOptionalFlag.Any(a => a.Assembly?.EndsWith(MicrosoftCodeAnalysisVisualBasic, StringComparison.OrdinalIgnoreCase) == true))
                 {
                     return;
                 }
@@ -150,7 +158,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Diagnostics
         // internal for testing purpose
         internal static ImmutableArray<HostDiagnosticAnalyzerPackage> GetHostAnalyzerPackages(dynamic extensionManager)
         {
-            var references = ImmutableArray.CreateBuilder<string>();
+            var references = ImmutableArray.CreateBuilder<(string assembly, bool isOptional)>();
             foreach (var reference in extensionManager.GetEnabledExtensionContentLocations(AnalyzerContentTypeName))
             {
                 if (string.IsNullOrEmpty((string)reference))
@@ -158,7 +166,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Diagnostics
                     continue;
                 }
 
-                references.Add((string)reference);
+                references.Add(((string)reference, false));
             }
 
             return ImmutableArray.Create(new HostDiagnosticAnalyzerPackage(name: null, assemblies: references.ToImmutable()));
@@ -172,6 +180,25 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Diagnostics
             var content_ContentTypeName = contentType_ContentTypeNameProperty.GetValue(content) as string;
 
             return string.Equals(content_ContentTypeName, AnalyzerContentTypeName, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        private static bool IsOptionBasedAnalyzer(object content)
+        {
+            var contentType = content.GetType();
+            var contentType_AttributesProperty = contentType.GetRuntimeProperty("Attributes");
+            var attributes = contentType_AttributesProperty.GetValue(content) as IDictionary<string, string>;
+            foreach (var attribute in attributes)
+            {
+                if (attribute.Key.Equals(AnalyzerIsOptionBasedAttributeName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    if (bool.TryParse(attribute.Value, out var isOptionBased))
+                    {
+                        return isOptionBased;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }

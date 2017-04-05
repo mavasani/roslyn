@@ -259,7 +259,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                         var buildToolName = analyzer == compilerAnalyzer ?
                             PredefinedBuildTools.Live : GetBuildToolName(analyzerManager, language, analyzer);
 
-                        builder.Add(analyzer, new StateSet(language, analyzer, buildToolName));
+                        var isOptional = analyzerManager.GetDiagnosticAnalyzerIsOptional(language, analyzer);
+
+                        builder.Add(analyzer, new StateSet(language, analyzer, buildToolName, isOptional));
                     }
                 }
 

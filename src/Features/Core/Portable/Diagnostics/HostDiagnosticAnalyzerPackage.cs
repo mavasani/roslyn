@@ -10,12 +10,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     internal class HostDiagnosticAnalyzerPackage
     {
         public readonly string Name;
-        public readonly ImmutableArray<string> Assemblies;
+        public readonly ImmutableArray<(string Assembly, bool IsOptional)> AssembliesWithOptionalFlag;
 
-        public HostDiagnosticAnalyzerPackage(string name, ImmutableArray<string> assemblies)
+        public HostDiagnosticAnalyzerPackage(string name, ImmutableArray<(string assembly, bool isOptional)> assemblies)
         {
             this.Name = name;
-            this.Assemblies = assemblies;
+            this.AssembliesWithOptionalFlag = assemblies;
         }
     }
 }

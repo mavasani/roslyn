@@ -93,6 +93,12 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
             set { SetBooleanOption(ServiceFeatureOnOffOptions.ClosedFileDiagnostic, value); }
         }
 
+        public int OptionalVSIXAnalyzers
+        {
+            get { return GetBooleanOption(ServiceFeatureOnOffOptions.OptionalVSIXAnalyzers); }
+            set { SetBooleanOption(ServiceFeatureOnOffOptions.OptionalVSIXAnalyzers, value); }
+        }
+
         public int DisplayLineSeparators
         {
             get { return GetBooleanOption(FeatureOnOffOptions.LineSeparator); }

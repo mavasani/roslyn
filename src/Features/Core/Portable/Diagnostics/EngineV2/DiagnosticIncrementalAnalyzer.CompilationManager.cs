@@ -43,7 +43,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                 if (_map.TryGetValue(project, out var analyzerDriverOpt))
                 {
                     // we have cached one, return that.
-                    AssertAnalyzers(analyzerDriverOpt, stateSets);
+                    AssertAnalyzers(analyzerDriverOpt, stateSets, project);
                     return analyzerDriverOpt;
                 }
 
@@ -57,7 +57,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                 // if somebody has beat us, make sure analyzers are good.
                 if (analyzerDriverOpt != newAnalyzerDriverOpt)
                 {
-                    AssertAnalyzers(analyzerDriverOpt, stateSets);
+                    AssertAnalyzers(analyzerDriverOpt, stateSets, project);
                 }
 
                 // return driver
@@ -85,6 +85,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                     project, compilation, analyzers, logAnalyzerExecutionTime: false, reportSuppressedDiagnostics: includeSuppressedDiagnostics);
             }
 
+            private bool ShouldSkipAnalyzer(DiagnosticAnalyzer analyzer, Project project) =>
+                analyzer.IsWorkspaceDiagnosticAnalyzer() || _owner.HostAnalyzerManager.IsAnalyzerSuppressed(analyzer, project);
+
             private CompilationWithAnalyzers CreateAnalyzerDriver(
                 Project project,
                 Compilation compilation,
@@ -92,7 +95,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                 bool logAnalyzerExecutionTime,
                 bool reportSuppressedDiagnostics)
             {
-                var analyzers = allAnalyzers.Where(a => !a.IsWorkspaceDiagnosticAnalyzer()).ToImmutableArrayOrEmpty();
+                var analyzers = allAnalyzers.Where(a => !ShouldSkipAnalyzer(a, project)).ToImmutableArrayOrEmpty();
 
                 // PERF: there is no analyzers for this compilation.
                 //       compilationWithAnalyzer will throw if it is created with no analyzers which is perf optimization.
@@ -157,7 +160,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
             }
 
             [Conditional("DEBUG")]
-            private void AssertAnalyzers(CompilationWithAnalyzers analyzerDriver, IEnumerable<StateSet> stateSets)
+            private void AssertAnalyzers(CompilationWithAnalyzers analyzerDriver, IEnumerable<StateSet> stateSets, Project project)
             {
                 if (analyzerDriver == null)
                 {
@@ -166,7 +169,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                 }
 
                 // make sure analyzers are same.
-                Contract.ThrowIfFalse(analyzerDriver.Analyzers.SetEquals(stateSets.Select(s => s.Analyzer).Where(a => !a.IsWorkspaceDiagnosticAnalyzer())));
+                Contract.ThrowIfFalse(analyzerDriver.Analyzers.SetEquals(stateSets.Select(s => s.Analyzer).Where(a => !ShouldSkipAnalyzer(a, project))));
             }
 
             [Conditional("DEBUG")]

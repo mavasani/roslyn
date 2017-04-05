@@ -21,6 +21,12 @@ Namespace Microsoft.VisualStudio.LanguageServices.VisualBasic.Options
             End Get
         End Property
 
+        Public ReadOnly Property Option_OptionalVSIXAnalyzers As String
+            Get
+                Return BasicVSResources.Optional_VSIX_Analyzers
+            End Get
+        End Property
+
         Public ReadOnly Property Option_DisplayLineSeparators As String
             Get
                 Return BasicVSResources.Show_procedure_line_separators

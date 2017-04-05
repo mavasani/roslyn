@@ -42,6 +42,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
             BindToOption(EnableHighlightKeywords, FeatureOnOffOptions.KeywordHighlighting, LanguageNames.CSharp);
             BindToOption(RenameTrackingPreview, FeatureOnOffOptions.RenameTrackingPreview, LanguageNames.CSharp);
             BindToFullSolutionAnalysisOption(ClosedFileDiagnostics, LanguageNames.CSharp);
+            BindToOption(OptionalVSIXAnalyzers, ServiceFeatureOnOffOptions.OptionalVSIXAnalyzers, LanguageNames.CSharp);
 
             BindToOption(DontPutOutOrRefOnStruct, ExtractMethodOptions.DontPutOutOrRefOnStruct, LanguageNames.CSharp);
             BindToOption(AllowMovingDeclaration, ExtractMethodOptions.AllowMovingDeclaration, LanguageNames.CSharp);

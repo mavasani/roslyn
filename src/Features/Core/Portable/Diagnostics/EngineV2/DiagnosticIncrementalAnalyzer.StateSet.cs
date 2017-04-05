@@ -22,6 +22,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
             private readonly string _language;
             private readonly DiagnosticAnalyzer _analyzer;
             private readonly string _errorSourceName;
+            private readonly bool _isOptional;
 
             // analyzer version this state belong to
             private readonly VersionStamp _analyzerVersion;
@@ -35,11 +36,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
             private readonly ConcurrentDictionary<DocumentId, ActiveFileState> _activeFileStates;
             private readonly ConcurrentDictionary<ProjectId, ProjectState> _projectStates;
 
-            public StateSet(string language, DiagnosticAnalyzer analyzer, string errorSourceName)
+            public StateSet(string language, DiagnosticAnalyzer analyzer, string errorSourceName, bool isOptional)
             {
                 _language = language;
                 _analyzer = analyzer;
                 _errorSourceName = errorSourceName;
+                _isOptional = isOptional;
 
                 var nameAndVersion = GetNameAndVersion(_analyzer);
                 _analyzerVersion = nameAndVersion.Item2;
@@ -61,6 +63,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
 
             public string Language => _language;
             public string ErrorSourceName => _errorSourceName;
+            public bool IsOptional => _isOptional;
 
             public DiagnosticAnalyzer Analyzer => _analyzer;
             public VersionStamp AnalyzerVersion => _analyzerVersion;

@@ -71,6 +71,15 @@ Namespace Microsoft.VisualStudio.LanguageServices.VisualBasic.Options
             End Set
         End Property
 
+        Public Property OptionalVSIXAnalyzers As Boolean
+            Get
+                Return GetBooleanOption(ServiceFeatureOnOffOptions.OptionalVSIXAnalyzers)
+            End Get
+            Set(value As Boolean)
+                SetBooleanOption(ServiceFeatureOnOffOptions.OptionalVSIXAnalyzers, value)
+            End Set
+        End Property
+
         Public Property RenameTrackingPreview As Boolean
             Get
                 Return GetBooleanOption(FeatureOnOffOptions.RenameTrackingPreview)
