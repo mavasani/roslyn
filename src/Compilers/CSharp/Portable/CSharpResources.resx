@@ -2123,6 +2123,12 @@ If such a class is used as a base class and if the deriving class defines a dest
   <data name="ERR_ImplicitlyTypedVariableCannotBeConst" xml:space="preserve">
     <value>Implicitly-typed variables cannot be constant</value>
   </data>
+  <data name="WRN_ImplicitlyTypedVariableNotRecommended" xml:space="preserve">
+    <value>Use an explicit type for declaration as the initializer type '{0}' is not apparent due to conversions</value>
+  </data>
+  <data name="WRN_ImplicitlyTypedVariableNotRecommended_Title" xml:space="preserve">
+    <value>Use an explicit type for declaration as the initializer type is not apparent due to conversions</value>
+  </data>
   <data name="WRN_ExternCtorNoImplementation" xml:space="preserve">
     <value>Constructor '{0}' is marked external</value>
   </data>

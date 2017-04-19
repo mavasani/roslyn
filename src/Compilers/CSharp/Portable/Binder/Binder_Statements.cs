@@ -699,6 +699,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Error(diagnostics, ErrorCode.ERR_ImplicitlyTypedVariableAssignedBadValue, errorSyntax, expression.Display);
             }
 
+            if (expression.Kind == BoundKind.BinaryOperator)
+            {
+                var binaryOperation = (BoundBinaryOperator)expression;
+                if (!binaryOperation.Left.GetConversion().IsIdentity || !binaryOperation.Right.GetConversion().IsIdentity)
+                {
+                    // Use an explicit type for declaration as the initializer type '{0}' is not apparent due to conversions.
+                    Error(diagnostics, ErrorCode.WRN_ImplicitlyTypedVariableNotRecommended, errorSyntax, expression.Display);
+                }
+            }
+
             return expression;
         }
 

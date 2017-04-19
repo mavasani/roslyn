@@ -563,6 +563,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_ImplicitlyTypedVariableAssignedArrayInitializer = 820,      // Dev10 name: ERR_ImplicitlyTypedLocalAssignedArrayInitializer
         ERR_ImplicitlyTypedLocalCannotBeFixed = 821,
         ERR_ImplicitlyTypedVariableCannotBeConst = 822,                 // Dev10 name: ERR_ImplicitlyTypedLocalCannotBeConst
+        WRN_ImplicitlyTypedVariableNotRecommended = 823,
         WRN_ExternCtorNoImplementation = 824,
         ERR_TypeVarNotFound = 825,
         ERR_ImplicitlyTypedArrayNoBestType = 826,

@@ -12647,6 +12647,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Use an explicit type for declaration as the initializer type &apos;{0}&apos; is not apparent due to conversions.
+        /// </summary>
+        internal static string WRN_ImplicitlyTypedVariableNotRecommended {
+            get {
+                return ResourceManager.GetString("WRN_ImplicitlyTypedVariableNotRecommended", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use an explicit type for declaration as the initializer type is not apparent due to conversions.
+        /// </summary>
+        internal static string WRN_ImplicitlyTypedVariableNotRecommended_Title {
+            get {
+                return ResourceManager.GetString("WRN_ImplicitlyTypedVariableNotRecommended_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Assignment in conditional expression is always constant; did you mean to use == instead of = ?.
         /// </summary>
         internal static string WRN_IncorrectBooleanAssg {
