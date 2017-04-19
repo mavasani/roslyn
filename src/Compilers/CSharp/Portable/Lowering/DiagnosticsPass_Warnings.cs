@@ -201,6 +201,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var field2 = expr2 as BoundFieldAccess;
                     return field1.FieldSymbol == field2.FieldSymbol &&
                         (field1.FieldSymbol.IsStatic || IsSameLocalOrField(field1.ReceiverOpt, field2.ReceiverOpt));
+                case BoundKind.PropertyAccess:
+                    var prop1 = expr1 as BoundPropertyAccess;
+                    var prop2 = expr2 as BoundPropertyAccess;
+                    return prop1.PropertySymbol == prop2.PropertySymbol &&
+                        (prop1.PropertySymbol.IsStatic || IsSameLocalOrField(prop1.ReceiverOpt, prop2.ReceiverOpt));
                 case BoundKind.EventAccess:
                     var event1 = expr1 as BoundEventAccess;
                     var event2 = expr2 as BoundEventAccess;
