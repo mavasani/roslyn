@@ -315,6 +315,11 @@ namespace Microsoft.CodeAnalysis.Semantics
             DefaultVisit(operation);
         }
 
+        public virtual void VisitCollectionElementInitializerExpression(ICollectionElementInitializerExpression operation)
+        {
+            DefaultVisit(operation);
+        }
+
         public virtual void VisitFieldInitializer(IFieldInitializer operation)
         {
             DefaultVisit(operation);
@@ -711,6 +716,11 @@ namespace Microsoft.CodeAnalysis.Semantics
         }
 
         public virtual TResult VisitObjectCreationExpression(IObjectCreationExpression operation, TArgument argument)
+        {
+            return DefaultVisit(operation, argument);
+        }
+
+        public virtual TResult VisitCollectionElementInitializerExpression(ICollectionElementInitializerExpression operation, TArgument argument)
         {
             return DefaultVisit(operation, argument);
         }

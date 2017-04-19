@@ -869,7 +869,25 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             LogCommonPropertiesAndNewLine(operation);
 
             VisitArguments(operation);
-            VisitArray(operation.MemberInitializers, "Member Initializers", logElementCount: true);
+            VisitArray(operation.Initializers, "Initializers", logElementCount: true);
+        }
+
+        public override void VisitCollectionElementInitializerExpression(ICollectionElementInitializerExpression operation)
+        {
+            LogString(nameof(ICollectionElementInitializerExpression));
+            if (operation.ApplicableMethods.Length == 1)
+            {
+                LogString($" (Method invoked: {operation.ApplicableMethods[0].ToTestDisplayString()})");
+            }
+            else if (operation.ApplicableMethods.Length > 1)
+            {
+                LogString($" (Applicable methods({operation.ApplicableMethods.Length}): ({string.Join(",", operation.ApplicableMethods.Select(m => m.ToTestDisplayString()))})");
+            }
+
+            LogString($" (IsDynamic: {operation.IsDynamic})");
+            LogCommonPropertiesAndNewLine(operation);
+
+            VisitArguments(operation);
         }
 
         public override void VisitFieldInitializer(IFieldInitializer operation)

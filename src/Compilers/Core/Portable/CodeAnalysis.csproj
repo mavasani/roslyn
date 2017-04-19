@@ -96,6 +96,7 @@
     <Compile Include="Operations\InstanceReferenceKind.cs" />
     <Compile Include="Operations\INullCoalescingExpression.cs" />
     <Compile Include="Operations\InvocationExpression_IHasArgumentsExpression.cs" />
+    <Compile Include="Operations\ICollectionElementInitializerExpression.cs" />
     <Compile Include="Operations\IObjectCreationExpression.cs" />
     <Compile Include="Operations\IOmittedArgumentExpression.cs" />
     <Compile Include="Operations\ObjectCreationExpression_IHasArgumentsExpression.cs" />

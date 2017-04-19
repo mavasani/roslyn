@@ -5,22 +5,23 @@ using System.Collections.Immutable;
 namespace Microsoft.CodeAnalysis.Semantics
 {
     /// <summary>
-    /// Represents a new/New expression.
+    /// Represents a collection element initializer expression.
     /// </summary>
     /// <remarks>
     /// This interface is reserved for implementation by its associated APIs. We reserve the right to
     /// change it in the future.
     /// </remarks>
-    public interface IObjectCreationExpression : IHasArgumentsExpression
+    public interface ICollectionElementInitializerExpression : IHasArgumentsExpression
     {
         /// <summary>
-        /// Constructor to be invoked on the created instance.
+        /// Set of applicable methods for an implicit dynamic invocation OR the implicit Add method symbol for non-dynamic invocation.
         /// </summary>
-        IMethodSymbol Constructor { get; }
+        ImmutableArray<IMethodSymbol> ApplicableMethods { get; }
+
         /// <summary>
-        /// Explicitly-specified member or collection initializers.
+        /// Flag indicating if this is a dynamic initializer invocation.
         /// </summary>
-        ImmutableArray<IOperation> Initializers { get; }
+        bool IsDynamic { get; }
     }
 }
 

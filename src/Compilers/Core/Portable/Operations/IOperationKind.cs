@@ -126,6 +126,8 @@ namespace Microsoft.CodeAnalysis
         ConditionalAccessExpression = 0x11c,
         /// <summary>Indicates an <see cref="IConditionalAccessInstanceExpression"/>.</summary>
         ConditionalAccessInstanceExpression = 0x11d,
+        /// <summary>Indicates an <see cref="ICollectionElementInitializerExpression"/>.</summary>
+        CollectionElementInitializerExpression = 0x11e,
 
         // Expressions that occur only in C#.
 

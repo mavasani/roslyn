@@ -126,6 +126,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             return arguments.ToImmutableAndFree();
         }
 
+        internal static ImmutableArray<IArgument> DeriveArguments(ImmutableArray<BoundExpression> boundArguments, SyntaxNode syntax)
+        {
+            var builder = ArrayBuilder<IArgument>.GetInstance(boundArguments.Length);
+            foreach (var boundArgument in boundArguments)
+            {
+                builder.Add(new SimpleArgument(null, boundArgument));
+            }
+
+            return builder.ToImmutableAndFree();
+        }
+
         private static readonly ConditionalWeakTable<BoundExpression, IArgument> s_argumentMappings = new ConditionalWeakTable<BoundExpression, IArgument>();
 
         private static IArgument DeriveArgument(int parameterIndex, int argumentIndex, ImmutableArray<BoundExpression> boundArguments, ImmutableArray<string> argumentNamesOpt, ImmutableArray<RefKind> argumentRefKindsOpt, ImmutableArray<Symbols.ParameterSymbol> parameters, SyntaxNode invocationSyntax)
@@ -511,48 +522,32 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal partial class BoundObjectCreationExpression : IObjectCreationExpression
     {
-        private static readonly ConditionalWeakTable<BoundObjectCreationExpression, object> s_memberInitializersMappings =
-            new ConditionalWeakTable<BoundObjectCreationExpression, object>();
-
         IMethodSymbol IObjectCreationExpression.Constructor => this.Constructor;
 
         ImmutableArray<IArgument> IHasArgumentsExpression.ArgumentsInEvaluationOrder => BoundCall.DeriveArguments(this.Arguments, this.ArgumentNamesOpt, this.ArgsToParamsOpt, this.ArgumentRefKindsOpt, this.Constructor.Parameters, this.Syntax);
 
-        ImmutableArray<ISymbolInitializer> IObjectCreationExpression.MemberInitializers
+        ImmutableArray<IOperation> IObjectCreationExpression.Initializers
         {
             get
             {
-                return (ImmutableArray<ISymbolInitializer>)s_memberInitializersMappings.GetValue(this,
-                    objectCreationExpression =>
-                    {
-                        var objectInitializerExpression = this.InitializerExpressionOpt as BoundObjectInitializerExpression;
-                        if (objectInitializerExpression != null)
-                        {
-                            var builder = ArrayBuilder<ISymbolInitializer>.GetInstance(objectInitializerExpression.Initializers.Length);
-                            foreach (var memberAssignment in objectInitializerExpression.Initializers)
-                            {
-                                var assignment = memberAssignment as BoundAssignmentOperator;
-                                var leftSymbol = (assignment?.Left as BoundObjectInitializerMember)?.MemberSymbol;
+                if (this.InitializerExpressionOpt == null)
+                {
+                    return ImmutableArray<IOperation>.Empty;
+                }
 
-                                if ((object)leftSymbol == null)
-                                {
-                                    continue;
-                                }
+                var objectInitializerExpression = this.InitializerExpressionOpt as BoundObjectInitializerExpression;
+                if (objectInitializerExpression != null)
+                {
+                    return objectInitializerExpression.Initializers.As<IOperation>();
+                }
 
-                                switch (leftSymbol.Kind)
-                                {
-                                    case SymbolKind.Field:
-                                        builder.Add(new FieldInitializer(assignment.Syntax, (IFieldSymbol)leftSymbol, assignment.Right));
-                                        break;
-                                    case SymbolKind.Property:
-                                        builder.Add(new PropertyInitializer(assignment.Syntax, (IPropertySymbol)leftSymbol, assignment.Right));
-                                        break;
-                                }
-                            }
-                            return builder.ToImmutableAndFree();
-                        }
-                        return ImmutableArray<ISymbolInitializer>.Empty;
-                    });
+                var collectionInitializerExpression = this.InitializerExpressionOpt as BoundCollectionInitializerExpression;
+                if (collectionInitializerExpression != null)
+                {
+                    return collectionInitializerExpression.Initializers.As<IOperation>();
+                }
+
+                return ImmutableArray.Create<IOperation>(this.InitializerExpressionOpt);
             }
         }
 
@@ -1574,9 +1569,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal partial class BoundCollectionElementInitializer
+    internal partial class BoundCollectionElementInitializer : ICollectionElementInitializerExpression
     {
-        protected override OperationKind ExpressionKind => OperationKind.None;
+        protected override OperationKind ExpressionKind => OperationKind.CollectionElementInitializerExpression;
+
+        ImmutableArray<IMethodSymbol> ICollectionElementInitializerExpression.ApplicableMethods => ImmutableArray.Create<IMethodSymbol>(this.AddMethod);
+
+        bool ICollectionElementInitializerExpression.IsDynamic => false;
+
+        ImmutableArray<IArgument> IHasArgumentsExpression.ArgumentsInEvaluationOrder
+            => BoundCall.DeriveArguments(this.Arguments, argumentNamesOpt: ImmutableArray<string>.Empty,
+                argumentsToParametersOpt: this.ArgsToParamsOpt, argumentRefKindsOpt: ImmutableArray<RefKind>.Empty,
+                parameters: this.AddMethod.Parameters, invocationSyntax: this.Syntax);
 
         public override void Accept(OperationVisitor visitor)
         {
@@ -2009,9 +2013,15 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal partial class BoundDynamicCollectionElementInitializer
+    internal partial class BoundDynamicCollectionElementInitializer : ICollectionElementInitializerExpression
     {
-        protected override OperationKind ExpressionKind => OperationKind.None;
+        protected override OperationKind ExpressionKind => OperationKind.CollectionElementInitializerExpression;
+
+        ImmutableArray<IMethodSymbol> ICollectionElementInitializerExpression.ApplicableMethods => this.ApplicableMethods.As<IMethodSymbol>();
+
+        bool ICollectionElementInitializerExpression.IsDynamic => true;
+
+        ImmutableArray<IArgument> IHasArgumentsExpression.ArgumentsInEvaluationOrder => BoundCall.DeriveArguments(this.Arguments, this.Syntax);
 
         public override void Accept(OperationVisitor visitor)
         {

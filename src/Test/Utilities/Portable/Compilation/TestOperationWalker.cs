@@ -417,6 +417,14 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             base.VisitObjectCreationExpression(operation);
         }
 
+        public override void VisitCollectionElementInitializerExpression(ICollectionElementInitializerExpression operation)
+        {
+            var applicableMethods = operation.ApplicableMethods;
+            var isDynamic = operation.IsDynamic;
+
+            base.VisitCollectionElementInitializerExpression(operation);
+        }
+
         public override void VisitFieldInitializer(IFieldInitializer operation)
         {
             foreach (var field in operation.InitializedFields)

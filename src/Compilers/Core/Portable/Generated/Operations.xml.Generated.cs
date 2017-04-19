@@ -1522,20 +1522,20 @@ namespace Microsoft.CodeAnalysis.Semantics
     /// </remarks>
     internal sealed partial class ObjectCreationExpression : Operation, IHasArgumentsExpression, IObjectCreationExpression
     {
-        public ObjectCreationExpression(IMethodSymbol constructor, ImmutableArray<ISymbolInitializer> memberInitializers, bool isInvalid, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue) :
+        public ObjectCreationExpression(IMethodSymbol constructor, ImmutableArray<IOperation> initializers, bool isInvalid, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue) :
             base(OperationKind.ObjectCreationExpression, isInvalid, syntax, type, constantValue)
         {
             Constructor = constructor;
-            MemberInitializers = memberInitializers;
+            Initializers = initializers;
         }
         /// <summary>
         /// Constructor to be invoked on the created instance.
         /// </summary>
         public IMethodSymbol Constructor { get; }
         /// <summary>
-        /// Explicitly-specified member initializers.
+        /// Explicitly-specified initializers.
         /// </summary>
-        public ImmutableArray<ISymbolInitializer> MemberInitializers { get; }
+        public ImmutableArray<IOperation> Initializers { get; }
         public override void Accept(OperationVisitor visitor)
         {
             visitor.VisitObjectCreationExpression(this);
