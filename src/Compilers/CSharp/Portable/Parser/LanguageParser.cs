@@ -4057,7 +4057,7 @@ tryAgain:
                     return this.IsTrueIdentifier();
 
                 default:
-                    return IsPredefinedType(this.CurrentToken.Kind);
+                    return IsPredefinedType(this.CurrentToken.Kind) || GetModifier(this.CurrentToken) != SyntaxModifier.None;
             }
         }
 
@@ -4231,8 +4231,22 @@ tryAgain:
         {
             var flags = ParamFlags.None;
 
-            while (IsParameterModifier(this.CurrentToken.Kind, allowThisKeyword))
+            while (true)
             {
+                if (!IsParameterModifier(this.CurrentToken.Kind, allowThisKeyword))
+                {
+                    if (GetModifier(this.CurrentToken) != SyntaxModifier.None)
+                    {
+                        // Misplaced modifier
+                        var misplacedModifier = this.EatToken();
+                        misplacedModifier = this.AddError(misplacedModifier, ErrorCode.ERR_BadMemberFlag, misplacedModifier.Text);
+                        modifiers.Add(misplacedModifier);
+                        continue;
+                    }
+
+                    break;
+                }
+
                 var mod = this.EatToken();
 
                 if (mod.Kind == SyntaxKind.ThisKeyword ||
