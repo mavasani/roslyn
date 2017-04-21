@@ -640,7 +640,9 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
         public override void VisitMethodBindingExpression(IMethodBindingExpression operation)
         {
             LogString(nameof(IMethodBindingExpression));
-            LogString($": {operation.Method.ToTestDisplayString()}");
+
+            var methodString = operation.Method != null ? operation.Method.ToTestDisplayString() : "null";
+            LogString($": {methodString}");
 
             if (operation.IsVirtual)
             {
