@@ -9423,6 +9423,14 @@ tryAgain:
                 var colonRight = this.ParseExpressionCore();
                 leftOperand = _syntaxFactory.ConditionalExpression(leftOperand, questionToken, colonLeft, colon, colonRight);
             }
+            else if (tk == SyntaxKind.QuestionColonToken && precedence <= Precedence.Ternary)
+            {
+                var questionColonToken = this.EatToken();
+                var labels = this.ParseBracketedArgumentList();
+                var colon = this.EatToken(SyntaxKind.ColonToken);
+                var values = this.ParseBracketedArgumentList();
+                leftOperand = _syntaxFactory.SwitchExpression(leftOperand, questionColonToken, labels, colon, values);
+            }
 
             return leftOperand;
         }
@@ -10541,6 +10549,7 @@ tryAgain:
                 case SyntaxKind.MinusGreaterThanToken:
                 case SyntaxKind.QuestionQuestionToken:
                 case SyntaxKind.EndOfFileToken:
+                case SyntaxKind.QuestionColonToken:
                     return false;
                 default:
                     return true;
