@@ -683,6 +683,42 @@
       <summary>Creates a ConditionalExpressionSyntax node.</summary>
     </FactoryComment>
   </Node>
+  <Node Name="SwitchExpressionSyntax" Base="ExpressionSyntax">
+    <Kind Name="SwitchExpression"/>
+    <Field Name="Expression" Type="ExpressionSyntax">
+      <PropertyComment>
+        <summary>ExpressionSyntax node representing the expression of the switch expression.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="QuestionColonToken" Type="SyntaxToken">
+      <Kind Name="QuestionColonToken"/>
+      <PropertyComment>
+        <summary>SyntaxToken representing the question mark.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="Labels" Type="BracketedArgumentListSyntax">
+      <PropertyComment>
+        <summary>BracketedArgumentListSyntax node representing comma separated labels to switch on.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="ColonToken" Type="SyntaxToken">
+      <Kind Name="ColonToken"/>
+      <PropertyComment>
+        <summary>SyntaxToken representing the colon.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="Values" Type="BracketedArgumentListSyntax">
+      <PropertyComment>
+        <summary>BracketedArgumentListSyntax node representing the comma separated expression results.</summary>
+      </PropertyComment>
+    </Field>
+    <TypeComment>
+      <summary>Class which represents the syntax node for switch expression.</summary>
+    </TypeComment>
+    <FactoryComment>
+      <summary>Creates a SwitchExpressionSyntax node.</summary>
+    </FactoryComment>
+  </Node>
   <AbstractNode Name="InstanceExpressionSyntax" Base="ExpressionSyntax">
     <TypeComment>
       <summary>Provides the base class from which the classes that represent instance expression syntax nodes are derived. This is an abstract class.</summary>
