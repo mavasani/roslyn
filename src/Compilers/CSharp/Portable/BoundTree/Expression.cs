@@ -1218,6 +1218,22 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
+    // TODO: Implement IOperation support for switch operator.
+    internal partial class BoundSwitchOperator
+    {
+        protected override OperationKind ExpressionKind => OperationKind.None;
+
+        public override void Accept(OperationVisitor visitor)
+        {
+            visitor.VisitNoneOperation(this);
+        }
+
+        public override TResult Accept<TArgument, TResult>(OperationVisitor<TArgument, TResult> visitor, TArgument argument)
+        {
+            return visitor.VisitNoneOperation(this, argument);
+        }
+    }
+
     internal partial class BoundNullCoalescingOperator : INullCoalescingExpression
     {
         IOperation INullCoalescingExpression.PrimaryOperand => this.LeftOperand;

@@ -256,5 +256,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         #endregion implementation for the pattern-matching variation of the switch statement.
+
+        public override BoundNode VisitSwitchOperator(BoundSwitchOperator node)
+        {
+            // TODO: Implement flow analysis for switch operator.
+            return null;
+        }
     }
 }

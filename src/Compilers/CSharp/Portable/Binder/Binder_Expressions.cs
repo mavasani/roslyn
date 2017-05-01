@@ -532,6 +532,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.ConditionalExpression:
                     return BindConditionalOperator((ConditionalExpressionSyntax)node, diagnostics);
 
+                case SyntaxKind.SwitchExpression:
+                    return BindSwitchOperator((SwitchExpressionSyntax)node, diagnostics);
+
                 case SyntaxKind.NumericLiteralExpression:
                 case SyntaxKind.StringLiteralExpression:
                 case SyntaxKind.CharacterLiteralExpression:
