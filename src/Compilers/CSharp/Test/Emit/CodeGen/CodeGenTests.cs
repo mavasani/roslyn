@@ -15519,5 +15519,49 @@ public class Form1 {
 }");
         }
 
+        [Fact]
+        public void TestSwitchExpressionCodeGen()
+        {
+            string source = @"
+class Class
+{
+    public static void Main(string[] args)
+    {
+        System.Console.WriteLine(args.Length ?: [0, 1, 2] : [""Zero"", ""One"", ""Two"", ""More than two""]);
+    }
+}";
+            var compilation = CompileAndVerify(source, options: TestOptions.DebugExe);
+            compilation.VerifyIL("Class.Main", @"
+{
+  // Code size       51 (0x33)
+  .maxstack  2
+  IL_0000:  nop
+  IL_0001:  ldarg.0
+  IL_0002:  ldlen
+  IL_0003:  conv.i4
+  IL_0004:  brfalse.s  IL_0027
+  IL_0006:  ldarg.0
+  IL_0007:  ldlen
+  IL_0008:  conv.i4
+  IL_0009:  ldc.i4.1
+  IL_000a:  beq.s      IL_0020
+  IL_000c:  ldarg.0
+  IL_000d:  ldlen
+  IL_000e:  conv.i4
+  IL_000f:  ldc.i4.2
+  IL_0010:  beq.s      IL_0019
+  IL_0012:  ldstr      ""More than two""
+  IL_0017:  br.s       IL_001e
+  IL_0019:  ldstr      ""Two""
+  IL_001e:  br.s       IL_0025
+  IL_0020:  ldstr      ""One""
+  IL_0025:  br.s       IL_002c
+  IL_0027:  ldstr      ""Zero""
+  IL_002c:  call       ""void System.Console.WriteLine(string)""
+  IL_0031:  nop
+  IL_0032:  ret
+}
+");
+        }
     }
 }

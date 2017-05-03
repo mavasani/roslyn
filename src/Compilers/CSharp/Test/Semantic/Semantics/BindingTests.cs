@@ -3550,5 +3550,57 @@ public class Class1
                 //         System.Func<object> delegateConversion2 = "string literal".ExtensionMethod2<>;
                 Diagnostic(ErrorCode.ERR_NoSuchMemberOrExtension, "ExtensionMethod2<>").WithArguments("string", "ExtensionMethod2").WithLocation(34, 68));
         }
+
+        [Fact]
+        public void TestSwitchExpressionBinding()
+        {
+            var source =
+@"
+class Class
+{
+    public static void Main(string[] args)
+    {
+        System.Console.WriteLine(args.Length ?: [0, 1, 2] : [""Zero"", ""One"", ""Two"", ""More than two""]);
+    }
+}
+";
+            var compilation = CreateCompilationWithMscorlib(source);
+            compilation.VerifyDiagnostics();
+
+            var tree = compilation.SyntaxTrees[0];
+            var model = compilation.GetSemanticModel(tree);
+
+            var switchExp = (SwitchExpressionSyntax)tree.GetRoot().DescendantNodes().Where(n => n.IsKind(SyntaxKind.SwitchExpression)).Single();
+            Assert.Equal(@"args.Length ?: [0, 1, 2] : [""Zero"", ""One"", ""Two"", ""More than two""]", switchExp.ToString());
+            var symbolInfo = model.GetSymbolInfo(switchExp);
+            Assert.Null(symbolInfo.Symbol);
+            var typeInfo = model.GetTypeInfo(switchExp);
+            Assert.NotNull(typeInfo.Type);
+            Assert.Equal("string", typeInfo.Type.ToString());
+
+            symbolInfo = model.GetSymbolInfo(switchExp.Expression);
+            Assert.NotNull(symbolInfo.Symbol);
+            Assert.Equal("System.Array.Length", symbolInfo.Symbol.ToString());
+
+            typeInfo = model.GetTypeInfo(switchExp.Expression);
+            Assert.NotNull(typeInfo.Type);
+            Assert.Equal("int", typeInfo.Type.ToString());
+
+            Assert.Equal(3, switchExp.Labels.Arguments.Count);
+            var constantValue = model.GetConstantValue(switchExp.Labels.Arguments[0].Expression);
+            Assert.True(constantValue.HasValue);
+            Assert.Equal(0, constantValue.Value);
+            typeInfo = model.GetTypeInfo(switchExp.Labels.Arguments[0].Expression);
+            Assert.NotNull(typeInfo.Type);
+            Assert.Equal("int", typeInfo.Type.ToString());
+
+            Assert.Equal(4, switchExp.Values.Arguments.Count);
+            constantValue = model.GetConstantValue(switchExp.Values.Arguments[0].Expression);
+            Assert.True(constantValue.HasValue);
+            Assert.Equal("Zero", constantValue.Value);
+            typeInfo = model.GetTypeInfo(switchExp.Values.Arguments[0].Expression);
+            Assert.NotNull(typeInfo.Type);
+            Assert.Equal("string", typeInfo.Type.ToString());
+        }
     }
 }

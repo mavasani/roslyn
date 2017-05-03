@@ -2956,5 +2956,46 @@ class C
             }
             EOF();
         }
+
+        [Fact]
+        public void TestSwitchExpression()
+        {
+            var text = @"expr ?: [0, 1, 2] : [""Zero"", ""One"", ""Two"", ""More than two""]";
+            var expr = SyntaxFactory.ParseExpression(text);
+
+            Assert.NotNull(expr);
+            Assert.Equal(SyntaxKind.SwitchExpression, expr.Kind());
+            Assert.Equal(text, expr. ToString());
+            Assert.Equal(0, expr.Errors().Length);
+
+            var switchExpr = (SwitchExpressionSyntax)expr;
+            Assert.NotNull(switchExpr.Expression);
+            Assert.Equal("expr", switchExpr.Expression.ToString());
+
+            Assert.NotNull(switchExpr.QuestionColonToken);
+            Assert.False(switchExpr.QuestionColonToken.IsMissing);
+
+            Assert.NotNull(switchExpr.Labels.OpenBracketToken);
+            Assert.False(switchExpr.Labels.OpenBracketToken.IsMissing);
+            Assert.Equal(3, switchExpr.Labels.Arguments.Count);
+            Assert.Equal("0", switchExpr.Labels.Arguments[0].ToString());
+            Assert.Equal("1", switchExpr.Labels.Arguments[1].ToString());
+            Assert.Equal("2", switchExpr.Labels.Arguments[2].ToString());
+            Assert.NotNull(switchExpr.Labels.CloseBracketToken);
+            Assert.False(switchExpr.Labels.CloseBracketToken.IsMissing);
+
+            Assert.NotNull(switchExpr.ColonToken);
+            Assert.False(switchExpr.ColonToken.IsMissing);
+
+            Assert.NotNull(switchExpr.Values.OpenBracketToken);
+            Assert.False(switchExpr.Values.OpenBracketToken.IsMissing);
+            Assert.Equal(4, switchExpr.Values.Arguments.Count);
+            Assert.Equal(@"""Zero""", switchExpr.Values.Arguments[0].ToString());
+            Assert.Equal(@"""One""", switchExpr.Values.Arguments[1].ToString());
+            Assert.Equal(@"""Two""", switchExpr.Values.Arguments[2].ToString());
+            Assert.Equal(@"""More than two""", switchExpr.Values.Arguments[3].ToString());
+            Assert.NotNull(switchExpr.Values.CloseBracketToken);
+            Assert.False(switchExpr.Values.CloseBracketToken.IsMissing);
+        }
     }
 }
