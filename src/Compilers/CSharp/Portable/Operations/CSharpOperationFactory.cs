@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Semantics
 {
@@ -57,6 +58,16 @@ namespace Microsoft.CodeAnalysis.Semantics
                     return CreateBoundLiteralOperation((BoundLiteral)boundNode);
                 case BoundKind.ObjectCreationExpression:
                     return CreateBoundObjectCreationExpressionOperation((BoundObjectCreationExpression)boundNode);
+                case BoundKind.ObjectInitializerExpression:
+                    return CreateBoundObjectInitializerExpressionOperation((BoundObjectInitializerExpression)boundNode);
+                case BoundKind.CollectionInitializerExpression:
+                    return CreateBoundCollectionInitializerExpressionOperation((BoundCollectionInitializerExpression)boundNode);
+                case BoundKind.ObjectInitializerMember:
+                    return CreateBoundObjectInitializerMemberOperation((BoundObjectInitializerMember)boundNode);
+                case BoundKind.CollectionElementInitializer:
+                    return CreateBoundCollectionElementInitializerOperation((BoundCollectionElementInitializer)boundNode);
+                case BoundKind.DynamicCollectionElementInitializer:
+                    return CreateBoundDynamicCollectionElementInitializerOperation((BoundDynamicCollectionElementInitializer)boundNode);
                 case BoundKind.UnboundLambda:
                     return CreateUnboundLambdaOperation((UnboundLambda)boundNode);
                 case BoundKind.Lambda:
@@ -82,7 +93,7 @@ namespace Microsoft.CodeAnalysis.Semantics
                 case BoundKind.ThisReference:
                     return CreateBoundThisReferenceOperation((BoundThisReference)boundNode);
                 case BoundKind.AssignmentOperator:
-                    return CreateBoundAssignmentOperatorOperation((BoundAssignmentOperator)boundNode);
+                    return CreateBoundAssignmentOperatorOrMemberInitializerOperation((BoundAssignmentOperator)boundNode);
                 case BoundKind.CompoundAssignmentOperator:
                     return CreateBoundCompoundAssignmentOperatorOperation((BoundCompoundAssignmentOperator)boundNode);
                 case BoundKind.IncrementOperator:
@@ -232,7 +243,7 @@ namespace Microsoft.CodeAnalysis.Semantics
                         boundCall.ReceiverOpt != null &&
                         (boundCall.Method.IsVirtual || boundCall.Method.IsAbstract || boundCall.Method.IsOverride) &&
                         !boundCall.ReceiverOpt.SuppressVirtualCalls;
-            Lazy<ImmutableArray<IArgument>> argumentsInEvaluationOrder = new Lazy<ImmutableArray<IArgument>>(() => DeriveArguments(boundCall, boundCall.BinderOpt, boundCall.Method, boundCall.Method, boundCall.Arguments, boundCall.ArgumentNamesOpt, boundCall.ArgsToParamsOpt, boundCall.ArgumentRefKindsOpt, boundCall.Method.Parameters, boundCall.Expanded, boundCall.Syntax, boundCall.InvokedAsExtensionMethod));
+            Lazy<ImmutableArray<IArgument>> argumentsInEvaluationOrder = new Lazy<ImmutableArray<IArgument>>(() => DeriveArguments(boundCall.HasErrors, boundCall.BinderOpt, boundCall.Method, boundCall.Method, boundCall.Arguments, boundCall.ArgumentNamesOpt, boundCall.ArgsToParamsOpt, boundCall.ArgumentRefKindsOpt, boundCall.Method.Parameters, boundCall.Expanded, boundCall.Syntax, boundCall.InvokedAsExtensionMethod));
             bool isInvalid = boundCall.HasErrors;
             SyntaxNode syntax = boundCall.Syntax;
             ITypeSymbol type = boundCall.Type;
@@ -285,7 +296,7 @@ namespace Microsoft.CodeAnalysis.Semantics
                     ? boundIndexerAccess.Indexer.GetOwnOrInheritedSetMethod()
                     : boundIndexerAccess.Indexer.GetOwnOrInheritedGetMethod();
 
-                return DeriveArguments(boundIndexerAccess,
+                return DeriveArguments(boundIndexerAccess.HasErrors,
                     boundIndexerAccess.BinderOpt,
                     boundIndexerAccess.Indexer,
                     accessor,
@@ -354,9 +365,9 @@ namespace Microsoft.CodeAnalysis.Semantics
         private IObjectCreationExpression CreateBoundObjectCreationExpressionOperation(BoundObjectCreationExpression boundObjectCreationExpression)
         {
             IMethodSymbol constructor = boundObjectCreationExpression.Constructor;
-            Lazy<ImmutableArray<IOperation>> memberInitializers = new Lazy<ImmutableArray<IOperation>>(() => GetObjectCreationInitializers(boundObjectCreationExpression));
+            Lazy<IObjectOrCollectionInitializerExpression> initializer = new Lazy<IObjectOrCollectionInitializerExpression>(() => (IObjectOrCollectionInitializerExpression)Create(boundObjectCreationExpression.InitializerExpressionOpt));
             Lazy<ImmutableArray<IArgument>> argumentsInEvaluationOrder = new Lazy<ImmutableArray<IArgument>>(() =>
-                DeriveArguments(boundObjectCreationExpression,
+                DeriveArguments(boundObjectCreationExpression.HasErrors,
                                 boundObjectCreationExpression.BinderOpt,
                                 boundObjectCreationExpression.Constructor,
                                 boundObjectCreationExpression.Constructor,
@@ -371,7 +382,100 @@ namespace Microsoft.CodeAnalysis.Semantics
             SyntaxNode syntax = boundObjectCreationExpression.Syntax;
             ITypeSymbol type = boundObjectCreationExpression.Type;
             Optional<object> constantValue = ConvertToOptional(boundObjectCreationExpression.ConstantValue);
-            return new LazyObjectCreationExpression(constructor, memberInitializers, argumentsInEvaluationOrder, isInvalid, syntax, type, constantValue);
+            return new LazyObjectCreationExpression(constructor, initializer, argumentsInEvaluationOrder, isInvalid, syntax, type, constantValue);
+        }
+
+        private IObjectOrCollectionInitializerExpression CreateBoundObjectInitializerExpressionOperation(BoundObjectInitializerExpression boundObjectInitializerExpression)
+        {
+            Lazy<ImmutableArray<IOperation>> initializers = new Lazy<ImmutableArray<IOperation>>(() => BoundObjectCreationExpression.GetChildInitializers(boundObjectInitializerExpression).SelectAsArray(n => Create(n)));
+            bool isInvalid = boundObjectInitializerExpression.HasErrors;
+            SyntaxNode syntax = boundObjectInitializerExpression.Syntax;
+            ITypeSymbol type = boundObjectInitializerExpression.Type;
+            Optional<object> constantValue = ConvertToOptional(boundObjectInitializerExpression.ConstantValue);
+            return new LazyObjectOrCollectionInitializerExpression(initializers, isInvalid, syntax, type, constantValue);
+        }
+
+        private IObjectOrCollectionInitializerExpression CreateBoundCollectionInitializerExpressionOperation(BoundCollectionInitializerExpression boundCollectionInitializerExpression)
+        {
+            Lazy<ImmutableArray<IOperation>> initializers = new Lazy<ImmutableArray<IOperation>>(() => BoundObjectCreationExpression.GetChildInitializers(boundCollectionInitializerExpression).SelectAsArray(n => Create(n)));
+            bool isInvalid = boundCollectionInitializerExpression.HasErrors;
+            SyntaxNode syntax = boundCollectionInitializerExpression.Syntax;
+            ITypeSymbol type = boundCollectionInitializerExpression.Type;
+            Optional<object> constantValue = ConvertToOptional(boundCollectionInitializerExpression.ConstantValue);
+            return new LazyObjectOrCollectionInitializerExpression(initializers, isInvalid, syntax, type, constantValue);
+        }
+
+        private IMemberReferenceExpression CreateBoundObjectInitializerMemberOperation(BoundObjectInitializerMember boundObjectInitializerMember)
+        {
+            Lazy<IOperation> instance = new Lazy<IOperation>(() => new InstanceReferenceExpression(InstanceReferenceKind.Implicit, boundObjectInitializerMember.HasErrors, syntax: boundObjectInitializerMember.Syntax, type: boundObjectInitializerMember.MemberSymbol.ContainingType, constantValue: default(Optional<object>)));
+            bool isInvalid = boundObjectInitializerMember.HasErrors;
+            SyntaxNode syntax = boundObjectInitializerMember.Syntax;
+            ITypeSymbol type = boundObjectInitializerMember.Type;
+            Optional<object> constantValue = ConvertToOptional(boundObjectInitializerMember.ConstantValue);
+
+            switch (boundObjectInitializerMember.MemberSymbol.Kind)
+            {
+                case SymbolKind.Field:
+                    var field = (FieldSymbol)boundObjectInitializerMember.MemberSymbol;
+                    return new LazyFieldReferenceExpression(field, instance, field, isInvalid, syntax, type, constantValue);
+                case SymbolKind.Event:
+                    var eventSymbol = (EventSymbol)boundObjectInitializerMember.MemberSymbol;
+                    return new LazyEventReferenceExpression(eventSymbol, instance, eventSymbol, isInvalid, syntax, type, constantValue);
+                case SymbolKind.Property:
+                    var property = (PropertySymbol)boundObjectInitializerMember.MemberSymbol;
+                    if (!boundObjectInitializerMember.Arguments.Any())
+                    {
+                        // Simple property reference.
+                        return new LazyPropertyReferenceExpression(property, instance, property, isInvalid, syntax, type, constantValue);
+                    }
+                    else
+                    {
+                        // Indexed property reference.
+                        Lazy<ImmutableArray<IArgument>> argumentsInEvaluationOrder = new Lazy<ImmutableArray<IArgument>>(() =>
+                        {
+                            return DeriveArguments(boundObjectInitializerMember.HasErrors,
+                                boundObjectInitializerMember.BinderOpt,
+                                property,
+                                property.SetMethod,
+                                boundObjectInitializerMember.Arguments,
+                                boundObjectInitializerMember.ArgumentNamesOpt,
+                                boundObjectInitializerMember.ArgsToParamsOpt,
+                                boundObjectInitializerMember.ArgumentRefKindsOpt,
+                                property.Parameters,
+                                boundObjectInitializerMember.Expanded,
+                                boundObjectInitializerMember.Syntax);
+                        });
+
+                        return new LazyIndexedPropertyReferenceExpression(property, instance, property, argumentsInEvaluationOrder, isInvalid, syntax, type, constantValue);
+                    }
+
+                default:
+                    throw ExceptionUtilities.Unreachable;
+            }
+        }
+
+        private ICollectionElementInitializerExpression CreateBoundCollectionElementInitializerOperation(BoundCollectionElementInitializer boundCollectionElementInitializer)
+        {
+            IMethodSymbol addMethod = boundCollectionElementInitializer.AddMethod;
+            Lazy<ImmutableArray<IOperation>> arguments = new Lazy<ImmutableArray<IOperation>>(() => boundCollectionElementInitializer.Arguments.SelectAsArray(n => Create(n)));
+            bool isDynamic = false;
+            bool isInvalid = boundCollectionElementInitializer.HasErrors;
+            SyntaxNode syntax = boundCollectionElementInitializer.Syntax;
+            ITypeSymbol type = boundCollectionElementInitializer.Type;
+            Optional<object> constantValue = ConvertToOptional(boundCollectionElementInitializer.ConstantValue);
+            return new LazyCollectionElementInitializerExpression(addMethod, arguments, isDynamic, isInvalid, syntax, type, constantValue);
+        }
+
+        private ICollectionElementInitializerExpression CreateBoundDynamicCollectionElementInitializerOperation(BoundDynamicCollectionElementInitializer boundCollectionElementInitializer)
+        {
+            IMethodSymbol addMethod = null;
+            Lazy<ImmutableArray<IOperation>> arguments = new Lazy<ImmutableArray<IOperation>>(() => boundCollectionElementInitializer.Arguments.SelectAsArray(n => Create(n)));
+            bool isDynamic = true;
+            bool isInvalid = boundCollectionElementInitializer.HasErrors;
+            SyntaxNode syntax = boundCollectionElementInitializer.Syntax;
+            ITypeSymbol type = boundCollectionElementInitializer.Type;
+            Optional<object> constantValue = ConvertToOptional(boundCollectionElementInitializer.ConstantValue);
+            return new LazyCollectionElementInitializerExpression(addMethod, arguments, isDynamic, isInvalid, syntax, type, constantValue);
         }
 
         private IOperation CreateUnboundLambdaOperation(UnboundLambda unboundLambda)
@@ -536,8 +640,20 @@ namespace Microsoft.CodeAnalysis.Semantics
             return new InstanceReferenceExpression(instanceReferenceKind, isInvalid, syntax, type, constantValue);
         }
 
-        private IAssignmentExpression CreateBoundAssignmentOperatorOperation(BoundAssignmentOperator boundAssignmentOperator)
+        private IOperation CreateBoundAssignmentOperatorOrMemberInitializerOperation(BoundAssignmentOperator boundAssignmentOperator)
         {
+            return IsMemberInitializer(boundAssignmentOperator) ?
+                CreateBoundMemberInitializerOperation(boundAssignmentOperator) :
+                CreateBoundAssignmentOperatorOperation(boundAssignmentOperator);
+        }
+
+        private static bool IsMemberInitializer(BoundAssignmentOperator boundAssignmentOperator) =>
+            boundAssignmentOperator.Right?.Kind == BoundKind.ObjectInitializerExpression || boundAssignmentOperator.Right?.Kind == BoundKind.CollectionInitializerExpression;
+
+        private IOperation CreateBoundAssignmentOperatorOperation(BoundAssignmentOperator boundAssignmentOperator)
+        {
+            Debug.Assert(!IsMemberInitializer(boundAssignmentOperator));
+
             Lazy<IOperation> target = new Lazy<IOperation>(() => Create(boundAssignmentOperator.Left));
             Lazy<IOperation> value = new Lazy<IOperation>(() => Create(boundAssignmentOperator.Right));
             bool isInvalid = boundAssignmentOperator.HasErrors;
@@ -545,6 +661,19 @@ namespace Microsoft.CodeAnalysis.Semantics
             ITypeSymbol type = boundAssignmentOperator.Type;
             Optional<object> constantValue = ConvertToOptional(boundAssignmentOperator.ConstantValue);
             return new LazyAssignmentExpression(target, value, isInvalid, syntax, type, constantValue);
+        }
+
+        private IMemberInitializerExpression CreateBoundMemberInitializerOperation(BoundAssignmentOperator boundAssignmentOperator)
+        {
+            Debug.Assert(IsMemberInitializer(boundAssignmentOperator));
+
+            Lazy<IMemberReferenceExpression> target = new Lazy<IMemberReferenceExpression>(() => (IMemberReferenceExpression)Create(boundAssignmentOperator.Left));
+            Lazy<IObjectOrCollectionInitializerExpression> value = new Lazy<IObjectOrCollectionInitializerExpression>(() => (IObjectOrCollectionInitializerExpression)Create(boundAssignmentOperator.Right));
+            bool isInvalid = boundAssignmentOperator.HasErrors;
+            SyntaxNode syntax = boundAssignmentOperator.Syntax;
+            ITypeSymbol type = boundAssignmentOperator.Type;
+            Optional<object> constantValue = ConvertToOptional(boundAssignmentOperator.ConstantValue);
+            return new LazyMemberInitializerExpression(target, value, isInvalid, syntax, type, constantValue);
         }
 
         private ICompoundAssignmentExpression CreateBoundCompoundAssignmentOperatorOperation(BoundCompoundAssignmentOperator boundCompoundAssignmentOperator)

@@ -52,7 +52,7 @@ namespace Microsoft.CodeAnalysis.Semantics
         }
 
         private ImmutableArray<IArgument> DeriveArguments(
-            BoundExpression boundNode,
+            bool hasErrors,
             Binder binder,
             Symbol methodOrIndexer,
             MethodSymbol optionalParametersMethod,
@@ -76,7 +76,7 @@ namespace Microsoft.CodeAnalysis.Semantics
             //TODO: https://github.com/dotnet/roslyn/issues/18722
             //      Right now, for erroneous code, we exposes all expression in place of arguments as IArgument with Parameter set to null,
             //      so user needs to check IsInvalid first before using anything we returned. Need to implement a new interface for invalid invocation instead.
-            if (boundNode.HasErrors || (object)optionalParametersMethod == null)
+            if (hasErrors || (object)optionalParametersMethod == null)
             {
                 // optionalParametersMethod can be null if we are writing to a readonly indexer or reading from an writeonly indexer,
                 // in which case HasErrors property would be true, but we still want to treat this as invalid invocation.
@@ -93,11 +93,6 @@ namespace Microsoft.CodeAnalysis.Semantics
                  expanded: expanded,
                  argsToParamsOpt: argumentsToParametersOpt,
                  invokedAsExtensionMethod: invokedAsExtensionMethod);
-        }
-
-        private ImmutableArray<IOperation> GetObjectCreationInitializers(BoundObjectCreationExpression expression)
-        {
-            return BoundObjectCreationExpression.GetChildInitializers(expression.InitializerExpressionOpt).SelectAsArray(n => Create(n));
         }
 
         private static ConversionKind GetConversionKind(CSharp.ConversionKind kind)

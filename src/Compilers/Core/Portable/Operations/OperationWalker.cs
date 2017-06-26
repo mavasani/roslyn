@@ -350,7 +350,23 @@ namespace Microsoft.CodeAnalysis.Semantics
         public override void VisitObjectCreationExpression(IObjectCreationExpression operation)
         {
             VisitArray(operation.ArgumentsInEvaluationOrder);
+            Visit(operation.Initializer);
+        }
+
+        public override void VisitObjectOrCollectionInitializerExpression(IObjectOrCollectionInitializerExpression operation)
+        {
             VisitArray(operation.Initializers);
+        }
+
+        public override void VisitMemberInitializerExpression(IMemberInitializerExpression operation)
+        {
+            Visit(operation.InitializedMember);
+            Visit(operation.Initializer);
+        }
+
+        public override void VisitCollectionElementInitializerExpression(ICollectionElementInitializerExpression operation)
+        {
+            VisitArray(operation.Arguments);
         }
 
         public override void VisitFieldInitializer(IFieldInitializer operation)
