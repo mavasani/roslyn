@@ -190,12 +190,16 @@ namespace Microsoft.CodeAnalysis.Semantics
                     return CreateBoundInterpolationOperation((BoundStringInsert)boundNode);
                 case BoundKind.LocalFunctionStatement:
                     return CreateBoundLocalFunctionStatementOperation((BoundLocalFunctionStatement)boundNode);
+                case BoundKind.AnonymousObjectCreationExpression:
+                    return CreateBoundAnonymousObjectCreationExpressionOperation((BoundAnonymousObjectCreationExpression)boundNode);
+                case BoundKind.AnonymousPropertyDeclaration:
+                    return CreateBoundAnonymousPropertyDeclarationOperation((BoundAnonymousPropertyDeclaration)boundNode);
                 case BoundKind.ConstantPattern:
                     return CreateBoundConstantPatternOperation((BoundConstantPattern)boundNode);
                 case BoundKind.DeclarationPattern:
                     return CreateBoundDeclarationPatternOperation((BoundDeclarationPattern)boundNode);
                 case BoundKind.WildcardPattern:
-                    return null;
+                    throw ExceptionUtilities.Unreachable;
                 case BoundKind.PatternSwitchStatement:
                     return CreateBoundPatternSwitchStatementOperation((BoundPatternSwitchStatement)boundNode);
                 case BoundKind.PatternSwitchLabel:
@@ -277,15 +281,16 @@ namespace Microsoft.CodeAnalysis.Semantics
         {
             IPropertySymbol property = boundPropertyAccess.PropertySymbol;
             Lazy<IOperation> instance = new Lazy<IOperation>(() => Create(boundPropertyAccess.PropertySymbol.IsStatic ? null : boundPropertyAccess.ReceiverOpt));
+            Lazy<ImmutableArray<IArgument>> argumentsInEvaluationOrder = new Lazy<ImmutableArray<IArgument>>(() => ImmutableArray<IArgument>.Empty);
             ISymbol member = boundPropertyAccess.PropertySymbol;
             bool isInvalid = boundPropertyAccess.HasErrors;
             SyntaxNode syntax = boundPropertyAccess.Syntax;
             ITypeSymbol type = boundPropertyAccess.Type;
             Optional<object> constantValue = ConvertToOptional(boundPropertyAccess.ConstantValue);
-            return new LazyPropertyReferenceExpression(property, instance, member, isInvalid, syntax, type, constantValue);
+            return new LazyPropertyReferenceExpression(property, instance, member, argumentsInEvaluationOrder, isInvalid, syntax, type, constantValue);
         }
 
-        private IIndexedPropertyReferenceExpression CreateBoundIndexerAccessOperation(BoundIndexerAccess boundIndexerAccess)
+        private IPropertyReferenceExpression CreateBoundIndexerAccessOperation(BoundIndexerAccess boundIndexerAccess)
         {
             IPropertySymbol property = boundIndexerAccess.Indexer;
             Lazy<IOperation> instance = new Lazy<IOperation>(() => Create(boundIndexerAccess.Indexer.IsStatic ? null : boundIndexerAccess.ReceiverOpt));
@@ -314,7 +319,7 @@ namespace Microsoft.CodeAnalysis.Semantics
             SyntaxNode syntax = boundIndexerAccess.Syntax;
             ITypeSymbol type = boundIndexerAccess.Type;
             Optional<object> constantValue = ConvertToOptional(boundIndexerAccess.ConstantValue);
-            return new LazyIndexedPropertyReferenceExpression(property, instance, member, argumentsInEvaluationOrder, isInvalid, syntax, type, constantValue);
+            return new LazyPropertyReferenceExpression(property, instance, member, argumentsInEvaluationOrder, isInvalid, syntax, type, constantValue);
         }
 
         private IEventReferenceExpression CreateBoundEventAccessOperation(BoundEventAccess boundEventAccess)
@@ -360,6 +365,29 @@ namespace Microsoft.CodeAnalysis.Semantics
             ITypeSymbol type = boundLiteral.Type;
             Optional<object> constantValue = ConvertToOptional(boundLiteral.ConstantValue);
             return new LiteralExpression(text, isInvalid, syntax, type, constantValue);
+        }
+
+        private IAnonymousObjectCreationExpression CreateBoundAnonymousObjectCreationExpressionOperation(BoundAnonymousObjectCreationExpression boundAnonymousObjectCreationExpression)
+        {
+            Lazy<ImmutableArray<IOperation>> memberInitializers = new Lazy<ImmutableArray<IOperation>>(() => GetAnonymousObjectCreationInitializers(boundAnonymousObjectCreationExpression));
+            bool isInvalid = boundAnonymousObjectCreationExpression.HasErrors;
+            SyntaxNode syntax = boundAnonymousObjectCreationExpression.Syntax;
+            ITypeSymbol type = boundAnonymousObjectCreationExpression.Type;
+            Optional<object> constantValue = ConvertToOptional(boundAnonymousObjectCreationExpression.ConstantValue);
+            return new LazyAnonymousObjectCreationExpression(memberInitializers, isInvalid, syntax, type, constantValue);
+        }
+
+        private IPropertyReferenceExpression CreateBoundAnonymousPropertyDeclarationOperation(BoundAnonymousPropertyDeclaration boundAnonymousPropertyDeclaration)
+        {
+            PropertySymbol property = boundAnonymousPropertyDeclaration.Property;
+            Lazy<IOperation> instance = new Lazy<IOperation>(() => null);
+            ISymbol member = boundAnonymousPropertyDeclaration.Property;
+            Lazy<ImmutableArray<IArgument>> argumentsInEvaluationOrder = new Lazy<ImmutableArray<IArgument>>(() => ImmutableArray<IArgument>.Empty);
+            bool isInvalid = boundAnonymousPropertyDeclaration.HasErrors;
+            SyntaxNode syntax = boundAnonymousPropertyDeclaration.Syntax;
+            ITypeSymbol type = boundAnonymousPropertyDeclaration.Type;
+            Optional<object> constantValue = ConvertToOptional(boundAnonymousPropertyDeclaration.ConstantValue);
+            return new LazyPropertyReferenceExpression(property, instance, member, argumentsInEvaluationOrder, isInvalid, syntax, type, constantValue);
         }
 
         private IObjectCreationExpression CreateBoundObjectCreationExpressionOperation(BoundObjectCreationExpression boundObjectCreationExpression)
@@ -650,7 +678,7 @@ namespace Microsoft.CodeAnalysis.Semantics
         private static bool IsMemberInitializer(BoundAssignmentOperator boundAssignmentOperator) =>
             boundAssignmentOperator.Right?.Kind == BoundKind.ObjectInitializerExpression || boundAssignmentOperator.Right?.Kind == BoundKind.CollectionInitializerExpression;
 
-        private IOperation CreateBoundAssignmentOperatorOperation(BoundAssignmentOperator boundAssignmentOperator)
+        private ISimpleAssignmentExpression CreateBoundAssignmentOperatorOperation(BoundAssignmentOperator boundAssignmentOperator)
         {
             Debug.Assert(!IsMemberInitializer(boundAssignmentOperator));
 
@@ -660,7 +688,7 @@ namespace Microsoft.CodeAnalysis.Semantics
             SyntaxNode syntax = boundAssignmentOperator.Syntax;
             ITypeSymbol type = boundAssignmentOperator.Type;
             Optional<object> constantValue = ConvertToOptional(boundAssignmentOperator.ConstantValue);
-            return new LazyAssignmentExpression(target, value, isInvalid, syntax, type, constantValue);
+            return new LazySimpleAssignmentExpression(target, value, isInvalid, syntax, type, constantValue);
         }
 
         private IMemberInitializerExpression CreateBoundMemberInitializerOperation(BoundAssignmentOperator boundAssignmentOperator)
@@ -693,16 +721,14 @@ namespace Microsoft.CodeAnalysis.Semantics
         private IIncrementExpression CreateBoundIncrementOperatorOperation(BoundIncrementOperator boundIncrementOperator)
         {
             UnaryOperationKind incrementOperationKind = Helper.DeriveUnaryOperationKind(boundIncrementOperator.OperatorKind);
-            BinaryOperationKind binaryOperationKind = Helper.DeriveBinaryOperationKind(incrementOperationKind);
             Lazy<IOperation> target = new Lazy<IOperation>(() => Create(boundIncrementOperator.Operand));
-            Lazy<IOperation> value = new Lazy<IOperation>(() => CreateIncrementOneLiteralExpression(boundIncrementOperator));
             bool usesOperatorMethod = (boundIncrementOperator.OperatorKind & UnaryOperatorKind.TypeMask) == UnaryOperatorKind.UserDefined;
             IMethodSymbol operatorMethod = boundIncrementOperator.MethodOpt;
             bool isInvalid = boundIncrementOperator.HasErrors;
             SyntaxNode syntax = boundIncrementOperator.Syntax;
             ITypeSymbol type = boundIncrementOperator.Type;
             Optional<object> constantValue = ConvertToOptional(boundIncrementOperator.ConstantValue);
-            return new LazyIncrementExpression(incrementOperationKind, binaryOperationKind, target, value, usesOperatorMethod, operatorMethod, isInvalid, syntax, type, constantValue);
+            return new LazyIncrementExpression(incrementOperationKind, target, usesOperatorMethod, operatorMethod, isInvalid, syntax, type, constantValue);
         }
 
         private IInvalidExpression CreateBoundBadExpressionOperation(BoundBadExpression boundBadExpression)

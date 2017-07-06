@@ -88,8 +88,6 @@ namespace Microsoft.CodeAnalysis
         MethodBindingExpression = 0x109,
         /// <summary>Indicates an <see cref="IPropertyReferenceExpression"/>.</summary>
         PropertyReferenceExpression = 0x10a,
-        /// <summary>Indicates an <see cref="IIndexedPropertyReferenceExpression"/>.</summary>
-        IndexedPropertyReferenceExpression = 0x10b,
         /// <summary>Indicates an <see cref="IEventReferenceExpression"/>.</summary>
         EventReferenceExpression = 0x10c,
         /// <summary>Indicates an <see cref="IUnaryOperatorExpression"/>.</summary>
@@ -114,8 +112,8 @@ namespace Microsoft.CodeAnalysis
         IsTypeExpression = 0x116,
         /// <summary>Indicates an <see cref="IAwaitExpression"/>.</summary>
         AwaitExpression = 0x117,
-        /// <summary>Indicates an <see cref="IAssignmentExpression"/>.</summary>
-        AssignmentExpression = 0x118,
+        /// <summary>Indicates an <see cref="ISimpleAssignmentExpression"/>.</summary>
+        SimpleAssignmentExpression = 0x118,
         /// <summary>Indicates an <see cref="ICompoundAssignmentExpression"/>.</summary>
         CompoundAssignmentExpression = 0x119,
         /// <summary>Indicates an <see cref="IParenthesizedExpression"/>.</summary>
@@ -128,12 +126,14 @@ namespace Microsoft.CodeAnalysis
         ConditionalAccessInstanceExpression = 0x11d,
         /// <summary>Indicates an <see cref="IInterpolatedStringExpression"/>.</summary>
         InterpolatedStringExpression = 0x11e,
+        /// <summary>Indicates an <see cref="IAnonymousObjectCreationExpression"/>.</summary>
+        AnonymousObjectCreationExpression = 0x11f,
         /// <summary>Indicates an <see cref="IObjectOrCollectionInitializerExpression"/>.</summary>
-        ObjectOrCollectionInitializerExpression = 0x11f,
+        ObjectOrCollectionInitializerExpression = 0x1120,
         /// <summary>Indicates an <see cref="IMemberInitializerExpression"/>.</summary>
-        MemberInitializerExpression = 0x120,
+        MemberInitializerExpression = 0x121,
         /// <summary>Indicates an <see cref="ICollectionElementInitializerExpression"/>.</summary>
-        CollectionElementInitializerExpression = 0x121,
+        CollectionElementInitializerExpression = 0x122,
 
         // Expressions that occur only in C#.
 

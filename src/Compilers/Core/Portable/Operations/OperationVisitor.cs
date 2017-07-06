@@ -245,11 +245,6 @@ namespace Microsoft.CodeAnalysis.Semantics
             DefaultVisit(operation);
         }
 
-        public virtual void VisitIndexedPropertyReferenceExpression(IIndexedPropertyReferenceExpression operation)
-        {
-            DefaultVisit(operation);
-        }
-
         public virtual void VisitUnaryOperatorExpression(IUnaryOperatorExpression operation)
         {
             DefaultVisit(operation);
@@ -315,6 +310,7 @@ namespace Microsoft.CodeAnalysis.Semantics
             DefaultVisit(operation);
         }
 
+<<<<<<< HEAD
         public virtual void VisitObjectOrCollectionInitializerExpression(IObjectOrCollectionInitializerExpression operation)
         {
             DefaultVisit(operation);
@@ -326,6 +322,9 @@ namespace Microsoft.CodeAnalysis.Semantics
         }
 
         public virtual void VisitCollectionElementInitializerExpression(ICollectionElementInitializerExpression operation)
+=======
+        public virtual void VisitAnonymousObjectCreationExpression(IAnonymousObjectCreationExpression operation)
+>>>>>>> upstream/features/ioperation
         {
             DefaultVisit(operation);
         }
@@ -355,7 +354,7 @@ namespace Microsoft.CodeAnalysis.Semantics
             DefaultVisit(operation);
         }
 
-        public virtual void VisitAssignmentExpression(IAssignmentExpression operation)
+        public virtual void VisitSimpleAssignmentExpression(ISimpleAssignmentExpression operation)
         {
             DefaultVisit(operation);
         }
@@ -690,11 +689,6 @@ namespace Microsoft.CodeAnalysis.Semantics
             return DefaultVisit(operation, argument);
         }
 
-        public virtual TResult VisitIndexedPropertyReferenceExpression(IIndexedPropertyReferenceExpression operation, TArgument argument)
-        {
-            return DefaultVisit(operation, argument);
-        }
-
         public virtual TResult VisitUnaryOperatorExpression(IUnaryOperatorExpression operation, TArgument argument)
         {
             return DefaultVisit(operation, argument);
@@ -760,6 +754,7 @@ namespace Microsoft.CodeAnalysis.Semantics
             return DefaultVisit(operation, argument);
         }
 
+<<<<<<< HEAD
         public virtual TResult VisitObjectOrCollectionInitializerExpression(IObjectOrCollectionInitializerExpression operation, TArgument argument)
         {
             return DefaultVisit(operation, argument);
@@ -771,6 +766,9 @@ namespace Microsoft.CodeAnalysis.Semantics
         }
 
         public virtual TResult VisitCollectionElementInitializerExpression(ICollectionElementInitializerExpression operation, TArgument argument)
+=======
+        public virtual TResult VisitAnonymousObjectCreationExpression(IAnonymousObjectCreationExpression operation, TArgument argument)
+>>>>>>> upstream/features/ioperation
         {
             return DefaultVisit(operation, argument);
         }
@@ -800,7 +798,7 @@ namespace Microsoft.CodeAnalysis.Semantics
             return DefaultVisit(operation, argument);
         }
 
-        public virtual TResult VisitAssignmentExpression(IAssignmentExpression operation, TArgument argument)
+        public virtual TResult VisitSimpleAssignmentExpression(ISimpleAssignmentExpression operation, TArgument argument)
         {
             return DefaultVisit(operation, argument);
         }
