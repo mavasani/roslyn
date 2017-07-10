@@ -128,6 +128,8 @@ namespace Microsoft.CodeAnalysis
         InterpolatedStringExpression = 0x11e,
         /// <summary>Indicates an <see cref="IAnonymousObjectCreationExpression"/>.</summary>
         AnonymousObjectCreationExpression = 0x11f,
+        /// <summary>Indicates an <see cref="ITupleExpression"/>.</summary>
+        TupleExpression = 0x124,
 
         // Expressions that occur only in C#.
 

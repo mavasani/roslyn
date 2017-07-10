@@ -163,6 +163,8 @@ Namespace Microsoft.CodeAnalysis.Semantics
                     Return CreateBoundAddHandlerStatementOperation(DirectCast(boundNode, BoundAddHandlerStatement))
                 Case BoundKind.RemoveHandlerStatement
                     Return CreateBoundRemoveHandlerStatementOperation(DirectCast(boundNode, BoundRemoveHandlerStatement))
+                Case BoundKind.TupleLiteral, BoundKind.ConvertedTupleLiteral
+                    Return CreateBoundTupleExpressionOperation(DirectCast(boundNode, BoundTupleExpression))
                 Case BoundKind.InterpolatedStringExpression
                     Return CreateBoundInterpolatedStringExpressionOperation(DirectCast(boundNode, BoundInterpolatedStringExpression))
                 Case BoundKind.Interpolation
@@ -1033,6 +1035,15 @@ Namespace Microsoft.CodeAnalysis.Semantics
             Dim type As ITypeSymbol = Nothing
             Dim constantValue As [Optional](Of Object) = New [Optional](Of Object)()
             Return New LazyExpressionStatement(expression, isInvalid, syntax, type, constantValue)
+        End Function
+
+        Private Function CreateBoundTupleExpressionOperation(boundTupleExpression As BoundTupleExpression) As ITupleExpression
+            Dim elements As New Lazy(Of ImmutableArray(Of IOperation))(Function() boundTupleExpression.Arguments.SelectAsArray(Function(element) Create(element)))
+            Dim isInvalid As Boolean = boundTupleExpression.HasErrors
+            Dim syntax As SyntaxNode = boundTupleExpression.Syntax
+            Dim type As ITypeSymbol = boundTupleExpression.Type
+            Dim constantValue As [Optional](Of Object) = ConvertToOptional(boundTupleExpression.ConstantValueOpt)
+            Return New LazyTupleExpression(elements, isInvalid, syntax, type, constantValue)
         End Function
 
         Private Function CreateBoundInterpolatedStringExpressionOperation(boundInterpolatedString As BoundInterpolatedStringExpression) As IInterpolatedStringExpression

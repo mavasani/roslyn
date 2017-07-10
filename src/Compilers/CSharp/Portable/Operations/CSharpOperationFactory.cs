@@ -175,6 +175,9 @@ namespace Microsoft.CodeAnalysis.Semantics
                     return CreateBoundLabeledStatementOperation((BoundLabeledStatement)boundNode);
                 case BoundKind.ExpressionStatement:
                     return CreateBoundExpressionStatementOperation((BoundExpressionStatement)boundNode);
+                case BoundKind.TupleLiteral:
+                case BoundKind.ConvertedTupleLiteral:
+                    return CreateBoundTupleExpressionOperation((BoundTupleExpression)boundNode);
                 case BoundKind.InterpolatedString:
                     return CreateBoundInterpolatedStringExpressionOperation((BoundInterpolatedString)boundNode);
                 case BoundKind.StringInsert:
@@ -1092,6 +1095,16 @@ namespace Microsoft.CodeAnalysis.Semantics
             ITypeSymbol type = null;
             Optional<object> constantValue = default(Optional<object>);
             return new LazyExpressionStatement(expression, isInvalid, syntax, type, constantValue);
+        }
+
+        private ITupleExpression CreateBoundTupleExpressionOperation(BoundTupleExpression boundTupleExpression)
+        {
+            Lazy<ImmutableArray<IOperation>> elements = new Lazy<ImmutableArray<IOperation>>(() => boundTupleExpression.Arguments.SelectAsArray(element => Create(element)));
+            bool isInvalid = boundTupleExpression.HasErrors;
+            SyntaxNode syntax = boundTupleExpression.Syntax;
+            ITypeSymbol type = boundTupleExpression.Type;
+            Optional<object> constantValue = ConvertToOptional(boundTupleExpression.ConstantValue);
+            return new LazyTupleExpression(elements, isInvalid, syntax, type, constantValue);
         }
 
         private IInterpolatedStringExpression CreateBoundInterpolatedStringExpressionOperation(BoundInterpolatedString boundInterpolatedString)

@@ -424,6 +424,11 @@ namespace Microsoft.CodeAnalysis.Semantics
         {
             DefaultVisit(operation);
         }
+
+        public virtual void VisitTupleExpression(ITupleExpression operation)
+        {
+            DefaultVisit(operation);
+        }
     }
 
     /// <summary>
@@ -851,6 +856,11 @@ namespace Microsoft.CodeAnalysis.Semantics
         }
 
         public virtual TResult VisitPatternCaseClause(IPatternCaseClause operation, TArgument argument)
+        {
+            return DefaultVisit(operation, argument);
+        }
+
+        public virtual TResult VisitTupleExpression(ITupleExpression operation, TArgument argument)
         {
             return DefaultVisit(operation, argument);
         }
