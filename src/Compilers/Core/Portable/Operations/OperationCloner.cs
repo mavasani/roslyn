@@ -345,21 +345,6 @@ namespace Microsoft.CodeAnalysis.Semantics
             return new CollectionElementInitializerExpression(operation.AddMethod, VisitArray(operation.Arguments), operation.IsDynamic, ((Operation)operation).SemanticModel, operation.Syntax, operation.Type, operation.ConstantValue, operation.IsImplicit);
         }
 
-        public override IOperation VisitFieldInitializer(IFieldInitializer operation, object argument)
-        {
-            return new FieldInitializer(operation.InitializedFields, Visit(operation.Value), operation.Kind, ((Operation)operation).SemanticModel, operation.Syntax, operation.Type, operation.ConstantValue, operation.IsImplicit);
-        }
-
-        public override IOperation VisitPropertyInitializer(IPropertyInitializer operation, object argument)
-        {
-            return new PropertyInitializer(operation.InitializedProperty, Visit(operation.Value), operation.Kind, ((Operation)operation).SemanticModel, operation.Syntax, operation.Type, operation.ConstantValue, operation.IsImplicit);
-        }
-
-        public override IOperation VisitParameterInitializer(IParameterInitializer operation, object argument)
-        {
-            return new ParameterInitializer(operation.Parameter, Visit(operation.Value), operation.Kind, ((Operation)operation).SemanticModel, operation.Syntax, operation.Type, operation.ConstantValue, operation.IsImplicit);
-        }
-
         public override IOperation VisitArrayCreationExpression(IArrayCreationExpression operation, object argument)
         {
             return new ArrayCreationExpression(operation.ElementType, VisitArray(operation.DimensionSizes), Visit(operation.Initializer), ((Operation)operation).SemanticModel, operation.Syntax, operation.Type, operation.ConstantValue, operation.IsImplicit);

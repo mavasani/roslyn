@@ -126,16 +126,15 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
                         });
 
                     // Track field initializations.
-                    compilationContext.RegisterOperationAction(
+                    compilationContext.RegisterOperationBlockAction(
                         (operationContext) =>
                         {
-                            IFieldInitializer initializer = (IFieldInitializer)operationContext.Operation;
-                            foreach (IFieldSymbol initializedField in initializer.InitializedFields)
+                            if (operationContext.OwningSymbol.Kind == SymbolKind.Field)
                             {
-                                AssignTo(initializedField, initializedField.Type, fieldsSourceTypes, initializer.Value);
+                                var initializedField = (IFieldSymbol)operationContext.OwningSymbol;
+                                AssignTo(initializedField, initializedField.Type, fieldsSourceTypes, operationContext.OperationBlocks.FirstOrDefault());
                             }
-                        },
-                        OperationKind.FieldInitializer);
+                        });
 
                     // Report fields that could have more specific types.
                     compilationContext.RegisterCompilationEndAction(

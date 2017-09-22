@@ -978,36 +978,36 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             CSharpSyntaxNode bindingRoot = GetBindingRoot(node);
 
-            // if binding root is parameter, make it equal value
+            // if binding root is parameter, make it parameter initializer value
             // we need to do this since node map doesn't contain bound node for parameter
             if (bindingRoot is ParameterSyntax parameter && parameter.Default?.FullSpan.Contains(node.Span) == true)
             {
-                return parameter.Default;
+                return parameter.Default.Value;
             }
 
-            // if binding root is field variable declarator, make it initializer
+            // if binding root is field variable declarator, make it field initializer value
             // we need to do this since node map doesn't contain bound node for field/event variable declarator
             if (bindingRoot is VariableDeclaratorSyntax variableDeclarator && variableDeclarator.Initializer?.FullSpan.Contains(node.Span) == true)
             {
                 if (variableDeclarator.Parent?.Parent.IsKind(SyntaxKind.FieldDeclaration) == true ||
                     variableDeclarator.Parent?.Parent.IsKind(SyntaxKind.EventFieldDeclaration) == true)
                 {
-                    return variableDeclarator.Initializer;
+                    return variableDeclarator.Initializer.Value;
                 }
             }
 
-            // if binding root is enum member decleration, make it equal value
+            // if binding root is enum member decleration, make it enum member initializer value
             // we need to do this since node map doesn't contain bound node for enum member decl
             if (bindingRoot is EnumMemberDeclarationSyntax enumMember && enumMember.EqualsValue?.FullSpan.Contains(node.Span) == true)
             {
-                return enumMember.EqualsValue;
+                return enumMember.EqualsValue.Value;
             }
 
-            // if binding root is property member decleration, make it equal value
+            // if binding root is property member decleration, make it property initializer value
             // we need to do this since node map doesn't contain bound node for property initializer
             if (bindingRoot is PropertyDeclarationSyntax propertyMember && propertyMember.Initializer?.FullSpan.Contains(node.Span) == true)
             {
-                return propertyMember.Initializer;
+                return propertyMember.Initializer.Value;
             }
 
             return bindingRoot;

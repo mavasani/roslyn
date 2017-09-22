@@ -1509,66 +1509,6 @@ namespace Microsoft.CodeAnalysis.Semantics
     }
 
     /// <summary>
-    /// Represents an initialization of a field.
-    /// </summary>
-    internal abstract partial class BaseFieldInitializer : SymbolInitializer, IFieldInitializer
-    {
-        public BaseFieldInitializer(ImmutableArray<IFieldSymbol> initializedFields, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            InitializedFields = initializedFields;
-        }
-        /// <summary>
-        /// Initialized fields. There can be multiple fields for Visual Basic fields declared with As New.
-        /// </summary>
-        public ImmutableArray<IFieldSymbol> InitializedFields { get; }
-        public override IEnumerable<IOperation> Children
-        {
-            get
-            {
-                yield return Value;
-            }
-        }
-
-        public override void Accept(OperationVisitor visitor)
-        {
-            visitor.VisitFieldInitializer(this);
-        }
-        public override TResult Accept<TArgument, TResult>(OperationVisitor<TArgument, TResult> visitor, TArgument argument)
-        {
-            return visitor.VisitFieldInitializer(this, argument);
-        }
-    }
-
-    /// <summary>
-    /// Represents an initialization of a field.
-    /// </summary>
-    internal sealed partial class FieldInitializer : BaseFieldInitializer, IFieldInitializer
-    {
-        public FieldInitializer(ImmutableArray<IFieldSymbol> initializedFields, IOperation value, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(initializedFields, kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            ValueImpl = value;
-        }
-        protected override IOperation ValueImpl { get; }
-    }
-
-    /// <summary>
-    /// Represents an initialization of a field.
-    /// </summary>
-    internal sealed partial class LazyFieldInitializer : BaseFieldInitializer, IFieldInitializer
-    {
-        private readonly Lazy<IOperation> _lazyValue;
-
-        public LazyFieldInitializer(ImmutableArray<IFieldSymbol> initializedFields, Lazy<IOperation> value, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(initializedFields, kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            _lazyValue = value ?? throw new System.ArgumentNullException(nameof(value));
-        }
-        protected override IOperation ValueImpl => _lazyValue.Value;
-    }
-
-    /// <summary>
     /// Represents a reference to a field.
     /// </summary>
     internal abstract partial class BaseFieldReferenceExpression : MemberReferenceExpression, IFieldReferenceExpression
@@ -3395,66 +3335,6 @@ namespace Microsoft.CodeAnalysis.Semantics
     }
 
     /// <summary>
-    /// Represents an initialization of a parameter at the point of declaration.
-    /// </summary>
-    internal abstract partial class BaseParameterInitializer : SymbolInitializer, IParameterInitializer
-    {
-        public BaseParameterInitializer(IParameterSymbol parameter, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            Parameter = parameter;
-        }
-        /// <summary>
-        /// Initialized parameter.
-        /// </summary>
-        public IParameterSymbol Parameter { get; }
-        public override IEnumerable<IOperation> Children
-        {
-            get
-            {
-                yield return Value;
-            }
-        }
-
-        public override void Accept(OperationVisitor visitor)
-        {
-            visitor.VisitParameterInitializer(this);
-        }
-        public override TResult Accept<TArgument, TResult>(OperationVisitor<TArgument, TResult> visitor, TArgument argument)
-        {
-            return visitor.VisitParameterInitializer(this, argument);
-        }
-    }
-
-    /// <summary>
-    /// Represents an initialization of a parameter at the point of declaration.
-    /// </summary>
-    internal sealed partial class ParameterInitializer : BaseParameterInitializer, IParameterInitializer
-    {
-        public ParameterInitializer(IParameterSymbol parameter, IOperation value, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(parameter, kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            ValueImpl = value;
-        }
-        protected override IOperation ValueImpl { get; }
-    }
-
-    /// <summary>
-    /// Represents an initialization of a parameter at the point of declaration.
-    /// </summary>
-    internal sealed partial class LazyParameterInitializer : BaseParameterInitializer, IParameterInitializer
-    {
-        private readonly Lazy<IOperation> _lazyValue;
-
-        public LazyParameterInitializer(IParameterSymbol parameter, Lazy<IOperation> value, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(parameter, kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            _lazyValue = value ?? throw new System.ArgumentNullException(nameof(value));
-        }
-        protected override IOperation ValueImpl => _lazyValue.Value;
-    }
-
-    /// <summary>
     /// Represents a reference to a parameter.
     /// </summary>
     internal sealed partial class ParameterReferenceExpression : Operation, IParameterReferenceExpression
@@ -3636,66 +3516,6 @@ namespace Microsoft.CodeAnalysis.Semantics
         }
 
         protected override IOperation PointerImpl => _lazyPointer.Value;
-    }
-
-    /// <summary>
-    /// Represents an initialization of a property.
-    /// </summary>
-    internal abstract partial class BasePropertyInitializer : SymbolInitializer, IPropertyInitializer
-    {
-        public BasePropertyInitializer(IPropertySymbol initializedProperty, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            InitializedProperty = initializedProperty;
-        }
-        /// <summary>
-        /// Set method used to initialize the property.
-        /// </summary>
-        public IPropertySymbol InitializedProperty { get; }
-        public override IEnumerable<IOperation> Children
-        {
-            get
-            {
-                yield return Value;
-            }
-        }
-
-        public override void Accept(OperationVisitor visitor)
-        {
-            visitor.VisitPropertyInitializer(this);
-        }
-        public override TResult Accept<TArgument, TResult>(OperationVisitor<TArgument, TResult> visitor, TArgument argument)
-        {
-            return visitor.VisitPropertyInitializer(this, argument);
-        }
-    }
-
-    /// <summary>
-    /// Represents an initialization of a property.
-    /// </summary>
-    internal sealed partial class PropertyInitializer : BasePropertyInitializer, IPropertyInitializer
-    {
-        public PropertyInitializer(IPropertySymbol initializedProperty, IOperation value, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(initializedProperty, kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            ValueImpl = value;
-        }
-        protected override IOperation ValueImpl { get; }
-    }
-
-    /// <summary>
-    /// Represents an initialization of a property.
-    /// </summary>
-    internal sealed partial class LazyPropertyInitializer : BasePropertyInitializer, IPropertyInitializer
-    {
-        private readonly Lazy<IOperation> _lazyValue;
-
-        public LazyPropertyInitializer(IPropertySymbol initializedProperty, Lazy<IOperation> value, OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(initializedProperty, kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-            _lazyValue = value ?? throw new System.ArgumentNullException(nameof(value));
-        }
-        protected override IOperation ValueImpl => _lazyValue.Value;
     }
 
     /// <summary>
@@ -4317,19 +4137,6 @@ namespace Microsoft.CodeAnalysis.Semantics
         protected override IOperation ValueImpl => _lazyValue.Value;
 
         protected override ImmutableArray<ISwitchCase> CasesImpl => _lazyCases.Value;
-    }
-
-    /// <summary>
-    /// Represents an initializer for a field, property, or parameter.
-    /// </summary>
-    internal abstract partial class SymbolInitializer : Operation, ISymbolInitializer
-    {
-        protected SymbolInitializer(OperationKind kind, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
-            base(kind, semanticModel, syntax, type, constantValue, isImplicit)
-        {
-        }
-        protected abstract IOperation ValueImpl { get; }
-        public IOperation Value => Operation.SetParentOperation(ValueImpl, this);
     }
 
     /// <summary>

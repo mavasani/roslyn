@@ -794,9 +794,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Function
 
         Friend Overrides Function GetOperationWorker(node As VisualBasicSyntaxNode, cancellationToken As CancellationToken) As IOperation
-            ' see whether we can bind smaller scope than GetBindingRoot to make perf better
-            ' https://github.com/dotnet/roslyn/issues/22176
-            Dim bindingRoot = DirectCast(GetBindingRoot(node), VisualBasicSyntaxNode)
+            Dim bindingRoot = DirectCast(GetBindingRootOrInitializerForIOperation(node), VisualBasicSyntaxNode)
 
             Dim statementOrRootOperation As IOperation = GetStatementOrRootOperation(bindingRoot, cancellationToken)
             If statementOrRootOperation Is Nothing Then
@@ -808,8 +806,51 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Return statementOrRootOperation.DescendantsAndSelf().FirstOrDefault(Function(o) Not o.IsImplicit AndAlso o.Syntax Is node)
         End Function
 
+        Private Function GetBindingRootOrInitializerForIOperation(node As VisualBasicSyntaxNode) As VisualBasicSyntaxNode
+            ' see whether we can bind smaller scope than GetBindingRoot to make perf better
+            ' https://github.com/dotnet/roslyn/issues/22176
+            Dim bindingRoot = DirectCast(GetBindingRoot(node), VisualBasicSyntaxNode)
+
+            ' if binding root Is parameter/field/property/enum declaration, make it initializer value of the symbol declaration.
+            ' we need to do this since we do not support IOperation for entire declaration or equals value node for the initializers.
+            Select Case bindingRoot.Kind()
+                Case SyntaxKind.FieldDeclaration
+                    Dim fieldDeclaration = DirectCast(bindingRoot, FieldDeclarationSyntax)
+                    Dim declarator As VariableDeclaratorSyntax = fieldDeclaration.Declarators.FirstOrDefault(Function(d) d.FullSpan.Contains(node.FullSpan))
+                    If declarator IsNot Nothing Then
+                        If declarator.Initializer?.FullSpan.Contains(node.FullSpan) Then
+                            bindingRoot = declarator.Initializer.Value
+                        ElseIf declarator.AsClause?.FullSpan.Contains(node.FullSpan) AndAlso declarator.AsClause.Kind = SyntaxKind.AsNewClause Then
+                            bindingRoot = DirectCast(declarator.AsClause, AsNewClauseSyntax).NewExpression
+                        End If
+                    End If
+                Case SyntaxKind.Parameter
+                    Dim parameterDeclaration = DirectCast(bindingRoot, ParameterSyntax)
+                    bindingRoot = parameterDeclaration.Default?.Value
+                Case SyntaxKind.PropertyStatement
+                    Dim propertyStatement = DirectCast(bindingRoot, PropertyStatementSyntax)
+                    bindingRoot = propertyStatement.Initializer?.Value
+                Case SyntaxKind.EnumMemberDeclaration
+                    Dim enumMemberDeclaration = DirectCast(bindingRoot, EnumMemberDeclarationSyntax)
+                    bindingRoot = enumMemberDeclaration.Initializer?.Value
+                Case SyntaxKind.EqualsValue
+                    'Dim equalsValue = DirectCast(node, EqualsValueSyntax)
+                    'Select Case node.Parent?.Kind
+                    '    Case SyntaxKind.Parameter, SyntaxKind.PropertyStatement, SyntaxKind.EnumMemberDeclaration
+                    '        bindingRoot = equalsValue.Value
+                    '    Case SyntaxKind.VariableDeclarator
+                    '        If node.Parent.Parent?.Kind = SyntaxKind.FieldDeclaration Then
+                    '            bindingRoot = equalsValue.Value
+                    '        End If
+                    'End Select
+            End Select
+
+
+            Return bindingRoot
+        End Function
+
         Private Function GetStatementOrRootOperation(node As VisualBasicSyntaxNode, cancellationToken As CancellationToken) As IOperation
-            Debug.Assert(node Is GetBindingRoot(node))
+            Debug.Assert(node Is GetBindingRootOrInitializerForIOperation(node))
 
             Dim summary As BoundNodeSummary = GetBoundNodeSummary(node)
 

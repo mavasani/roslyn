@@ -503,29 +503,6 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             base.VisitCollectionElementInitializerExpression(operation);
         }
 
-        public override void VisitFieldInitializer(IFieldInitializer operation)
-        {
-            foreach (var field in operation.InitializedFields)
-            {
-                // empty loop body, just want to make sure it won't crash.
-            }
-            base.VisitFieldInitializer(operation);
-        }
-
-        public override void VisitPropertyInitializer(IPropertyInitializer operation)
-        {
-            var initializedProperty = operation.InitializedProperty;
-
-            base.VisitPropertyInitializer(operation);
-        }
-
-        public override void VisitParameterInitializer(IParameterInitializer operation)
-        {
-            var parameter = operation.Parameter;
-
-            base.VisitParameterInitializer(operation);
-        }
-
         public override void VisitArrayCreationExpression(IArrayCreationExpression operation)
         {
             var elementType = operation.ElementType;

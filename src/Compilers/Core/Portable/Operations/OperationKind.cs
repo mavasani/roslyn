@@ -190,15 +190,8 @@ namespace Microsoft.CodeAnalysis
 
         // Operations that are constituents of statements, expressions, or declarations.
 
+        // Unused 0x400 to 0x404
 
-        // Unused 0x400 and 0x402
-
-        /// <summary>Indicates an <see cref="IFieldInitializer"/>.</summary>
-        FieldInitializer = 0x401,
-        /// <summary>Indicates an <see cref="IPropertyInitializer"/>.</summary>
-        PropertyInitializer = 0x403,
-        /// <summary>Indicates an <see cref="IParameterInitializer"/>.</summary>
-        ParameterInitializer = 0x404,
         /// <summary>Indicates an <see cref="IArrayInitializer"/>.</summary>
         ArrayInitializer = 0x405,
 

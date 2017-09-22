@@ -124,12 +124,8 @@ Namespace Microsoft.CodeAnalysis.Semantics
                     Return CreateBoundLateInvocationOperation(DirectCast(boundNode, BoundLateInvocation))
                 Case BoundKind.LateMemberAccess
                     Return CreateBoundLateMemberAccessOperation(DirectCast(boundNode, BoundLateMemberAccess))
-                Case BoundKind.FieldInitializer
-                    Return CreateBoundFieldInitializerOperation(DirectCast(boundNode, BoundFieldInitializer))
-                Case BoundKind.PropertyInitializer
-                    Return CreateBoundPropertyInitializerOperation(DirectCast(boundNode, BoundPropertyInitializer))
-                Case BoundKind.ParameterEqualsValue
-                    Return CreateBoundParameterEqualsValueOperation(DirectCast(boundNode, BoundParameterEqualsValue))
+                Case BoundKind.FieldInitializer, BoundKind.PropertyInitializer, BoundKind.ParameterEqualsValue
+                    Throw ExceptionUtilities.Unreachable
                 Case BoundKind.RValuePlaceholder
                     Return CreateBoundRValuePlaceholderOperation(DirectCast(boundNode, BoundRValuePlaceholder))
                 Case BoundKind.IfStatement
@@ -831,39 +827,6 @@ Namespace Microsoft.CodeAnalysis.Semantics
             Dim constantValue As [Optional](Of Object) = ConvertToOptional(boundLateMemberAccess.ConstantValueOpt)
             Dim isImplicit As Boolean = boundLateMemberAccess.WasCompilerGenerated
             Return New LazyDynamicMemberReferenceExpression(instance, memberName, typeArguments, containingType, _semanticModel, syntax, type, constantValue, isImplicit)
-        End Function
-
-        Private Function CreateBoundFieldInitializerOperation(boundFieldInitializer As BoundFieldInitializer) As IFieldInitializer
-            Dim initializedFields As ImmutableArray(Of IFieldSymbol) = ImmutableArray(Of IFieldSymbol).CastUp(boundFieldInitializer.InitializedFields)
-            Dim value As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() Create(boundFieldInitializer.InitialValue))
-            Dim kind As OperationKind = OperationKind.FieldInitializer
-            Dim syntax As SyntaxNode = boundFieldInitializer.Syntax
-            Dim type As ITypeSymbol = Nothing
-            Dim constantValue As [Optional](Of Object) = New [Optional](Of Object)()
-            Dim isImplicit As Boolean = boundFieldInitializer.WasCompilerGenerated
-            Return New LazyFieldInitializer(initializedFields, value, kind, _semanticModel, syntax, type, constantValue, isImplicit)
-        End Function
-
-        Private Function CreateBoundPropertyInitializerOperation(boundPropertyInitializer As BoundPropertyInitializer) As IPropertyInitializer
-            Dim initializedProperty As IPropertySymbol = boundPropertyInitializer.InitializedProperties.FirstOrDefault()
-            Dim value As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() Create(boundPropertyInitializer.InitialValue))
-            Dim kind As OperationKind = OperationKind.PropertyInitializer
-            Dim syntax As SyntaxNode = boundPropertyInitializer.Syntax
-            Dim type As ITypeSymbol = Nothing
-            Dim constantValue As [Optional](Of Object) = New [Optional](Of Object)()
-            Dim isImplicit As Boolean = boundPropertyInitializer.WasCompilerGenerated
-            Return New LazyPropertyInitializer(initializedProperty, value, kind, _semanticModel, syntax, type, constantValue, isImplicit)
-        End Function
-
-        Private Function CreateBoundParameterEqualsValueOperation(boundParameterEqualsValue As BoundParameterEqualsValue) As IParameterInitializer
-            Dim parameter As IParameterSymbol = boundParameterEqualsValue.Parameter
-            Dim value As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() Create(boundParameterEqualsValue.Value))
-            Dim kind As OperationKind = OperationKind.ParameterInitializer
-            Dim syntax As SyntaxNode = boundParameterEqualsValue.Syntax
-            Dim type As ITypeSymbol = Nothing
-            Dim constantValue As [Optional](Of Object) = New [Optional](Of Object)()
-            Dim isImplicit As Boolean = boundParameterEqualsValue.WasCompilerGenerated
-            Return New LazyParameterInitializer(parameter, value, kind, _semanticModel, syntax, type, constantValue, isImplicit)
         End Function
 
         Private Function CreateBoundRValuePlaceholderOperation(boundRValuePlaceholder As BoundRValuePlaceholder) As IPlaceholderExpression

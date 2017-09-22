@@ -1188,27 +1188,21 @@ namespace Microsoft.CodeAnalysis.UnitTests.Diagnostics
 
         public sealed override void Initialize(AnalysisContext context)
         {
-            context.RegisterOperationAction(
+            context.RegisterOperationBlockAction(
                  (operationContext) =>
                  {
-                     IFieldInitializer equalsValue = (IFieldInitializer)operationContext.Operation;
-                     if (equalsValue.InitializedFields[0].Name.StartsWith("F"))
+                     switch (operationContext.OwningSymbol.Kind)
                      {
-                         operationContext.ReportDiagnostic(Diagnostic.Create(EqualsValueDescriptor, equalsValue.Syntax.GetLocation()));
+                         case SymbolKind.Parameter:
+                         case SymbolKind.Field:
+                             if (operationContext.OwningSymbol.Name.StartsWith("F"))
+                             {
+                                 var initializer = operationContext.OperationBlocks.First();
+                                 operationContext.ReportDiagnostic(Diagnostic.Create(EqualsValueDescriptor, initializer.Syntax.GetLocation()));
+                             }
+                             break;
                      }
-                 },
-                 OperationKind.FieldInitializer);
-
-            context.RegisterOperationAction(
-                 (operationContext) =>
-                 {
-                     IParameterInitializer equalsValue = (IParameterInitializer)operationContext.Operation;
-                     if (equalsValue.Parameter.Name.StartsWith("F"))
-                     {
-                         operationContext.ReportDiagnostic(Diagnostic.Create(EqualsValueDescriptor, equalsValue.Syntax.GetLocation()));
-                     }
-                 },
-                 OperationKind.ParameterInitializer);
+                 });
         }
     }
 

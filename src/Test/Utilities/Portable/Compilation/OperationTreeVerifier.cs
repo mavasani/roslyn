@@ -1122,60 +1122,6 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             VisitArray(operation.Arguments, "Arguments", logElementCount: true);
         }
 
-        public override void VisitFieldInitializer(IFieldInitializer operation)
-        {
-            LogString(nameof(IFieldInitializer));
-
-            if (operation.InitializedFields.Length <= 1)
-            {
-                if (operation.InitializedFields.Length == 1)
-                {
-                    LogSymbol(operation.InitializedFields[0], header: " (Field");
-                    LogString(")");
-                }
-
-                LogCommonPropertiesAndNewLine(operation);
-            }
-            else
-            {
-                LogString($" ({operation.InitializedFields.Length} initialized fields)");
-                LogCommonPropertiesAndNewLine(operation);
-
-                Indent();
-
-                int index = 1;
-                foreach (var local in operation.InitializedFields)
-                {
-                    LogSymbol(local, header: $"Field_{index++}");
-                    LogNewLine();
-                }
-
-                Unindent();
-            }
-
-            base.VisitFieldInitializer(operation);
-        }
-
-        public override void VisitPropertyInitializer(IPropertyInitializer operation)
-        {
-            LogString(nameof(IPropertyInitializer));
-            LogSymbol(operation.InitializedProperty, header: " (Property");
-            LogString(")");
-            LogCommonPropertiesAndNewLine(operation);
-
-            base.VisitPropertyInitializer(operation);
-        }
-
-        public override void VisitParameterInitializer(IParameterInitializer operation)
-        {
-            LogString(nameof(IParameterInitializer));
-            LogSymbol(operation.Parameter, header: " (Parameter");
-            LogString(")");
-            LogCommonPropertiesAndNewLine(operation);
-
-            base.VisitParameterInitializer(operation);
-        }
-
         public override void VisitArrayCreationExpression(IArrayCreationExpression operation)
         {
             LogString(nameof(IArrayCreationExpression));

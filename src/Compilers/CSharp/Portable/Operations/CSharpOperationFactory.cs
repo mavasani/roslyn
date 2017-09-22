@@ -145,11 +145,9 @@ namespace Microsoft.CodeAnalysis.Semantics
                 case BoundKind.ConditionalReceiver:
                     return CreateBoundConditionalReceiverOperation((BoundConditionalReceiver)boundNode);
                 case BoundKind.FieldEqualsValue:
-                    return CreateBoundFieldEqualsValueOperation((BoundFieldEqualsValue)boundNode);
                 case BoundKind.PropertyEqualsValue:
-                    return CreateBoundPropertyEqualsValueOperation((BoundPropertyEqualsValue)boundNode);
                 case BoundKind.ParameterEqualsValue:
-                    return CreateBoundParameterEqualsValueOperation((BoundParameterEqualsValue)boundNode);
+                    throw ExceptionUtilities.Unreachable;
                 case BoundKind.Block:
                     return CreateBoundBlockOperation((BoundBlock)boundNode);
                 case BoundKind.ContinueStatement:
@@ -1051,42 +1049,6 @@ namespace Microsoft.CodeAnalysis.Semantics
             Optional<object> constantValue = ConvertToOptional(boundConditionalReceiver.ConstantValue);
             bool isImplicit = boundConditionalReceiver.WasCompilerGenerated;
             return new ConditionalAccessInstanceExpression(_semanticModel, syntax, type, constantValue, isImplicit);
-        }
-
-        private IFieldInitializer CreateBoundFieldEqualsValueOperation(BoundFieldEqualsValue boundFieldEqualsValue)
-        {
-            ImmutableArray<IFieldSymbol> initializedFields = ImmutableArray.Create<IFieldSymbol>(boundFieldEqualsValue.Field);
-            Lazy<IOperation> value = new Lazy<IOperation>(() => Create(boundFieldEqualsValue.Value));
-            OperationKind kind = OperationKind.FieldInitializer;
-            SyntaxNode syntax = boundFieldEqualsValue.Syntax;
-            ITypeSymbol type = null;
-            Optional<object> constantValue = default(Optional<object>);
-            bool isImplicit = boundFieldEqualsValue.WasCompilerGenerated;
-            return new LazyFieldInitializer(initializedFields, value, kind, _semanticModel, syntax, type, constantValue, isImplicit);
-        }
-
-        private IPropertyInitializer CreateBoundPropertyEqualsValueOperation(BoundPropertyEqualsValue boundPropertyEqualsValue)
-        {
-            IPropertySymbol initializedProperty = boundPropertyEqualsValue.Property;
-            Lazy<IOperation> value = new Lazy<IOperation>(() => Create(boundPropertyEqualsValue.Value));
-            OperationKind kind = OperationKind.PropertyInitializer;
-            SyntaxNode syntax = boundPropertyEqualsValue.Syntax;
-            ITypeSymbol type = null;
-            Optional<object> constantValue = default(Optional<object>);
-            bool isImplicit = boundPropertyEqualsValue.WasCompilerGenerated;
-            return new LazyPropertyInitializer(initializedProperty, value, kind, _semanticModel, syntax, type, constantValue, isImplicit);
-        }
-
-        private IParameterInitializer CreateBoundParameterEqualsValueOperation(BoundParameterEqualsValue boundParameterEqualsValue)
-        {
-            IParameterSymbol parameter = boundParameterEqualsValue.Parameter;
-            Lazy<IOperation> value = new Lazy<IOperation>(() => Create(boundParameterEqualsValue.Value));
-            OperationKind kind = OperationKind.ParameterInitializer;
-            SyntaxNode syntax = boundParameterEqualsValue.Syntax;
-            ITypeSymbol type = null;
-            Optional<object> constantValue = default(Optional<object>);
-            bool isImplicit = boundParameterEqualsValue.WasCompilerGenerated;
-            return new LazyParameterInitializer(parameter, value, kind, _semanticModel, syntax, type, constantValue, isImplicit);
         }
 
         private IBlockStatement CreateBoundBlockOperation(BoundBlock boundBlock)
