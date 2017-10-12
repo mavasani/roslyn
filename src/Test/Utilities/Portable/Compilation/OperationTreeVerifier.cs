@@ -75,6 +75,10 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
                 LogString(", ");
                 LogType(operation.Type);
             }
+            else if(operation.Type != null)
+            {
+                //Assert.Null(operation.Type);
+            }
 
             // ConstantValue
             if (operation.ConstantValue.HasValue)
