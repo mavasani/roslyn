@@ -783,6 +783,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
         public override void VisitInstanceReference(IInstanceReferenceOperation operation)
         {
             LogString(nameof(IInstanceReferenceOperation));
+            LogString($" ({nameof(InstanceReferenceKind)}.{operation.InstanceReferenceKind})");
             LogCommonPropertiesAndNewLine(operation);
         }
 

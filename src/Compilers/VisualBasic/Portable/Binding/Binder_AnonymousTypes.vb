@@ -100,7 +100,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Private _freeze As Boolean
 
             Friend Shared Function BindAnonymousObjectInitializer(containingBinder As Binder,
-                                                                  owningSyntax As VisualBasicSyntaxNode,
+                                                                  owningSyntax As AnonymousObjectCreationExpressionSyntax,
                                                                   initializerSyntax As ObjectMemberInitializerSyntax,
                                                                   typeLocationToken As SyntaxToken,
                                                                   diagnostics As DiagnosticBag) As BoundExpression
@@ -204,7 +204,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
 #Region "Binding of anonymous type creation field initializers"
 
-            Private Function BindInitializersAndCreateBoundNode(owningSyntax As VisualBasicSyntaxNode,
+            Private Function BindInitializersAndCreateBoundNode(owningSyntax As AnonymousObjectCreationExpressionSyntax,
                                                                 initializerSyntax As ObjectMemberInitializerSyntax,
                                                                 diagnostics As DiagnosticBag,
                                                                 typeLocationToken As SyntaxToken) As BoundExpression
@@ -236,7 +236,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                         initExpression = namedFieldInitializer.Expression
                     End If
 
-                    Dim initializerBinder As New AnonymousTypeFieldInitializerBinder(Me, index)
+                    Dim initializerBinder As New AnonymousTypeFieldInitializerBinder(Me, index, owningSyntax)
 
                     Dim boundExpression As BoundExpression = initializerBinder.BindRValue(initExpression, diagnostics)
                     boundExpression = New BoundAnonymousTypeFieldInitializer(initializer, initializerBinder, boundExpression, boundExpression.Type).MakeCompilerGenerated()
@@ -266,7 +266,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                         Me._fieldDeclarations.Add(
                                         New BoundAnonymousTypePropertyAccess(
                                             namedFieldInitializer.Name,
-                                            Me, index, fieldType))
+                                            Me, index, owningSyntax, fieldType))
                     End If
 
                     ' TODO: when Dev10 reports ERR_BadOrCircularInitializerReference (BC36555) ??
@@ -366,11 +366,13 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Inherits Binder
 
             Private ReadOnly _initializerOrdinal As Integer
+            Private ReadOnly _owningSyntax As AnonymousObjectCreationExpressionSyntax
 
-            Public Sub New(creationBinder As AnonymousTypeCreationBinder, initializerOrdinal As Integer)
+            Public Sub New(creationBinder As AnonymousTypeCreationBinder, initializerOrdinal As Integer, owningSyntax As AnonymousObjectCreationExpressionSyntax)
                 MyBase.New(creationBinder)
 
                 _initializerOrdinal = initializerOrdinal
+                _owningSyntax = owningSyntax
             End Sub
 
 #Region "Binding of member access with omitted left like '.fieldName'"
@@ -434,7 +436,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
                         ' return bound anonymous type access
                         Debug.Assert(field.Type IsNot Nothing)
-                        Return New BoundAnonymousTypePropertyAccess(node, creationBinder, fieldIndex, field.Type, hasErrors)
+                        Return New BoundAnonymousTypePropertyAccess(node, creationBinder, fieldIndex, _owningSyntax, field.Type, hasErrors)
                     End If
                 Else
                     ' NOTE: Dev10 allows references to methods defined of anonymous type, which boils 

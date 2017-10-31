@@ -308,7 +308,7 @@ Namespace Microsoft.CodeAnalysis.Operations
             Dim type As ITypeSymbol = boundMeReference.Type
             Dim constantValue As [Optional](Of Object) = ConvertToOptional(boundMeReference.ConstantValueOpt)
             Dim isImplicit As Boolean = boundMeReference.WasCompilerGenerated
-            Return New InstanceReferenceExpression(_semanticModel, syntax, type, constantValue, isImplicit)
+            Return New InstanceReferenceExpression(InstanceReferenceKind.This, _semanticModel, syntax, type, constantValue, isImplicit)
         End Function
 
         Private Function CreateBoundMyBaseReferenceOperation(boundMyBaseReference As BoundMyBaseReference) As IInstanceReferenceOperation
@@ -316,7 +316,7 @@ Namespace Microsoft.CodeAnalysis.Operations
             Dim type As ITypeSymbol = boundMyBaseReference.Type
             Dim constantValue As [Optional](Of Object) = ConvertToOptional(boundMyBaseReference.ConstantValueOpt)
             Dim isImplicit As Boolean = boundMyBaseReference.WasCompilerGenerated
-            Return New InstanceReferenceExpression(_semanticModel, syntax, type, constantValue, isImplicit)
+            Return New InstanceReferenceExpression(InstanceReferenceKind.Base, _semanticModel, syntax, type, constantValue, isImplicit)
         End Function
 
         Private Function CreateBoundMyClassReferenceOperation(boundMyClassReference As BoundMyClassReference) As IInstanceReferenceOperation
@@ -324,7 +324,7 @@ Namespace Microsoft.CodeAnalysis.Operations
             Dim type As ITypeSymbol = boundMyClassReference.Type
             Dim constantValue As [Optional](Of Object) = ConvertToOptional(boundMyClassReference.ConstantValueOpt)
             Dim isImplicit As Boolean = boundMyClassReference.WasCompilerGenerated
-            Return New InstanceReferenceExpression(_semanticModel, syntax, type, constantValue, isImplicit)
+            Return New InstanceReferenceExpression(InstanceReferenceKind.This, _semanticModel, syntax, type, constantValue, isImplicit)
         End Function
 
         Private Function CreateBoundLiteralOperation(boundLiteral As BoundLiteral, Optional implicit As Boolean = False) As ILiteralOperation
@@ -367,7 +367,7 @@ Namespace Microsoft.CodeAnalysis.Operations
             Dim targetMethod As IMethodSymbol = boundCall.Method
             Dim receiver As IOperation = Create(boundCall.ReceiverOpt)
 
-            Dim instance As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() If(targetMethod.IsShared, Nothing, receiver))
+            Dim instance As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() If(receiver?.Kind = BoundKind.TypeExpression, Nothing, receiver))
             Dim isVirtual As Boolean =
                 targetMethod IsNot Nothing AndAlso
                 instance IsNot Nothing AndAlso
@@ -767,7 +767,7 @@ Namespace Microsoft.CodeAnalysis.Operations
         Private Function CreateBoundPropertyAccessOperation(boundPropertyAccess As BoundPropertyAccess) As IPropertyReferenceOperation
             Dim instance As Lazy(Of IOperation) = New Lazy(Of IOperation)(
                 Function()
-                    If boundPropertyAccess.PropertySymbol.IsShared Then
+                    If boundPropertyAccess.ReceiverOpt?.Kind = BoundKind.TypeExpression Then
                         Return Nothing
                     Else
                         Return Create(boundPropertyAccess.ReceiverOpt)
@@ -788,26 +788,37 @@ Namespace Microsoft.CodeAnalysis.Operations
             Return New LazyPropertyReferenceExpression([property], instance, arguments, _semanticModel, syntax, type, constantValue, isImplicit)
         End Function
 
+        Private Shared Function IsObjectCreationOrAsClauseSyntax(syntax As SyntaxNode) As Boolean
+            Select Case syntax.Kind
+                Case SyntaxKind.ObjectCreationExpression, SyntaxKind.AsNewClause, SyntaxKind.SimpleAsClause
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
+
         Private Function CreateBoundWithLValueExpressionPlaceholder(boundWithLValueExpressionPlaceholder As BoundWithLValueExpressionPlaceholder) As IInstanceReferenceOperation
             Dim syntax As SyntaxNode = boundWithLValueExpressionPlaceholder.Syntax
+            Dim instanceReferenceKind As InstanceReferenceKind = If(IsObjectCreationOrAsClauseSyntax(syntax), InstanceReferenceKind.ObjectCreation, InstanceReferenceKind.This)
             Dim type As ITypeSymbol = boundWithLValueExpressionPlaceholder.Type
             Dim constantValue As [Optional](Of Object) = ConvertToOptional(boundWithLValueExpressionPlaceholder.ConstantValueOpt)
             Dim isImplicit As Boolean = boundWithLValueExpressionPlaceholder.WasCompilerGenerated
-            Return New InstanceReferenceExpression(_semanticModel, syntax, type, constantValue, isImplicit)
+            Return New InstanceReferenceExpression(instanceReferenceKind, _semanticModel, syntax, type, constantValue, isImplicit)
         End Function
 
         Private Function CreateBoundWithRValueExpressionPlaceholder(boundWithRValueExpressionPlaceholder As BoundWithRValueExpressionPlaceholder) As IInstanceReferenceOperation
             Dim syntax As SyntaxNode = boundWithRValueExpressionPlaceholder.Syntax
+            Dim instanceReferenceKind As InstanceReferenceKind = If(IsObjectCreationOrAsClauseSyntax(syntax), InstanceReferenceKind.ObjectCreation, InstanceReferenceKind.This)
             Dim type As ITypeSymbol = boundWithRValueExpressionPlaceholder.Type
             Dim constantValue As [Optional](Of Object) = ConvertToOptional(boundWithRValueExpressionPlaceholder.ConstantValueOpt)
             Dim isImplicit As Boolean = boundWithRValueExpressionPlaceholder.WasCompilerGenerated
-            Return New InstanceReferenceExpression(_semanticModel, syntax, type, constantValue, isImplicit)
+            Return New InstanceReferenceExpression(instanceReferenceKind, _semanticModel, syntax, type, constantValue, isImplicit)
         End Function
 
         Private Function CreateBoundEventAccessOperation(boundEventAccess As BoundEventAccess) As IEventReferenceOperation
             Dim instance As Lazy(Of IOperation) = New Lazy(Of IOperation)(
                 Function()
-                    If boundEventAccess.EventSymbol.IsShared Then
+                    If boundEventAccess.ReceiverOpt?.Kind = BoundKind.TypeExpression Then
                         Return Nothing
                     Else
                         Return Create(boundEventAccess.ReceiverOpt)
@@ -827,7 +838,7 @@ Namespace Microsoft.CodeAnalysis.Operations
             Dim isDeclaration As Boolean = False
             Dim instance As Lazy(Of IOperation) = New Lazy(Of IOperation)(
                 Function()
-                    If boundFieldAccess.FieldSymbol.IsShared Then
+                    If boundFieldAccess.ReceiverOpt?.Kind = BoundKind.TypeExpression Then
                         Return Nothing
                     Else
                         Return Create(boundFieldAccess.ReceiverOpt)
@@ -1410,7 +1421,7 @@ Namespace Microsoft.CodeAnalysis.Operations
                 boundInstance = receiver
             End If
 
-            Dim eventReferenceInstance As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() If(eventSymbol.IsShared, Nothing, Create(boundInstance)))
+            Dim eventReferenceInstance As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() If(boundInstance?.Kind = BoundKind.TypeExpression, Nothing, Create(boundInstance)))
 
             Dim eventReference As Lazy(Of IEventReferenceOperation) = New Lazy(Of IEventReferenceOperation)(Function() As IEventReferenceOperation
                                                                                                                 Return New LazyEventReferenceExpression(eventSymbol,
@@ -1512,8 +1523,13 @@ Namespace Microsoft.CodeAnalysis.Operations
         End Function
 
         Private Function CreateBoundAnonymousTypePropertyAccessOperation(boundAnonymousTypePropertyAccess As BoundAnonymousTypePropertyAccess) As IPropertyReferenceOperation
-            Dim instance As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() Nothing)
             Dim [property] As IPropertySymbol = DirectCast(boundAnonymousTypePropertyAccess.ExpressionSymbol, IPropertySymbol)
+            Dim instance As Lazy(Of IOperation) = New Lazy(Of IOperation)(Function() New InstanceReferenceExpression(InstanceReferenceKind.AnonymousObjectCreation,
+                                                                                                                     _semanticModel,
+                                                                                                                     boundAnonymousTypePropertyAccess.OwningSyntax,
+                                                                                                                     [property].ContainingType,
+                                                                                                                     constantValue:=Nothing,
+                                                                                                                     isImplicit:=True))
             Dim arguments As Lazy(Of ImmutableArray(Of IArgumentOperation)) = New Lazy(Of ImmutableArray(Of IArgumentOperation))(Function() ImmutableArray(Of IArgumentOperation).Empty)
             Dim syntax As SyntaxNode = boundAnonymousTypePropertyAccess.Syntax
             Dim type As ITypeSymbol = boundAnonymousTypePropertyAccess.Type

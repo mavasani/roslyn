@@ -802,7 +802,7 @@ IArrayCreationOperation (OperationKind.ArrayCreation, Type: System.String[]) (Sy
   Dimension Sizes(1):
       IInvocationOperation ( System.Int32 C.M()) (OperationKind.Invocation, Type: System.Int32) (Syntax: 'M()')
         Instance Receiver: 
-          IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M')
+          IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M')
         Arguments(0)
   Initializer: 
     null
@@ -834,7 +834,7 @@ IArrayCreationOperation (OperationKind.ArrayCreation, Type: System.String[]) (Sy
         Operand: 
           IInvocationOperation ( System.Object C.M()) (OperationKind.Invocation, Type: System.Object) (Syntax: 'M()')
             Instance Receiver: 
-              IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M')
+              IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M')
             Arguments(0)
   Initializer: 
     null
@@ -863,7 +863,7 @@ IArrayCreationOperation (OperationKind.ArrayCreation, Type: System.String[], IsI
   Dimension Sizes(1):
       IInvocationOperation ( System.Object C.M()) (OperationKind.Invocation, Type: System.Object, IsInvalid) (Syntax: 'M()')
         Instance Receiver: 
-          IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M')
+          IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M')
         Arguments(0)
   Initializer: 
     null
@@ -899,7 +899,7 @@ IArrayCreationOperation (OperationKind.ArrayCreation, Type: System.String[], IsI
         Operand: 
           IInvocationOperation ( C C.M()) (OperationKind.Invocation, Type: C, IsInvalid) (Syntax: 'M()')
             Instance Receiver: 
-              IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M')
+              IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M')
             Arguments(0)
   Initializer: 
     null

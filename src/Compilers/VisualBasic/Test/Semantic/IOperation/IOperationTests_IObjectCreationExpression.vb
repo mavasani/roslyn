@@ -68,7 +68,7 @@ IBlockOperation (9 statements, 7 locals) (OperationKind.Block, Type: null, IsInv
                       Left: 
                         IFieldReferenceOperation: F.Field As System.Int32 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'Field')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... .Field = 2}')
+                            IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... .Field = 2}')
                       Right: 
                         ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 2) (Syntax: '2')
   IVariableDeclarationsOperation (1 declarations) (OperationKind.VariableDeclarations, Type: null) (Syntax: 'Dim x3 = Ne ... erty1 = ""}')
@@ -85,7 +85,7 @@ IBlockOperation (9 statements, 7 locals) (OperationKind.Block, Type: null, IsInv
                       Left: 
                         IPropertyReferenceOperation: Property F.Property1 As System.String (OperationKind.PropertyReference, Type: System.String) (Syntax: 'Property1')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... erty1 = ""}')
+                            IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... erty1 = ""}')
                       Right: 
                         ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: "") (Syntax: '""')
   IVariableDeclarationsOperation (1 declarations) (OperationKind.VariableDeclarations, Type: null) (Syntax: 'Dim x4 = Ne ... .Field = 2}')
@@ -102,14 +102,14 @@ IBlockOperation (9 statements, 7 locals) (OperationKind.Block, Type: null, IsInv
                       Left: 
                         IPropertyReferenceOperation: Property F.Property1 As System.String (OperationKind.PropertyReference, Type: System.String) (Syntax: 'Property1')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... .Field = 2}')
+                            IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... .Field = 2}')
                       Right: 
                         ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: "") (Syntax: '""')
                     ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Int32) (Syntax: '.Field = 2')
                       Left: 
                         IFieldReferenceOperation: F.Field As System.Int32 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'Field')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... .Field = 2}')
+                            IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... .Field = 2}')
                       Right: 
                         ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 2) (Syntax: '2')
   IVariableDeclarationsOperation (1 declarations) (OperationKind.VariableDeclarations, Type: null) (Syntax: 'Dim x5 = Ne ... ld = True}}')
@@ -126,7 +126,7 @@ IBlockOperation (9 statements, 7 locals) (OperationKind.Block, Type: null, IsInv
                       Left: 
                         IPropertyReferenceOperation: Property F.Property2 As B (OperationKind.PropertyReference, Type: B) (Syntax: 'Property2')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... ld = True}}')
+                            IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: F, IsImplicit) (Syntax: 'New F() Wit ... ld = True}}')
                       Right: 
                         IObjectCreationOperation (Constructor: Sub B..ctor()) (OperationKind.ObjectCreation, Type: B) (Syntax: 'New B() Wit ... eld = True}')
                           Arguments(0)
@@ -137,7 +137,7 @@ IBlockOperation (9 statements, 7 locals) (OperationKind.Block, Type: null, IsInv
                                     Left: 
                                       IFieldReferenceOperation: B.Field As System.Boolean (OperationKind.FieldReference, Type: System.Boolean) (Syntax: 'Field')
                                         Instance Receiver: 
-                                          IInstanceReferenceOperation (OperationKind.InstanceReference, Type: B, IsImplicit) (Syntax: 'New B() Wit ... eld = True}')
+                                          IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: B, IsImplicit) (Syntax: 'New B() Wit ... eld = True}')
                                     Right: 
                                       ILiteralOperation (OperationKind.Literal, Type: System.Boolean, Constant: True) (Syntax: 'True')
   IVariableDeclarationsOperation (1 declarations) (OperationKind.VariableDeclarations, Type: null, IsInvalid) (Syntax: 'Dim e1 = Ne ... perty2 = 1}')
@@ -154,7 +154,7 @@ IBlockOperation (9 statements, 7 locals) (OperationKind.Block, Type: null, IsInv
                       Left: 
                         IPropertyReferenceOperation: Property F.Property2 As B (OperationKind.PropertyReference, Type: B) (Syntax: 'Property2')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: F, IsInvalid, IsImplicit) (Syntax: 'New F() Wit ... perty2 = 1}')
+                            IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: F, IsInvalid, IsImplicit) (Syntax: 'New F() Wit ... perty2 = 1}')
                       Right: 
                         IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: B, IsInvalid, IsImplicit) (Syntax: '1')
                           Conversion: CommonConversion (Exists: False, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
@@ -224,7 +224,7 @@ IObjectCreationOperation (Constructor: Sub System.Collections.Generic.List(Of Sy
             Arguments(1):
                 IFieldReferenceOperation: C.field As System.Int32 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'field')
                   Instance Receiver: 
-                    IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'field')
+                    IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'field')
 ]]>.Value
 
             Dim expectedDiagnostics = String.Empty
@@ -281,7 +281,7 @@ IObjectCreationOperation (Constructor: Sub System.Collections.Generic.List(Of Sy
                             Arguments(1):
                                 IFieldReferenceOperation: C.field As System.Int32 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'field')
                                   Instance Receiver: 
-                                    IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'field')
+                                    IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'field')
 ]]>.Value
 
             Dim expectedDiagnostics = String.Empty
@@ -324,14 +324,14 @@ IObjectCreationOperation (Constructor: Sub [Class]..ctor()) (OperationKind.Objec
             Left: 
               IPropertyReferenceOperation: Property [Class].X As System.Int32 (OperationKind.PropertyReference, Type: System.Int32) (Syntax: 'X')
                 Instance Receiver: 
-                  IInstanceReferenceOperation (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... }')
+                  IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... }')
             Right: 
               IParameterReferenceOperation: x (OperationKind.ParameterReference, Type: System.Int32) (Syntax: 'x')
           ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Void) (Syntax: '.Y = {x, y, 3}')
             Left: 
               IPropertyReferenceOperation: Property [Class].Y As System.Int32() (OperationKind.PropertyReference, Type: System.Int32()) (Syntax: 'Y')
                 Instance Receiver: 
-                  IInstanceReferenceOperation (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... }')
+                  IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... }')
             Right: 
               IArrayCreationOperation (OperationKind.ArrayCreation, Type: System.Int32()) (Syntax: '{x, y, 3}')
                 Dimension Sizes(1):
@@ -346,7 +346,7 @@ IObjectCreationOperation (Constructor: Sub [Class]..ctor()) (OperationKind.Objec
             Left: 
               IPropertyReferenceOperation: Property [Class].Z As System.Collections.Generic.Dictionary(Of System.Int32, System.Int32) (OperationKind.PropertyReference, Type: System.Collections.Generic.Dictionary(Of System.Int32, System.Int32)) (Syntax: 'Z')
                 Instance Receiver: 
-                  IInstanceReferenceOperation (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... }')
+                  IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... }')
             Right: 
               IObjectCreationOperation (Constructor: Sub System.Collections.Generic.Dictionary(Of System.Int32, System.Int32)..ctor()) (OperationKind.ObjectCreation, Type: System.Collections.Generic.Dictionary(Of System.Int32, System.Int32)) (Syntax: 'New Diction ... om {{x, y}}')
                 Arguments(0)
@@ -361,7 +361,7 @@ IObjectCreationOperation (Constructor: Sub [Class]..ctor()) (OperationKind.Objec
             Left: 
               IPropertyReferenceOperation: Property [Class].C As [Class] (OperationKind.PropertyReference, Type: [Class]) (Syntax: 'C')
                 Instance Receiver: 
-                  IInstanceReferenceOperation (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... }')
+                  IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... }')
             Right: 
               IObjectCreationOperation (Constructor: Sub [Class]..ctor()) (OperationKind.ObjectCreation, Type: [Class]) (Syntax: 'New [Class] ... .X = field}')
                 Arguments(0)
@@ -372,11 +372,11 @@ IObjectCreationOperation (Constructor: Sub [Class]..ctor()) (OperationKind.Objec
                           Left: 
                             IPropertyReferenceOperation: Property [Class].X As System.Int32 (OperationKind.PropertyReference, Type: System.Int32) (Syntax: 'X')
                               Instance Receiver: 
-                                IInstanceReferenceOperation (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... .X = field}')
+                                IInstanceReferenceOperation (InstanceReferenceKind.ObjectCreation) (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'New [Class] ... .X = field}')
                           Right: 
                             IFieldReferenceOperation: [Class].field As System.Int32 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'field')
                               Instance Receiver: 
-                                IInstanceReferenceOperation (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'field')
+                                IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: [Class], IsImplicit) (Syntax: 'field')
 ]]>.Value
 
             Dim expectedDiagnostics = String.Empty

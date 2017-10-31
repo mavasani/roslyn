@@ -493,7 +493,7 @@ ITryOperation (OperationKind.Try, Type: null, IsInvalid) (Syntax: 'Try 'BIND:" .
         ExceptionDeclarationOrExpression: 
           IFieldReferenceOperation: C.e As System.IO.IOException (OperationKind.FieldReference, Type: System.IO.IOException, IsInvalid) (Syntax: 'e')
             Instance Receiver: 
-              IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'e')
+              IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'e')
         Filter: 
           null
         Handler: 
@@ -578,7 +578,7 @@ ITryOperation (OperationKind.Try, Type: null, IsInvalid) (Syntax: 'Try'BIND:"T .
             Children(1):
                 IOperation:  (OperationKind.None, Type: null, IsInvalid) (Syntax: 'M2')
                   Children(1):
-                      IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M2')
+                      IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M2')
         Filter: 
           null
         Handler: 

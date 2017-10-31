@@ -5069,39 +5069,45 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed partial class BoundAnonymousPropertyDeclaration : BoundExpression
     {
-        public BoundAnonymousPropertyDeclaration(SyntaxNode syntax, PropertySymbol property, TypeSymbol type, bool hasErrors)
+        public BoundAnonymousPropertyDeclaration(SyntaxNode syntax, PropertySymbol property, AnonymousObjectCreationExpressionSyntax owningSyntax, TypeSymbol type, bool hasErrors)
             : base(BoundKind.AnonymousPropertyDeclaration, syntax, type, hasErrors)
         {
 
             Debug.Assert(property != null, "Field 'property' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(owningSyntax != null, "Field 'owningSyntax' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
             Debug.Assert(type != null, "Field 'type' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
             this.Property = property;
+            this.OwningSyntax = owningSyntax;
         }
 
-        public BoundAnonymousPropertyDeclaration(SyntaxNode syntax, PropertySymbol property, TypeSymbol type)
+        public BoundAnonymousPropertyDeclaration(SyntaxNode syntax, PropertySymbol property, AnonymousObjectCreationExpressionSyntax owningSyntax, TypeSymbol type)
             : base(BoundKind.AnonymousPropertyDeclaration, syntax, type)
         {
 
             Debug.Assert(property != null, "Field 'property' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(owningSyntax != null, "Field 'owningSyntax' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
             Debug.Assert(type != null, "Field 'type' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
             this.Property = property;
+            this.OwningSyntax = owningSyntax;
         }
 
 
         public PropertySymbol Property { get; }
+
+        public AnonymousObjectCreationExpressionSyntax OwningSyntax { get; }
 
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
             return visitor.VisitAnonymousPropertyDeclaration(this);
         }
 
-        public BoundAnonymousPropertyDeclaration Update(PropertySymbol property, TypeSymbol type)
+        public BoundAnonymousPropertyDeclaration Update(PropertySymbol property, AnonymousObjectCreationExpressionSyntax owningSyntax, TypeSymbol type)
         {
-            if (property != this.Property || type != this.Type)
+            if (property != this.Property || owningSyntax != this.OwningSyntax || type != this.Type)
             {
-                var result = new BoundAnonymousPropertyDeclaration(this.Syntax, property, type, this.HasErrors);
+                var result = new BoundAnonymousPropertyDeclaration(this.Syntax, property, owningSyntax, type, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -9160,7 +9166,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override BoundNode VisitAnonymousPropertyDeclaration(BoundAnonymousPropertyDeclaration node)
         {
             TypeSymbol type = this.VisitType(node.Type);
-            return node.Update(node.Property, type);
+            return node.Update(node.Property, node.OwningSyntax, type);
         }
         public override BoundNode VisitNewT(BoundNewT node)
         {
@@ -10607,6 +10613,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new TreeDumperNode("anonymousPropertyDeclaration", null, new TreeDumperNode[]
             {
                 new TreeDumperNode("property", node.Property, null),
+                new TreeDumperNode("owningSyntax", node.OwningSyntax, null),
                 new TreeDumperNode("type", node.Type, null)
             }
             );

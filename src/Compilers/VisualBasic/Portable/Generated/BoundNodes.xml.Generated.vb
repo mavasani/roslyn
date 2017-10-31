@@ -3788,22 +3788,26 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
     Friend NotInheritable Partial Class BoundAnonymousTypePropertyAccess
         Inherits BoundExpression
 
-        Public Sub New(syntax As SyntaxNode, binder As Binder.AnonymousTypeCreationBinder, propertyIndex As Integer, type As TypeSymbol, hasErrors As Boolean)
+        Public Sub New(syntax As SyntaxNode, binder As Binder.AnonymousTypeCreationBinder, propertyIndex As Integer, owningSyntax As AnonymousObjectCreationExpressionSyntax, type As TypeSymbol, hasErrors As Boolean)
             MyBase.New(BoundKind.AnonymousTypePropertyAccess, syntax, type, hasErrors)
 
             Debug.Assert(binder IsNot Nothing, "Field 'binder' cannot be null (use Null=""allow"" in BoundNodes.xml to remove this check)")
+            Debug.Assert(owningSyntax IsNot Nothing, "Field 'owningSyntax' cannot be null (use Null=""allow"" in BoundNodes.xml to remove this check)")
 
             Me._Binder = binder
             Me._PropertyIndex = propertyIndex
+            Me._OwningSyntax = owningSyntax
         End Sub
 
-        Public Sub New(syntax As SyntaxNode, binder As Binder.AnonymousTypeCreationBinder, propertyIndex As Integer, type As TypeSymbol)
+        Public Sub New(syntax As SyntaxNode, binder As Binder.AnonymousTypeCreationBinder, propertyIndex As Integer, owningSyntax As AnonymousObjectCreationExpressionSyntax, type As TypeSymbol)
             MyBase.New(BoundKind.AnonymousTypePropertyAccess, syntax, type)
 
             Debug.Assert(binder IsNot Nothing, "Field 'binder' cannot be null (use Null=""allow"" in BoundNodes.xml to remove this check)")
+            Debug.Assert(owningSyntax IsNot Nothing, "Field 'owningSyntax' cannot be null (use Null=""allow"" in BoundNodes.xml to remove this check)")
 
             Me._Binder = binder
             Me._PropertyIndex = propertyIndex
+            Me._OwningSyntax = owningSyntax
         End Sub
 
 
@@ -3821,13 +3825,20 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End Get
         End Property
 
+        Private ReadOnly _OwningSyntax As AnonymousObjectCreationExpressionSyntax
+        Public ReadOnly Property OwningSyntax As AnonymousObjectCreationExpressionSyntax
+            Get
+                Return _OwningSyntax
+            End Get
+        End Property
+
         Public Overrides Function Accept(visitor as BoundTreeVisitor) As BoundNode
             Return visitor.VisitAnonymousTypePropertyAccess(Me)
         End Function
 
-        Public Function Update(binder As Binder.AnonymousTypeCreationBinder, propertyIndex As Integer, type As TypeSymbol) As BoundAnonymousTypePropertyAccess
-            If binder IsNot Me.Binder OrElse propertyIndex <> Me.PropertyIndex OrElse type IsNot Me.Type Then
-                Dim result = New BoundAnonymousTypePropertyAccess(Me.Syntax, binder, propertyIndex, type, Me.HasErrors)
+        Public Function Update(binder As Binder.AnonymousTypeCreationBinder, propertyIndex As Integer, owningSyntax As AnonymousObjectCreationExpressionSyntax, type As TypeSymbol) As BoundAnonymousTypePropertyAccess
+            If binder IsNot Me.Binder OrElse propertyIndex <> Me.PropertyIndex OrElse owningSyntax IsNot Me.OwningSyntax OrElse type IsNot Me.Type Then
+                Dim result = New BoundAnonymousTypePropertyAccess(Me.Syntax, binder, propertyIndex, owningSyntax, type, Me.HasErrors)
                 
                 If Me.WasCompilerGenerated Then
                     result.SetWasCompilerGenerated()
@@ -12839,7 +12850,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
         Public Overrides Function VisitAnonymousTypePropertyAccess(node As BoundAnonymousTypePropertyAccess) As BoundNode
             Dim type as TypeSymbol = Me.VisitType(node.Type)
-            Return node.Update(node.Binder, node.PropertyIndex, type)
+            Return node.Update(node.Binder, node.PropertyIndex, node.OwningSyntax, type)
         End Function
 
         Public Overrides Function VisitAnonymousTypeFieldInitializer(node As BoundAnonymousTypeFieldInitializer) As BoundNode
@@ -14075,6 +14086,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Return New TreeDumperNode("anonymousTypePropertyAccess", Nothing, New TreeDumperNode() {
                 New TreeDumperNode("binder", node.Binder, Nothing),
                 New TreeDumperNode("propertyIndex", node.PropertyIndex, Nothing),
+                New TreeDumperNode("owningSyntax", node.OwningSyntax, Nothing),
                 New TreeDumperNode("type", node.Type, Nothing)
             })
         End Function

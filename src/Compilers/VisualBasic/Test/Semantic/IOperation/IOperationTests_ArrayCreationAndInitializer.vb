@@ -1055,7 +1055,7 @@ IArrayCreationOperation (OperationKind.ArrayCreation, Type: C()) (Syntax: 'New C
         Left: 
           IInvocationOperation ( Function C.M() As System.Int32) (OperationKind.Invocation, Type: System.Int32) (Syntax: 'M()')
             Instance Receiver: 
-              IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M')
+              IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M')
             Arguments(0)
         Right: 
           ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1, IsImplicit) (Syntax: 'M()')
@@ -1093,7 +1093,7 @@ IArrayCreationOperation (OperationKind.ArrayCreation, Type: C()) (Syntax: 'New C
             Operand: 
               IInvocationOperation ( Function C.M() As System.Object) (OperationKind.Invocation, Type: System.Object) (Syntax: 'M()')
                 Instance Receiver: 
-                  IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M')
+                  IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M')
                 Arguments(0)
         Right: 
           ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1, IsImplicit) (Syntax: 'DirectCast(M(), Integer)')
@@ -1131,7 +1131,7 @@ IArrayCreationOperation (OperationKind.ArrayCreation, Type: C(), IsInvalid) (Syn
             Operand: 
               IInvocationOperation ( Function C.M() As System.Object) (OperationKind.Invocation, Type: System.Object, IsInvalid) (Syntax: 'M()')
                 Instance Receiver: 
-                  IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M')
+                  IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M')
                 Arguments(0)
         Right: 
           ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1, IsInvalid, IsImplicit) (Syntax: 'M()')
@@ -1173,7 +1173,7 @@ IArrayCreationOperation (OperationKind.ArrayCreation, Type: C(), IsInvalid) (Syn
             Operand: 
               IInvocationOperation ( Function C.M() As C) (OperationKind.Invocation, Type: C, IsInvalid) (Syntax: 'M()')
                 Instance Receiver: 
-                  IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M')
+                  IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsInvalid, IsImplicit) (Syntax: 'M')
                 Arguments(0)
         Right: 
           ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1, IsInvalid, IsImplicit) (Syntax: 'DirectCast(M(), Integer)')

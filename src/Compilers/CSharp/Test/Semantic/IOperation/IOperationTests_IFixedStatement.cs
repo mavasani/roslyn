@@ -46,7 +46,7 @@ IOperation:  (OperationKind.None, Type: null) (Syntax: 'fixed(int * ... }')
                       Reference: 
                         IFieldReferenceOperation: System.Int32 C.i (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'i')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i')
+                            IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i')
       IBlockOperation (1 statements) (OperationKind.Block, Type: null) (Syntax: '{ ... }')
         IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (Syntax: 'Console.Wri ...  is {*p}"");')
           Expression: 
@@ -117,7 +117,7 @@ IOperation:  (OperationKind.None, Type: null) (Syntax: 'fixed (int* ... }')
                       Reference: 
                         IFieldReferenceOperation: System.Int32 C.i1 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'i1')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i1')
+                            IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i1')
         IVariableDeclarationOperation (1 variables) (OperationKind.VariableDeclaration, Type: null) (Syntax: 'p2 = &i2')
           Variables: Local_1: System.Int32* p2
           Initializer: 
@@ -128,7 +128,7 @@ IOperation:  (OperationKind.None, Type: null) (Syntax: 'fixed (int* ... }')
                       Reference: 
                         IFieldReferenceOperation: System.Int32 C.i2 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'i2')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i2')
+                            IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i2')
       IBlockOperation (1 statements) (OperationKind.Block, Type: null) (Syntax: '{ ... }')
         IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (Syntax: 'i3 = *p1 + *p2;')
           Expression: 
@@ -194,7 +194,7 @@ IOperation:  (OperationKind.None, Type: null) (Syntax: 'fixed (int* ... }')
                       Reference: 
                         IFieldReferenceOperation: System.Int32 C.i1 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'i1')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i1')
+                            IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i1')
       IOperation:  (OperationKind.None, Type: null) (Syntax: 'fixed (int* ... }')
         Children(2):
             IVariableDeclarationsOperation (1 declarations) (OperationKind.VariableDeclarations, Type: null) (Syntax: 'int* p2 = &i2')
@@ -208,7 +208,7 @@ IOperation:  (OperationKind.None, Type: null) (Syntax: 'fixed (int* ... }')
                             Reference: 
                               IFieldReferenceOperation: System.Int32 C.i2 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'i2')
                                 Instance Receiver: 
-                                  IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i2')
+                                  IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i2')
             IBlockOperation (1 statements) (OperationKind.Block, Type: null) (Syntax: '{ ... }')
               IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (Syntax: 'i3 = *p1 + *p2;')
                 Expression: 
@@ -324,7 +324,7 @@ IOperation:  (OperationKind.None, Type: null, IsInvalid) (Syntax: 'fixed (int* .
                       Reference: 
                         IFieldReferenceOperation: System.Int32 C.i1 (OperationKind.FieldReference, Type: System.Int32) (Syntax: 'i1')
                           Instance Receiver: 
-                            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i1')
+                            IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'i1')
       IBlockOperation (1 statements) (OperationKind.Block, Type: null, IsInvalid) (Syntax: '{ ... }')
         IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null, IsInvalid) (Syntax: 'i3 = &p1;')
           Expression: 

@@ -34,13 +34,13 @@ IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (S
       Event Reference: 
         IEventReferenceOperation: Event TestClass.TestEvent As System.Action (OperationKind.EventReference, Type: System.Action) (Syntax: 'TestEvent')
           Instance Receiver: 
-            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'TestEvent')
+            IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'TestEvent')
       Handler: 
         IDelegateCreationOperation (OperationKind.DelegateCreation, Type: System.Action, IsImplicit) (Syntax: 'AddressOf M')
           Target: 
             IMethodReferenceOperation: Sub TestClass.M() (OperationKind.MethodReference, Type: null) (Syntax: 'AddressOf M')
               Instance Receiver: 
-                IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
+                IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
 ]]>.Value
 
             Dim expectedDiagnostics = String.Empty
@@ -73,13 +73,13 @@ IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (S
       Event Reference: 
         IEventReferenceOperation: Event TestClass.TestEvent As System.Action (OperationKind.EventReference, Type: System.Action) (Syntax: 'TestEvent')
           Instance Receiver: 
-            IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'TestEvent')
+            IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'TestEvent')
       Handler: 
         IDelegateCreationOperation (OperationKind.DelegateCreation, Type: System.Action, IsImplicit) (Syntax: 'AddressOf M')
           Target: 
             IMethodReferenceOperation: Sub TestClass.M() (OperationKind.MethodReference, Type: null) (Syntax: 'AddressOf M')
               Instance Receiver: 
-                IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
+                IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
 ]]>.Value
 
             Dim expectedDiagnostics = String.Empty
@@ -118,7 +118,7 @@ IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (S
           Target: 
             IMethodReferenceOperation: Sub TestClass.M() (OperationKind.MethodReference, Type: null) (Syntax: 'AddressOf M')
               Instance Receiver: 
-                IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
+                IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
 ]]>.Value
 
             Dim expectedDiagnostics = String.Empty
@@ -157,7 +157,7 @@ IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (S
           Target: 
             IMethodReferenceOperation: Sub TestClass.M() (OperationKind.MethodReference, Type: null) (Syntax: 'AddressOf M')
               Instance Receiver: 
-                IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
+                IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
 ]]>.Value
 
             Dim expectedDiagnostics = String.Empty
@@ -198,7 +198,7 @@ IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null, Is
               Children(1):
                   IOperation:  (OperationKind.None, Type: null, IsInvalid) (Syntax: 'M')
                     Children(1):
-                        IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsInvalid, IsImplicit) (Syntax: 'M')
+                        IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsInvalid, IsImplicit) (Syntax: 'M')
 ]]>.Value
 
             Dim expectedDiagnostics = <![CDATA[
@@ -233,13 +233,13 @@ IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (S
       Event Reference: 
         IEventReferenceOperation: Event TestClass.TestEvent As System.Action (Static) (OperationKind.EventReference, Type: System.Action) (Syntax: 'Me.TestEvent')
           Instance Receiver: 
-            null
+            IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass) (Syntax: 'Me')
       Handler: 
         IDelegateCreationOperation (OperationKind.DelegateCreation, Type: System.Action, IsImplicit) (Syntax: 'AddressOf M')
           Target: 
             IMethodReferenceOperation: Sub TestClass.M() (OperationKind.MethodReference, Type: null) (Syntax: 'AddressOf M')
               Instance Receiver: 
-                IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
+                IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
 ]]>.Value
 
             Dim expectedDiagnostics = <![CDATA[
@@ -275,13 +275,13 @@ IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null, Is
       Event Reference: 
         IEventReferenceOperation: Event TestClass.TestEvent As System.Action (OperationKind.EventReference, Type: System.Action, IsInvalid) (Syntax: 'TestClass.TestEvent')
           Instance Receiver: 
-            IOperation:  (OperationKind.None, Type: null, IsInvalid) (Syntax: 'TestClass')
+            null
       Handler: 
         IDelegateCreationOperation (OperationKind.DelegateCreation, Type: System.Action, IsImplicit) (Syntax: 'AddressOf M')
           Target: 
             IMethodReferenceOperation: Sub TestClass.M() (OperationKind.MethodReference, Type: null) (Syntax: 'AddressOf M')
               Instance Receiver: 
-                IInstanceReferenceOperation (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
+                IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: TestClass, IsImplicit) (Syntax: 'M')
 ]]>.Value
 
             Dim expectedDiagnostics = <![CDATA[

@@ -31,7 +31,7 @@ IAwaitOperation (OperationKind.Await, Type: System.Void) (Syntax: 'Await M2()')
   Expression: 
     IInvocationOperation ( Function C.M2() As System.Threading.Tasks.Task) (OperationKind.Invocation, Type: System.Threading.Tasks.Task) (Syntax: 'M2()')
       Instance Receiver: 
-        IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M2')
+        IInstanceReferenceOperation (InstanceReferenceKind.This) (OperationKind.InstanceReference, Type: C, IsImplicit) (Syntax: 'M2')
       Arguments(0)
 ]]>.Value
 

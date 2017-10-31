@@ -332,6 +332,7 @@ Microsoft.CodeAnalysis.Operations.IIncrementOrDecrementOperation.IsPostfix.get -
 Microsoft.CodeAnalysis.Operations.IIncrementOrDecrementOperation.OperatorMethod.get -> Microsoft.CodeAnalysis.IMethodSymbol
 Microsoft.CodeAnalysis.Operations.IIncrementOrDecrementOperation.Target.get -> Microsoft.CodeAnalysis.IOperation
 Microsoft.CodeAnalysis.Operations.IInstanceReferenceOperation
+Microsoft.CodeAnalysis.Operations.IInstanceReferenceOperation.InstanceReferenceKind.get -> Microsoft.CodeAnalysis.Operations.InstanceReferenceKind
 Microsoft.CodeAnalysis.Operations.IInterpolatedStringContentOperation
 Microsoft.CodeAnalysis.Operations.IInterpolatedStringOperation
 Microsoft.CodeAnalysis.Operations.IInterpolatedStringOperation.Parts.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Operations.IInterpolatedStringContentOperation>
@@ -461,6 +462,12 @@ Microsoft.CodeAnalysis.Operations.IVariableDeclarationsOperation.Declarations.ge
 Microsoft.CodeAnalysis.Operations.IVariableInitializerOperation
 Microsoft.CodeAnalysis.Operations.IWhileLoopOperation
 Microsoft.CodeAnalysis.Operations.IWhileLoopOperation.Condition.get -> Microsoft.CodeAnalysis.IOperation
+Microsoft.CodeAnalysis.Operations.InstanceReferenceKind
+Microsoft.CodeAnalysis.Operations.InstanceReferenceKind.AnonymousObjectCreation = 4 -> Microsoft.CodeAnalysis.Operations.InstanceReferenceKind
+Microsoft.CodeAnalysis.Operations.InstanceReferenceKind.Base = 2 -> Microsoft.CodeAnalysis.Operations.InstanceReferenceKind
+Microsoft.CodeAnalysis.Operations.InstanceReferenceKind.None = 0 -> Microsoft.CodeAnalysis.Operations.InstanceReferenceKind
+Microsoft.CodeAnalysis.Operations.InstanceReferenceKind.ObjectCreation = 3 -> Microsoft.CodeAnalysis.Operations.InstanceReferenceKind
+Microsoft.CodeAnalysis.Operations.InstanceReferenceKind.This = 1 -> Microsoft.CodeAnalysis.Operations.InstanceReferenceKind
 Microsoft.CodeAnalysis.Operations.LoopKind
 Microsoft.CodeAnalysis.Operations.LoopKind.Do = 1 -> Microsoft.CodeAnalysis.Operations.LoopKind
 Microsoft.CodeAnalysis.Operations.LoopKind.For = 3 -> Microsoft.CodeAnalysis.Operations.LoopKind

@@ -202,7 +202,7 @@ namespace Microsoft.CodeAnalysis.Operations
 
         public override IOperation VisitInstanceReference(IInstanceReferenceOperation operation, object argument)
         {
-            return new InstanceReferenceExpression(((Operation)operation).SemanticModel, operation.Syntax, operation.Type, operation.ConstantValue, operation.IsImplicit);
+            return new InstanceReferenceExpression(operation.InstanceReferenceKind, ((Operation)operation).SemanticModel, operation.Syntax, operation.Type, operation.ConstantValue, operation.IsImplicit);
         }
 
         public override IOperation VisitFieldReference(IFieldReferenceOperation operation, object argument)

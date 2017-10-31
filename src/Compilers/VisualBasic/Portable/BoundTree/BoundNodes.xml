@@ -831,6 +831,7 @@
            only be created by AnonymousTypeCreationBinder which is essential for their functionality -->
       <Field Name="Binder" Type="Binder.AnonymousTypeCreationBinder"/>
       <Field Name="PropertyIndex" Type="Integer"/>
+      <Field Name="OwningSyntax" Type="AnonymousObjectCreationExpressionSyntax"/>
     </Node>
 
     <!-- Created for FieldInitializerSyntax within AnonymousObjectCreationExpressionSyntax, used by SemanticModel. -->

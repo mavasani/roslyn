@@ -29,7 +29,7 @@ public class C2 : C1
 }
 ";
             string expectedOperationTree = @"
-IInstanceReferenceOperation (OperationKind.InstanceReference, Type: C1) (Syntax: 'base')
+IInstanceReferenceOperation (InstanceReferenceKind.Base) (OperationKind.InstanceReference, Type: C1) (Syntax: 'base')
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
@@ -52,7 +52,7 @@ public class C1
 }
 ";
             string expectedOperationTree = @"
-IInstanceReferenceOperation (OperationKind.InstanceReference, Type: System.Object) (Syntax: 'base')
+IInstanceReferenceOperation (InstanceReferenceKind.Base) (OperationKind.InstanceReference, Type: System.Object) (Syntax: 'base')
 ";
             var expectedDiagnostics = new DiagnosticDescription[] {
                 // CS0117: 'object' does not contain a definition for 'M1'
