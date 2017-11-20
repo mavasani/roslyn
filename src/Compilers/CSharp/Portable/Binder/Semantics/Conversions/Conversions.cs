@@ -298,7 +298,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (pointerConversion.IsValid)
                 {
                     // Report unsafe errors
-                    _binder.ReportUnsafeIfNotAllowed(sourceExpression.Syntax.Location, ref useSiteDiagnostics);
+                    _binder.ReportUnsafeIfNotAllowed(ref useSiteDiagnostics);
 
                     return Conversion.MakeStackAllocToPointerType(pointerConversion);
                 }

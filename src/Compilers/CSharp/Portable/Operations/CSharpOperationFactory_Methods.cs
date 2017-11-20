@@ -127,14 +127,11 @@ namespace Microsoft.CodeAnalysis.Operations
         }
 
         private ImmutableArray<IArgumentOperation> DeriveArguments(
-            BoundNode boundNode,
             Binder binder,
             Symbol methodOrIndexer,
             MethodSymbol optionalParametersMethod,
             ImmutableArray<BoundExpression> boundArguments,
-            ImmutableArray<string> argumentNamesOpt,
             ImmutableArray<int> argumentsToParametersOpt,
-            ImmutableArray<RefKind> argumentRefKindsOpt,
             ImmutableArray<ParameterSymbol> parameters,
             bool expanded,
             SyntaxNode invocationSyntax,

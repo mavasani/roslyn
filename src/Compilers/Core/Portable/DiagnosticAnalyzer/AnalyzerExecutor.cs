@@ -608,7 +608,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ImmutableArray<SyntaxNode> executableCodeBlocks,
             SemanticModel semanticModel,
             Func<SyntaxNode, TLanguageKindEnum> getKind,
-            SyntaxReference declaration,
             int declarationIndex,
             AnalysisScope analysisScope,
             AnalysisState analysisStateOpt,
@@ -653,7 +652,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ImmutableArray<IOperation> operationBlocks,
             ImmutableArray<IOperation> operations,
             SemanticModel semanticModel,
-            SyntaxReference declaration,
             int declarationIndex,
             AnalysisScope analysisScope,
             AnalysisState analysisStateOpt,
@@ -735,7 +733,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 blockEndActions.AddAll(endActions);
             }
 
-            var addDiagnostic = GetAddDiagnostic(semanticModel.SyntaxTree, declaredNode.FullSpan, analyzer, isSyntaxDiagnostic: false);
+            var addDiagnostic = GetAddDiagnostic(semanticModel.SyntaxTree, declaredNode.FullSpan, analyzer);
             Func<Diagnostic, bool> isSupportedDiagnostic = d => IsSupportedDiagnostic(analyzer, d);
 
             try
@@ -915,7 +913,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
            SemanticModel model,
            Func<SyntaxNode, TLanguageKindEnum> getKind,
            TextSpan filterSpan,
-           SyntaxReference declaration,
            int declarationIndex,
            ISymbol declaredSymbol,
            AnalysisScope analysisScope,
@@ -958,7 +955,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return;
             }
 
-            var addDiagnostic = GetAddDiagnostic(model.SyntaxTree, filterSpan, analyzer, isSyntaxDiagnostic: false);
+            var addDiagnostic = GetAddDiagnostic(model.SyntaxTree, filterSpan, analyzer);
             Func<Diagnostic, bool> isSupportedDiagnostic = d => IsSupportedDiagnostic(analyzer, d);
             ExecuteSyntaxNodeActions(nodesToAnalyze, nodeActionsByKind, analyzer, containingSymbol, model, getKind, addDiagnostic, isSupportedDiagnostic, analyzerStateOpt);
         }
@@ -1096,7 +1093,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return;
             }
 
-            var addDiagnostic = GetAddDiagnostic(model.SyntaxTree, filterSpan, analyzer, isSyntaxDiagnostic: false);
+            var addDiagnostic = GetAddDiagnostic(model.SyntaxTree, filterSpan, analyzer);
             Func<Diagnostic, bool> isSupportedDiagnostic = d => IsSupportedDiagnostic(analyzer, d);
             ExecuteOperationActions(operationsToAnalyze, operationActionsByKind, analyzer, containingSymbol, model, addDiagnostic, isSupportedDiagnostic, analyzerStateOpt);
         }
@@ -1425,7 +1422,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 _shouldSuppressGeneratedCodeDiagnostic, _cancellationToken);
         }
 
-        private Action<Diagnostic> GetAddDiagnostic(SyntaxTree tree, TextSpan? span, DiagnosticAnalyzer analyzer, bool isSyntaxDiagnostic)
+        private Action<Diagnostic> GetAddDiagnostic(SyntaxTree tree, TextSpan? span, DiagnosticAnalyzer analyzer)
         {
             return GetAddDiagnostic(tree, span, _compilation, analyzer, false,
                 _addNonCategorizedDiagnosticOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt,

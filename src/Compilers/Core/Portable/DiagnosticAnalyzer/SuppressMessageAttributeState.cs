@@ -243,10 +243,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ImmutableDictionary<string, SuppressMessageInfo> DecodeLocalSuppressMessageAttributes(ISymbol symbol)
         {
             var attributes = symbol.GetAttributes().Where(a => a.AttributeClass == this.SuppressMessageAttribute);
-            return DecodeLocalSuppressMessageAttributes(symbol, attributes);
+            return DecodeLocalSuppressMessageAttributes(attributes);
         }
 
-        private static ImmutableDictionary<string, SuppressMessageInfo> DecodeLocalSuppressMessageAttributes(ISymbol symbol, IEnumerable<AttributeData> attributes)
+        private static ImmutableDictionary<string, SuppressMessageInfo> DecodeLocalSuppressMessageAttributes(IEnumerable<AttributeData> attributes)
         {
             var builder = ImmutableDictionary.CreateBuilder<string, SuppressMessageInfo>();
             foreach (var attribute in attributes)
@@ -279,10 +279,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Debug.Assert(symbol is IAssemblySymbol || symbol is IModuleSymbol);
 
             var attributes = symbol.GetAttributes().Where(a => a.AttributeClass == this.SuppressMessageAttribute);
-            DecodeGlobalSuppressMessageAttributes(compilation, symbol, globalSuppressions, attributes);
+            DecodeGlobalSuppressMessageAttributes(compilation, globalSuppressions, attributes);
         }
 
-        private static void DecodeGlobalSuppressMessageAttributes(Compilation compilation, ISymbol symbol, GlobalSuppressions globalSuppressions, IEnumerable<AttributeData> attributes)
+        private static void DecodeGlobalSuppressMessageAttributes(Compilation compilation, GlobalSuppressions globalSuppressions, IEnumerable<AttributeData> attributes)
         {
             foreach (var instance in attributes)
             {

@@ -862,7 +862,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
                 OnSuggestedActionsChanged(e.Workspace, e.DocumentId, e.Solution.WorkspaceVersion);
             }
 
-            private void OnSuggestedActionsChanged(Workspace currentWorkspace, DocumentId currentDocumentId, int solutionVersion, DiagnosticsUpdatedArgs args = null)
+            private void OnSuggestedActionsChanged(Workspace currentWorkspace, DocumentId currentDocumentId, int solutionVersion)
             {
                 // Explicitly hold onto the _subjectBuffer field in a local and use this local in this function to avoid crashes
                 // if this field happens to be cleared by Dispose() below. This is required since this code path involves code

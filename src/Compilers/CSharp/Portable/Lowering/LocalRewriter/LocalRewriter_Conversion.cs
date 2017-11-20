@@ -160,7 +160,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         rewrittenType: rewrittenType);
 
                 case ConversionKind.IntPtr:
-                    return RewriteIntPtrConversion(oldNode, syntax, rewrittenOperand, conversion, @checked,
+                    return RewriteIntPtrConversion(syntax, rewrittenOperand, conversion, @checked,
                         explicitCastInCode, constantValueOpt, rewrittenType);
 
                 case ConversionKind.ImplicitNullable:
@@ -1114,7 +1114,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         private BoundExpression RewriteIntPtrConversion(
-            BoundConversion oldNode,
             SyntaxNode syntax,
             BoundExpression rewrittenOperand,
             Conversion conversion,

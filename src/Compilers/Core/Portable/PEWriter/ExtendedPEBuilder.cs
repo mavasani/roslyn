@@ -72,7 +72,7 @@ namespace Microsoft.Cci
             if (name.Equals(MvidSectionName, StringComparison.Ordinal))
             {
                 Debug.Assert(_withMvidSection);
-                return SerializeMvidSection(location);
+                return SerializeMvidSection();
             }
 
             return base.SerializeSection(name, location);
@@ -85,7 +85,7 @@ namespace Microsoft.Cci
             return result;
         }
 
-        private BlobBuilder SerializeMvidSection(SectionLocation location)
+        private BlobBuilder SerializeMvidSection()
         {
             var sectionBuilder = new BlobBuilder();
 

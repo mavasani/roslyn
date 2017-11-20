@@ -142,20 +142,20 @@ namespace Microsoft.CodeAnalysis.IntroduceVariable
                 // then we prefer to offer to generate a constant field instead of a constant
                 // local.
                 var action1 = CreateAction(state, allOccurrences: false, isConstant: true, isLocal: false, isQueryLocal: false);
-                if (await CanGenerateIntoContainerAsync(state, action1, cancellationToken).ConfigureAwait(false))
+                if (await CanGenerateIntoContainerAsync(state, cancellationToken).ConfigureAwait(false))
                 {
                     actions.Add(action1);
                 }
 
                 var action2 = CreateAction(state, allOccurrences: true, isConstant: true, isLocal: false, isQueryLocal: false);
-                if (await CanGenerateIntoContainerAsync(state, action2, cancellationToken).ConfigureAwait(false))
+                if (await CanGenerateIntoContainerAsync(state, cancellationToken).ConfigureAwait(false))
                 {
                     actions.Add(action2);
                 }
             }
         }
 
-        private async Task<bool> CanGenerateIntoContainerAsync(State state, CodeAction action, CancellationToken cancellationToken)
+        private async Task<bool> CanGenerateIntoContainerAsync(State state, CancellationToken cancellationToken)
         {
             var result = await this.IntroduceFieldAsync(
                 state.Document, state.Expression,

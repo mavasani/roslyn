@@ -235,7 +235,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 substitutedSourceMethod,
                 slotAllocatorOpt,
                 compilationState,
-                closureDebugInfoBuilder,
                 diagnostics);
 
             CheckLocalsDefined(loweredBody);

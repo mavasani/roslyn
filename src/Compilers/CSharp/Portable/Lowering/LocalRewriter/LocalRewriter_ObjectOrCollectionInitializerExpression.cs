@@ -43,7 +43,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return;
 
                 case BoundKind.CollectionInitializerExpression:
-                    AddCollectionInitializers(ref dynamicSiteInitializers, result, rewrittenReceiver, ((BoundCollectionInitializerExpression)initializerExpression).Initializers);
+                    AddCollectionInitializers(result, rewrittenReceiver, ((BoundCollectionInitializerExpression)initializerExpression).Initializers);
                     return;
 
                 default:
@@ -62,12 +62,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case BoundKind.CollectionInitializerExpression:
                     var result = ArrayBuilder<BoundExpression>.GetInstance();
-                    ArrayBuilder<BoundExpression> dynamicSiteInitializers = null;
-                    AddCollectionInitializers(ref dynamicSiteInitializers, result, null, ((BoundCollectionInitializerExpression)initializerExpression).Initializers);
-
-                    // dynamic sites not allowed in ET:
-                    Debug.Assert(dynamicSiteInitializers == null);
-
+                    AddCollectionInitializers(result, null, ((BoundCollectionInitializerExpression)initializerExpression).Initializers);
                     return result.ToImmutableAndFree();
 
                 default:
@@ -78,7 +73,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         // Rewrite collection initializer add method calls:
         // 2) new List<int> { 1 };
         //                    ~
-        private void AddCollectionInitializers(ref ArrayBuilder<BoundExpression> dynamicSiteInitializers, ArrayBuilder<BoundExpression> result, BoundExpression rewrittenReceiver, ImmutableArray<BoundExpression> initializers)
+        private void AddCollectionInitializers(ArrayBuilder<BoundExpression> result, BoundExpression rewrittenReceiver, ImmutableArray<BoundExpression> initializers)
         {
             Debug.Assert(rewrittenReceiver != null || _inExpressionLambda);
 

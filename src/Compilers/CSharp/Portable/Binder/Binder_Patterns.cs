@@ -41,8 +41,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             PatternSyntax node,
             TypeSymbol operandType,
             bool hasErrors,
-            DiagnosticBag diagnostics,
-            bool wasSwitchCase = false)
+            DiagnosticBag diagnostics)
         {
             switch (node.Kind())
             {
@@ -52,7 +51,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case SyntaxKind.ConstantPattern:
                     return BindConstantPattern(
-                        (ConstantPatternSyntax)node, operandType, hasErrors, diagnostics, wasSwitchCase);
+                        (ConstantPatternSyntax)node, operandType, hasErrors, diagnostics);
 
                 default:
                     throw ExceptionUtilities.UnexpectedValue(node.Kind());
@@ -63,11 +62,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             ConstantPatternSyntax node,
             TypeSymbol operandType,
             bool hasErrors,
-            DiagnosticBag diagnostics,
-            bool wasSwitchCase)
+            DiagnosticBag diagnostics)
         {
             bool wasExpression;
-            return BindConstantPattern(node, operandType, node.Expression, hasErrors, diagnostics, out wasExpression, wasSwitchCase);
+            return BindConstantPattern(node, operandType, node.Expression, hasErrors, diagnostics, out wasExpression);
         }
 
         internal BoundConstantPattern BindConstantPattern(
@@ -76,12 +74,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             ExpressionSyntax patternExpression,
             bool hasErrors,
             DiagnosticBag diagnostics,
-            out bool wasExpression,
-            bool wasSwitchCase)
+            out bool wasExpression)
         {
             var expression = BindValue(patternExpression, diagnostics, BindValueKind.RValue);
             ConstantValue constantValueOpt = null;
-            var convertedExpression = ConvertPatternExpression(operandType, patternExpression, expression, ref constantValueOpt, diagnostics);
+            var convertedExpression = ConvertPatternExpression(operandType, expression, ref constantValueOpt, diagnostics);
             wasExpression = expression.Type?.IsErrorType() != true;
             if (!convertedExpression.HasErrors && constantValueOpt == null)
             {
@@ -92,7 +89,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new BoundConstantPattern(node, convertedExpression, constantValueOpt, hasErrors);
         }
 
-        internal BoundExpression ConvertPatternExpression(TypeSymbol inputType, CSharpSyntaxNode node, BoundExpression expression, ref ConstantValue constantValue, DiagnosticBag diagnostics)
+        internal BoundExpression ConvertPatternExpression(TypeSymbol inputType, BoundExpression expression, ref ConstantValue constantValue, DiagnosticBag diagnostics)
         {
             // NOTE: This will allow user-defined conversions, even though they're not allowed here.  This is acceptable
             // because the result of a user-defined conversion does not have a ConstantValue and we'll report a diagnostic

@@ -196,7 +196,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
                     return 0;
 
                 case SyntaxKind.OpenBraceToken:
-                    return LineBreaksAfterOpenBrace(currentToken, nextToken);
+                    return LineBreaksAfterOpenBrace(currentToken);
 
                 case SyntaxKind.FinallyKeyword:
                     return 1;
@@ -259,7 +259,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return 0;
         }
 
-        private static int LineBreaksAfterOpenBrace(SyntaxToken currentToken, SyntaxToken nextToken)
+        private static int LineBreaksAfterOpenBrace(SyntaxToken currentToken)
         {
             if (currentToken.Parent is InitializerExpressionSyntax ||
                 currentToken.Parent.IsKind(SyntaxKind.Interpolation))

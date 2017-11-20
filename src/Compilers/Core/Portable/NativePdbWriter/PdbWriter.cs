@@ -137,7 +137,7 @@ namespace Microsoft.Cci
             var methodHandle = (MethodDefinitionHandle)_metadataWriter.GetMethodHandle(methodBody.MethodDefinition);
             int methodToken = MetadataTokens.GetToken(methodHandle);
 
-            OpenMethod(methodToken, methodBody.MethodDefinition);
+            OpenMethod(methodToken);
 
             var localScopes = methodBody.LocalScopes;
 
@@ -873,7 +873,7 @@ namespace Microsoft.Cci
             return writer;
         }
 
-        private void OpenMethod(int methodToken, IMethodDefinition method)
+        private void OpenMethod(int methodToken)
         {
             try
             {

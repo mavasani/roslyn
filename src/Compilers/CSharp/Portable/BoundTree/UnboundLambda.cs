@@ -446,8 +446,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 cacheKey.ParameterTypes,
                 cacheKey.ParameterRefKinds,
                 refKind,
-                returnType,
-                diagnostics);
+                returnType);
             lambdaBodyBinder = new ExecutableCodeBinder(_unboundLambda.Syntax, lambdaSymbol, ParameterBinder(lambdaSymbol, binder));
 
             if (lambdaSymbol.RefKind == CodeAnalysis.RefKind.RefReadOnly)
@@ -537,8 +536,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 parameterTypes,
                 parameterRefKinds,
                 refKind: CodeAnalysis.RefKind.None,
-                returnType: null,
-                diagnostics: diagnostics);
+                returnType: null);
             Binder lambdaBodyBinder = new ExecutableCodeBinder(_unboundLambda.Syntax, lambdaSymbol, ParameterBinder(lambdaSymbol, binder));
             var block = BindLambdaBody(lambdaSymbol, lambdaBodyBinder, diagnostics);
 

@@ -235,14 +235,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var caseLabel = (CaseSwitchLabelSyntax)labelSyntax;
                         Debug.Assert(caseLabel.Value != null);
                         var boundLabelExpression = sectionBinder.BindValue(caseLabel.Value, tempDiagnosticBag, BindValueKind.RValue);
-                        boundLabelExpression = ConvertCaseExpression(labelSyntax, boundLabelExpression, sectionBinder, ref boundLabelConstantOpt, tempDiagnosticBag);
+                        boundLabelExpression = ConvertCaseExpression(labelSyntax, boundLabelExpression, ref boundLabelConstantOpt, tempDiagnosticBag);
                         break;
 
                     case SyntaxKind.CasePatternSwitchLabel:
                         // bind the pattern, to cause its pattern variables to be inferred if necessary
                         var matchLabel = (CasePatternSwitchLabelSyntax)labelSyntax;
                         var pattern = sectionBinder.BindPattern(
-                            matchLabel.Pattern, SwitchGoverningType, labelSyntax.HasErrors, tempDiagnosticBag, wasSwitchCase: true);
+                            matchLabel.Pattern, SwitchGoverningType, labelSyntax.HasErrors, tempDiagnosticBag);
                         break;
 
                     default:
@@ -255,7 +255,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        protected BoundExpression ConvertCaseExpression(CSharpSyntaxNode node, BoundExpression caseExpression, Binder sectionBinder, ref ConstantValue constantValueOpt, DiagnosticBag diagnostics, bool isGotoCaseExpr = false)
+        protected BoundExpression ConvertCaseExpression(CSharpSyntaxNode node, BoundExpression caseExpression, ref ConstantValue constantValueOpt, DiagnosticBag diagnostics, bool isGotoCaseExpr = false)
         {
             if (isGotoCaseExpr)
             {
@@ -285,7 +285,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 caseExpression = CreateConversion(caseExpression, conversion, SwitchGoverningType, diagnostics);
             }
 
-            return ConvertPatternExpression(SwitchGoverningType, node, caseExpression, ref constantValueOpt, diagnostics);
+            return ConvertPatternExpression(SwitchGoverningType, caseExpression, ref constantValueOpt, diagnostics);
         }
 
         private static readonly object s_nullKey = new object();
@@ -604,7 +604,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var caseLabelSyntax = (CaseSwitchLabelSyntax)node;
                     // Bind the label case expression
                     boundLabelExpressionOpt = sectionBinder.BindValue(caseLabelSyntax.Value, diagnostics, BindValueKind.RValue);
-                    boundLabelExpressionOpt = ConvertCaseExpression(caseLabelSyntax, boundLabelExpressionOpt, sectionBinder, ref labelExpressionConstant, diagnostics);
+                    boundLabelExpressionOpt = ConvertCaseExpression(caseLabelSyntax, boundLabelExpressionOpt, ref labelExpressionConstant, diagnostics);
 
                     // Check for bind errors
                     hasErrors = hasErrors || boundLabelExpressionOpt.HasAnyErrors;
@@ -684,7 +684,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // Bind the goto case expression
                     gotoCaseExpressionOpt = gotoBinder.BindValue(node.Expression, diagnostics, BindValueKind.RValue);
 
-                    gotoCaseExpressionOpt = ConvertCaseExpression(node, gotoCaseExpressionOpt, gotoBinder,
+                    gotoCaseExpressionOpt = ConvertCaseExpression(node, gotoCaseExpressionOpt,
                         ref gotoCaseExpressionConstant, diagnostics, isGotoCaseExpr: true);
 
                     // Check for bind errors

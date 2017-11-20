@@ -130,7 +130,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // (1) Is there any named argument used out-of-position and followed by unnamed arguments?
 
-            int? badNonTrailingNamedArgument = CheckForBadNonTrailingNamedArgument(arguments, argsToParameters, parameters);
+            int? badNonTrailingNamedArgument = CheckForBadNonTrailingNamedArgument(arguments, argsToParameters);
             if (badNonTrailingNamedArgument != null)
             {
                 return ArgumentAnalysisResult.BadNonTrailingNamedArgument(badNonTrailingNamedArgument.Value);
@@ -180,7 +180,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 ArgumentAnalysisResult.NormalForm(argsToParameters.ToImmutableArray());
         }
 
-        private static int? CheckForBadNonTrailingNamedArgument(AnalyzedArguments arguments, ParameterMap argsToParameters, ImmutableArray<ParameterSymbol> parameters)
+        private static int? CheckForBadNonTrailingNamedArgument(AnalyzedArguments arguments, ParameterMap argsToParameters)
         {
             // Is there any named argument used out-of-position and followed by unnamed arguments?
 

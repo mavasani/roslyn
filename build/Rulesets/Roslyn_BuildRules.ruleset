@@ -5,18 +5,19 @@
     <Rule Id="CA1000" Action="None" />
     <Rule Id="CA1001" Action="None" />
     <Rule Id="CA1010" Action="None" />
+    <Rule Id="CA1012" Action="Warning" />
     <Rule Id="CA1016" Action="None" />
     <Rule Id="CA1018" Action="None" />
     <Rule Id="CA1028" Action="None" />
     <Rule Id="CA1030" Action="None" />
-    <Rule Id="CA1032" Action="None" />
+    <Rule Id="CA1032" Action="Warning" />
     <Rule Id="CA1034" Action="None" />
     <Rule Id="CA1036" Action="None" />
     <Rule Id="CA1040" Action="None" />
     <Rule Id="CA1041" Action="None" />
     <Rule Id="CA1043" Action="None" />
     <Rule Id="CA1051" Action="None" />
-    <Rule Id="CA1052" Action="None" />
+    <Rule Id="CA1052" Action="Warning" />
     <Rule Id="CA1054" Action="None" />
     <Rule Id="CA1055" Action="None" />
     <Rule Id="CA1056" Action="None" />
@@ -36,13 +37,14 @@
     <Rule Id="CA1720" Action="None" />
     <Rule Id="CA1721" Action="None" />
     <Rule Id="CA1724" Action="None" />
-    <Rule Id="CA1801" Action="None" /> <!-- https://github.com/dotnet/roslyn/issues/20405: Enable rule CA1801 (remove unused parameter) in Roslyn.sln once we have a fixer for it -->
+    <Rule Id="CA1801" Action="Warning" /> <!-- https://github.com/dotnet/roslyn/issues/20405: Enable rule CA1801 (remove unused parameter) in Roslyn.sln once we have a fixer for it -->
     <Rule Id="CA1802" Action="Warning" />
-    <Rule Id="CA1804" Action="None" /> <!-- https://github.com/dotnet/roslyn/issues/20406: Enable rule CA1804 (remove unused local) in Roslyn.sln once we have a fixer for it -->
+    <Rule Id="CA1804" Action="Warning" /> <!-- https://github.com/dotnet/roslyn/issues/20406: Enable rule CA1804 (remove unused local) in Roslyn.sln once we have a fixer for it -->
     <Rule Id="CA1806" Action="None" /> <!-- "do not ignore results": we do this in many places, for example fire-and-forget async or HRESULTs we don't care about -->
     <Rule Id="CA1812" Action="None" /> <!-- disabled as we create many internal types via reflection-based mechanisms -->
+    <Rule Id="CA1813" Action="Warning" />
     <Rule Id="CA1814" Action="None" /> <!-- prefer jagged arrays to multidimensional: a silly piece of advice -->
-    <Rule Id="CA1815" Action="None" />
+    <Rule Id="CA1815" Action="Warning" />
     <Rule Id="CA1821" Action="Warning" />
     <Rule Id="CA1823" Action="None" /> <!-- https://github.com/dotnet/roslyn/issues/20404: Enable rule CA1823 (remove unused field) once we have a fixer for it -->
     <Rule Id="CA1824" Action="None" /> <!-- mark assemblies with NeutralResourcesLanguageAttribute -->

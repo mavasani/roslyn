@@ -197,8 +197,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 UnpendException(pendingExceptionLocal),
                 UnpendBranches(
                     frame,
-                    pendingBranchVar,
-                    pendingExceptionLocal));
+                    pendingBranchVar));
 
 
             var locals = ArrayBuilder<LocalSymbol>.GetInstance();
@@ -279,8 +278,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundStatement UnpendBranches(
             AwaitFinallyFrame frame,
-            SynthesizedLocal pendingBranchVar,
-            SynthesizedLocal pendingException)
+            SynthesizedLocal pendingBranchVar)
         {
             var parent = frame.ParentOpt;
 

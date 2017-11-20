@@ -509,14 +509,14 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         #region Statement Visitors
 
-        private void EnterStatement(BoundNode boundStatement)
+        private void EnterStatement()
         {
             _tempSubstitution.Clear();
         }
 
         public override BoundNode VisitSwitchStatement(BoundSwitchStatement node)
         {
-            EnterStatement(node);
+            EnterStatement();
 
             BoundSpillSequenceBuilder builder = null;
             var preambleOpt = (BoundStatement)this.Visit(node.LoweredPreambleOpt);
@@ -527,7 +527,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitThrowStatement(BoundThrowStatement node)
         {
-            EnterStatement(node);
+            EnterStatement();
 
             BoundSpillSequenceBuilder builder = null;
             BoundExpression expression = VisitExpression(ref builder, node.ExpressionOpt);
@@ -536,7 +536,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitExpressionStatement(BoundExpressionStatement node)
         {
-            EnterStatement(node);
+            EnterStatement();
 
             BoundSpillSequenceBuilder builder = null;
             BoundExpression expr;
@@ -560,7 +560,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitConditionalGoto(BoundConditionalGoto node)
         {
-            EnterStatement(node);
+            EnterStatement();
 
             BoundSpillSequenceBuilder builder = null;
             var condition = VisitExpression(ref builder, node.Condition);
@@ -569,7 +569,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitReturnStatement(BoundReturnStatement node)
         {
-            EnterStatement(node);
+            EnterStatement();
 
             BoundSpillSequenceBuilder builder = null;
             var expression = VisitExpression(ref builder, node.ExpressionOpt);

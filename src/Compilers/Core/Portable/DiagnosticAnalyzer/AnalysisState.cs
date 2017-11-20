@@ -154,7 +154,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     return;
                 }
 
-                OnCompilationEventsGenerated_NoLock(compilationEvents, tree, driver, cancellationToken);
+                OnCompilationEventsGenerated_NoLock(compilationEvents, tree);
 
                 var added = _treesWithGeneratedSourceEvents.Add(tree);
                 Debug.Assert(added);
@@ -199,7 +199,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 var compilationEvent = started ? (CompilationEvent)new CompilationStartedEvent(compilation) : new CompilationCompletedEvent(compilation);
                 var events = ImmutableArray.Create(compilationEvent);
-                OnCompilationEventsGenerated_NoLock(events, filterTreeOpt: null, driver: driver, cancellationToken: cancellationToken);
+                OnCompilationEventsGenerated_NoLock(events, filterTreeOpt: null);
 
                 if (started)
                 {
@@ -218,11 +218,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             lock (_gate)
             {
-                OnCompilationEventsGenerated_NoLock(compilationEvents, filterTreeOpt: null, driver: driver, cancellationToken: cancellationToken);
+                OnCompilationEventsGenerated_NoLock(compilationEvents, filterTreeOpt: null);
             }
         }
 
-        private void OnCompilationEventsGenerated_NoLock(ImmutableArray<CompilationEvent> compilationEvents, SyntaxTree filterTreeOpt, AnalyzerDriver driver, CancellationToken cancellationToken)
+        private void OnCompilationEventsGenerated_NoLock(ImmutableArray<CompilationEvent> compilationEvents, SyntaxTree filterTreeOpt)
         {
             Debug.Assert(_lazyAnalyzerActionCountsMap != null);
 

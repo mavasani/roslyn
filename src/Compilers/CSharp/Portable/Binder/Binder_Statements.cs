@@ -930,7 +930,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         hasErrors = true;
                     }
                 }
-                else if (!IsValidFixedVariableInitializer(declTypeOpt, localSymbol, ref initializerOpt, localDiagnostics))
+                else if (!IsValidFixedVariableInitializer(declTypeOpt, ref initializerOpt, localDiagnostics))
                 {
                     hasErrors = true;
                 }
@@ -1036,7 +1036,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return localSymbol;
         }
 
-        private bool IsValidFixedVariableInitializer(TypeSymbol declType, SourceLocalSymbol localSymbol, ref BoundExpression initializerOpt, DiagnosticBag diagnostics)
+        private bool IsValidFixedVariableInitializer(TypeSymbol declType, ref BoundExpression initializerOpt, DiagnosticBag diagnostics)
         {
             Debug.Assert(!ReferenceEquals(declType, null));
             Debug.Assert(declType.IsPointerType());

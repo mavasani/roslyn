@@ -1366,7 +1366,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Emit
         }
 
         internal Cci.ITypeReference Translate(
-            DynamicTypeSymbol symbol,
             SyntaxNode syntaxNodeOpt,
             DiagnosticBag diagnostics)
         {

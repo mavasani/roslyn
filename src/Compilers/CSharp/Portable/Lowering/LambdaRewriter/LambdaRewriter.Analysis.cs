@@ -69,7 +69,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 MethodSymbol substitutedSourceMethod,
                 VariableSlotAllocator slotAllocatorOpt,
                 TypeCompilationState compilationState,
-                ArrayBuilder<ClosureDebugInfo> closureDebugInfo,
                 DiagnosticBag diagnostics)
             {
                 var methodsConvertedToDelegates = PooledHashSet<MethodSymbol>.GetInstance();
@@ -90,7 +89,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     compilationState);
 
                 analysis.MakeAndAssignEnvironments();
-                analysis.ComputeLambdaScopesAndFrameCaptures(method.ThisParameter);
+                analysis.ComputeLambdaScopesAndFrameCaptures();
                 analysis.InlineThisOnlyEnvironments();
                 return analysis;
             }
@@ -134,7 +133,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// the number of indirections we may have to traverse to access captured
             /// variables.
             /// </summary>
-            private void ComputeLambdaScopesAndFrameCaptures(ParameterSymbol thisParam)
+            private void ComputeLambdaScopesAndFrameCaptures()
             {
                 VisitClosures(ScopeTree, (scope, closure) =>
                 {

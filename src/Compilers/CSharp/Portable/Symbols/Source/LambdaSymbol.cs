@@ -32,8 +32,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             ImmutableArray<TypeSymbol> parameterTypes, 
             ImmutableArray<RefKind> parameterRefKinds,
             RefKind refKind,
-            TypeSymbol returnType,
-            DiagnosticBag diagnostics)
+            TypeSymbol returnType)
         {
             _containingSymbol = containingSymbol;
             _messageID = unboundLambda.Data.MessageID;
@@ -43,7 +42,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _isSynthesized = unboundLambda.WasCompilerGenerated;
             _isAsync = unboundLambda.IsAsync;
             // No point in making this lazy. We are always going to need these soon after creation of the symbol.
-            _parameters = MakeParameters(compilation, unboundLambda, parameterTypes, parameterRefKinds, diagnostics);
+            _parameters = MakeParameters(compilation, unboundLambda, parameterTypes, parameterRefKinds);
         }
 
         public LambdaSymbol(
@@ -315,8 +314,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             CSharpCompilation compilation,
             UnboundLambda unboundLambda,
             ImmutableArray<TypeSymbol> parameterTypes,
-            ImmutableArray<RefKind> parameterRefKinds,
-            DiagnosticBag diagnostics)
+            ImmutableArray<RefKind> parameterRefKinds)
         {
             Debug.Assert(parameterTypes.Length == parameterRefKinds.Length);
 

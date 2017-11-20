@@ -1767,7 +1767,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                         if (!analyzerExecutor.TryExecuteSyntaxNodeActions(nodesToAnalyze, nodeActionsByKind,
                             analyzer, semanticModel, _getKind, declarationAnalysisData.TopmostNodeForAnalysis.FullSpan,
-                            decl, declarationIndex, symbol, analysisScope, analysisStateOpt, isInGeneratedCode))
+                            declarationIndex, symbol, analysisScope, analysisStateOpt, isInGeneratedCode))
                         {
                             success = false;
                         }
@@ -1850,7 +1850,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                                             if (!analyzerExecutor.TryExecuteOperationBlockActions(
                                                 analyzerActions.OperationBlockStartActions, analyzerActions.OperationBlockActions,
                                                 analyzerActions.OperationBlockEndActions, analyzerActions.Analyzer, declarationAnalysisData.TopmostNodeForAnalysis, symbol,
-                                                operationBlocksToAnalyze, operationsToAnalyze, semanticModel, decl, declarationIndex, analysisScope, analysisStateOpt, isInGeneratedCode))
+                                                operationBlocksToAnalyze, operationsToAnalyze, semanticModel, declarationIndex, analysisScope, analysisStateOpt, isInGeneratedCode))
                                             {
                                                 success = false;
                                             }
@@ -1878,7 +1878,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                         if (!analyzerExecutor.TryExecuteCodeBlockActions(
                             analyzerActions.CodeBlockStartActions, analyzerActions.CodeBlockActions,
                             analyzerActions.CodeBlockEndActions, analyzerActions.Analyzer, declarationAnalysisData.TopmostNodeForAnalysis, symbol,
-                            executableCodeBlocks, semanticModel, _getKind, decl, declarationIndex, analysisScope, analysisStateOpt, isInGeneratedCode))
+                            executableCodeBlocks, semanticModel, _getKind, declarationIndex, analysisScope, analysisStateOpt, isInGeneratedCode))
                         {
                             success = false;
                         }

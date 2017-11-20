@@ -325,14 +325,11 @@ namespace Microsoft.CodeAnalysis.Operations
             Lazy<ImmutableArray<IArgumentOperation>> arguments = new Lazy<ImmutableArray<IArgumentOperation>>(() =>
             {
                 return DeriveArguments(
-                    boundCall,
                     boundCall.BinderOpt,
                     targetMethod,
                     targetMethod,
                     boundCall.Arguments,
-                    boundCall.ArgumentNamesOpt,
                     boundCall.ArgsToParamsOpt,
-                    boundCall.ArgumentRefKindsOpt,
                     boundCall.Method.Parameters,
                     boundCall.Expanded,
                     syntax,
@@ -410,14 +407,11 @@ namespace Microsoft.CodeAnalysis.Operations
             Lazy<IOperation> instance = CreateReceiverOperation(boundIndexerAccess.ReceiverOpt, property);
             Lazy<ImmutableArray<IArgumentOperation>> arguments = new Lazy<ImmutableArray<IArgumentOperation>>(() =>
                 DeriveArguments(
-                    boundIndexerAccess,
                     boundIndexerAccess.BinderOpt,
                     property,
                     accessor,
                     boundIndexerAccess.Arguments,
-                    boundIndexerAccess.ArgumentNamesOpt,
                     boundIndexerAccess.ArgsToParamsOpt,
-                    boundIndexerAccess.ArgumentRefKindsOpt,
                     property.Parameters,
                     boundIndexerAccess.Expanded,
                     syntax));
@@ -505,14 +499,11 @@ namespace Microsoft.CodeAnalysis.Operations
             Lazy<ImmutableArray<IArgumentOperation>> arguments = new Lazy<ImmutableArray<IArgumentOperation>>(() =>
             {
                 return DeriveArguments(
-                    boundObjectCreationExpression,
                     boundObjectCreationExpression.BinderOpt,
                     constructor,
                     constructor,
                     boundObjectCreationExpression.Arguments,
-                    boundObjectCreationExpression.ArgumentNamesOpt,
                     boundObjectCreationExpression.ArgsToParamsOpt,
-                    boundObjectCreationExpression.ArgumentRefKindsOpt,
                     constructor.Parameters,
                     boundObjectCreationExpression.Expanded,
                     syntax);
@@ -636,14 +627,11 @@ namespace Microsoft.CodeAnalysis.Operations
                         arguments = new Lazy<ImmutableArray<IArgumentOperation>>(() =>
                         {
                             return DeriveArguments(
-                                boundObjectInitializerMember,
                                 boundObjectInitializerMember.BinderOpt,
                                 property,
                                 accessor,
                                 boundObjectInitializerMember.Arguments,
-                                boundObjectInitializerMember.ArgumentNamesOpt,
                                 boundObjectInitializerMember.ArgsToParamsOpt,
-                                boundObjectInitializerMember.ArgumentRefKindsOpt,
                                 property.Parameters,
                                 boundObjectInitializerMember.Expanded,
                                 boundObjectInitializerMember.Syntax);

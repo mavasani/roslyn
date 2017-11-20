@@ -902,7 +902,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             foreach (var arg in badArg.Result.BadArgumentsOpt)
             {
-                ReportBadArgumentError(diagnostics, compilation, name, arguments, symbols, location, badArg, method, arg);
+                ReportBadArgumentError(diagnostics, compilation, name, arguments, symbols, badArg, method, arg);
             }
 
             return true;
@@ -914,7 +914,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             string name,
             AnalyzedArguments arguments,
             ImmutableArray<Symbol> symbols,
-            Location location,
             MemberResolutionResult<TMember> badArg,
             TMember method,
             int arg)

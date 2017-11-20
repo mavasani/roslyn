@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (fieldSymbol.IsTupleField)
             {
-                return MakeTupleFieldAccess(syntax, fieldSymbol, rewrittenReceiver, constantValueOpt, resultKind);
+                return MakeTupleFieldAccess(syntax, fieldSymbol, rewrittenReceiver);
             }
             
             BoundExpression result = oldNodeOpt != null ?
@@ -49,9 +49,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundExpression MakeTupleFieldAccess(
             SyntaxNode syntax,
             FieldSymbol tupleField, 
-            BoundExpression rewrittenReceiver,
-            ConstantValue constantValueOpt,
-            LookupResultKind resultKind)
+            BoundExpression rewrittenReceiver)
         {
             var tupleType = tupleField.ContainingType;
 
@@ -102,7 +100,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Symbol.ReportUseSiteDiagnostic(useSiteInfo, _diagnostics, syntax.Location);
             }
 
-            return MakeTupleFieldAccess(syntax, field, tuple, null, LookupResultKind.Empty);
+            return MakeTupleFieldAccess(syntax, field, tuple);
         }
     }
 }

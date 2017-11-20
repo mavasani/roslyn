@@ -68,7 +68,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     CSharp.MessageProvider.Instance.GetIdForErrorCode((int)ErrorCode.WRN_ALinkWarn),
                     ErrorFacts.GetWarningLevel(ErrorCode.WRN_ALinkWarn),
                     d.Location as Location,
-                    d.Category,
                     warningLevelOption,
                     generalDiagnosticOption,
                     specificDiagnosticOptions,
@@ -77,7 +76,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             else
             {
                 reportAction = GetDiagnosticReport(d.Severity, d.IsEnabledByDefault, d.Id, d.WarningLevel, d.Location as Location,
-                    d.Category, warningLevelOption, generalDiagnosticOption, specificDiagnosticOptions, out hasPragmaSuppression);
+                    warningLevelOption, generalDiagnosticOption, specificDiagnosticOptions, out hasPragmaSuppression);
             }
 
             if (hasPragmaSuppression)
@@ -96,7 +95,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             string id,
             int diagnosticWarningLevel,
             Location location,
-            string category,
             int warningLevelOption,
             ReportDiagnostic generalDiagnosticOption,
             IDictionary<string, ReportDiagnostic> specificDiagnosticOptions,
