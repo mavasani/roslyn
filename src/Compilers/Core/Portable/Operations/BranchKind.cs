@@ -25,7 +25,12 @@ namespace Microsoft.CodeAnalysis.Operations
         /// <summary>
         /// Represents a goto branch kind.
         /// </summary>
-        GoTo = 0x3
+        GoTo = 0x3,
+
+        /// <summary>
+        /// Represents a conditional goto branch kind.
+        /// </summary>
+        ConditionalGoTo = 0x4
     }
 }
 

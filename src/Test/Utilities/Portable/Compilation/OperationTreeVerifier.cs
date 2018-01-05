@@ -534,7 +534,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             LogString(nameof(ILabeledOperation));
 
             // TODO: Put a better workaround to skip compiler generated labels.
-            if (!operation.Label.IsImplicitlyDeclared)
+            //if (!operation.Label.IsImplicitlyDeclared)
             {
                 LogString($" (Label: {operation.Label.Name})");
             }
@@ -548,7 +548,13 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
         {
             LogString(nameof(IBranchOperation));
             var kindStr = $"{nameof(BranchKind)}.{operation.BranchKind}";
-            var labelStr = !operation.Target.IsImplicitlyDeclared ? $", Label: {operation.Target.Name}" : string.Empty;
+            if (operation.BranchKind == BranchKind.ConditionalGoTo)
+            {
+                var cond = operation.JumpIfConditionTrue ? "JumpIfConditionTrue" : "JumpIfConditionFalse";
+                kindStr += $", {cond}";
+            }
+            //var labelStr = !operation.Target.IsImplicitlyDeclared ? $", Label: {operation.Target.Name}" : string.Empty;
+            var labelStr = $", Label: {operation.Target.Name}";
             LogString($" ({kindStr}{labelStr})");
             LogCommonPropertiesAndNewLine(operation);
 

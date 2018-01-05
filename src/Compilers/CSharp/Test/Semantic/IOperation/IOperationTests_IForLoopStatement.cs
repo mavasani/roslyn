@@ -2868,5 +2868,138 @@ IForLoopOperation (LoopKind.For) (OperationKind.Loop, Type: null, IsInvalid) (Sy
 ";
             VerifyOperationTreeForTest<ForStatementSyntax>(source, expectedOperationTree);
         }
+
+        [CompilerTrait(CompilerFeature.IOperation)]
+        [Fact]
+        public void ControlFlowGraph_IForLoopStatement_ForSimpleLoop()
+        {
+            string source = @"
+class C
+{
+    static void Main()
+    {
+        int x = 3;
+        /*<bind>*/for (int i = 0; i < 3; i = i + 1)
+        {
+            x = x * 3;
+        }/*</bind>*/
+        System.Console.Write(""{0}"", x);
+    }
+}
+";
+            string expectedFlowGraph = @"
+BB[0](Entry)
+
+  Fall through to BB[1]
+
+BB[1]
+  IVariableDeclarationOperation (1 declarators) (OperationKind.VariableDeclaration, Type: null, IsImplicit) (Syntax: 'i + 1')
+    Declarators:
+        IVariableDeclaratorOperation (Symbol: System.Int32 temp_2) (OperationKind.VariableDeclarator, Type: null, IsImplicit) (Syntax: 'i + 1')
+          Initializer: 
+            null
+    Initializer: 
+      IVariableInitializerOperation (OperationKind.VariableInitializer, Type: System.Int32, IsImplicit) (Syntax: 'i + 1')
+        IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.BinaryOperator, Type: System.Int32) (Syntax: 'i + 1')
+          Left: 
+            ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+          Right: 
+            ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1) (Syntax: '1')
+  IVariableDeclarationOperation (1 declarators) (OperationKind.VariableDeclaration, Type: null, IsImplicit) (Syntax: 'i < 3')
+    Declarators:
+        IVariableDeclaratorOperation (Symbol: System.Boolean temp_3) (OperationKind.VariableDeclarator, Type: null, IsImplicit) (Syntax: 'i < 3')
+          Initializer: 
+            null
+    Initializer: 
+      IVariableInitializerOperation (OperationKind.VariableInitializer, Type: System.Boolean, IsImplicit) (Syntax: 'i < 3')
+        IBinaryOperation (BinaryOperatorKind.LessThan) (OperationKind.BinaryOperator, Type: System.Boolean) (Syntax: 'i < 3')
+          Left: 
+            ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+          Right: 
+            ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 3) (Syntax: '3')
+  IVariableDeclarationGroupOperation (1 declarations) (OperationKind.VariableDeclarationGroup, Type: null, IsImplicit) (Syntax: 'int i = 0')
+    IVariableDeclarationOperation (1 declarators) (OperationKind.VariableDeclaration, Type: null) (Syntax: 'int i = 0')
+      Declarators:
+          IVariableDeclaratorOperation (Symbol: System.Int32 i) (OperationKind.VariableDeclarator, Type: null) (Syntax: 'i = 0')
+            Initializer: 
+              IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null) (Syntax: '= 0')
+                ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 0) (Syntax: '0')
+      Initializer: 
+        null
+  IVariableDeclarationOperation (1 declarators) (OperationKind.VariableDeclaration, Type: null) (Syntax: 'int i = 0')
+    Declarators:
+        IVariableDeclaratorOperation (Symbol: System.Int32 i) (OperationKind.VariableDeclarator, Type: null) (Syntax: 'i = 0')
+          Initializer: 
+            IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null) (Syntax: '= 0')
+              ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 0) (Syntax: '0')
+    Initializer: 
+      null
+  IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null) (Syntax: '= 0')
+    ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 0) (Syntax: '0')
+  IBranchOperation (BranchKind.GoTo, Label: <end-4>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'for (int i  ... }')
+
+  Fall through to BB[2]
+
+BB[2]
+  ILabeledOperation (Label: <end-4>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: 'for (int i  ... }')
+    Statement: 
+      null
+  IBranchOperation (BranchKind.ConditionalGoTo, JumpIfConditionTrue, Label: <start-5>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'i < 3')
+    ILocalReferenceOperation: temp_3 (OperationKind.LocalReference, Type: System.Boolean, IsImplicit) (Syntax: 'i < 3')
+
+  Conditional jump to BB[4]
+  Fall through to BB[3]
+
+BB[3]
+  ILabeledOperation (Label: <break-2>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: 'for (int i  ... }')
+    Statement: 
+      null
+
+  Fall through to BB[5](Exit)
+
+BB[4]
+  ILabeledOperation (Label: <start-5>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: '{ ... }')
+    Statement: 
+      null
+  IVariableDeclarationOperation (1 declarators) (OperationKind.VariableDeclaration, Type: null, IsImplicit) (Syntax: 'x * 3')
+    Declarators:
+        IVariableDeclaratorOperation (Symbol: System.Int32 temp_1) (OperationKind.VariableDeclarator, Type: null, IsImplicit) (Syntax: 'x * 3')
+          Initializer: 
+            null
+    Initializer: 
+      IVariableInitializerOperation (OperationKind.VariableInitializer, Type: System.Int32, IsImplicit) (Syntax: 'x * 3')
+        IBinaryOperation (BinaryOperatorKind.Multiply) (OperationKind.BinaryOperator, Type: System.Int32) (Syntax: 'x * 3')
+          Left: 
+            ILocalReferenceOperation: x (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'x')
+          Right: 
+            ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 3) (Syntax: '3')
+  IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (Syntax: 'x = x * 3;')
+    Expression: 
+      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Int32) (Syntax: 'x = x * 3')
+        Left: 
+          ILocalReferenceOperation: x (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'x')
+        Right: 
+          ILocalReferenceOperation: temp_1 (OperationKind.LocalReference, Type: System.Int32, IsImplicit) (Syntax: 'x * 3')
+
+  Fall through to BB[6]
+
+BB[5](Exit)
+
+BB[6]
+  ILabeledOperation (Label: <continue-3>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: '{ ... }')
+    Statement: 
+      null
+  IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null, IsImplicit) (Syntax: 'i = i + 1')
+    Expression: 
+      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Int32) (Syntax: 'i = i + 1')
+        Left: 
+          ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+        Right: 
+          ILocalReferenceOperation: temp_2 (OperationKind.LocalReference, Type: System.Int32, IsImplicit) (Syntax: 'i + 1')
+
+  Fall through to BB[2]
+";
+            VerifyControlFlowGraphForTest<ForStatementSyntax>(source, expectedFlowGraph);
+        }
     }
 }

@@ -5,7 +5,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 {
     internal abstract class BaseCSharpCompoundAssignmentOperation : BaseCompoundAssignmentExpression
     {
-        protected BaseCSharpCompoundAssignmentOperation(Conversion inConversion, Conversion outConversion, Operations.BinaryOperatorKind operatorKind, bool isLifted, bool isChecked, IMethodSymbol operatorMethod, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) : base(operatorKind, isLifted, isChecked, operatorMethod, semanticModel, syntax, type, constantValue, isImplicit)
+        protected BaseCSharpCompoundAssignmentOperation(Conversion inConversion, Conversion outConversion, Microsoft.CodeAnalysis.Operations.BinaryOperatorKind operatorKind, bool isLifted, bool isChecked, IMethodSymbol operatorMethod, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) : base(operatorKind, isLifted, isChecked, operatorMethod, semanticModel, syntax, type, constantValue, isImplicit)
         {
             InConversionInternal = inConversion;
             OutConversionInternal = outConversion;
@@ -20,7 +20,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed class CSharpCompoundAssignmentOperation : BaseCSharpCompoundAssignmentOperation
     {
-        public CSharpCompoundAssignmentOperation(IOperation target, IOperation value, Conversion inConversion, Conversion outConversion, Operations.BinaryOperatorKind operatorKind, bool isLifted, bool isChecked, IMethodSymbol operatorMethod, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
+        public CSharpCompoundAssignmentOperation(IOperation target, IOperation value, Conversion inConversion, Conversion outConversion, Microsoft.CodeAnalysis.Operations.BinaryOperatorKind operatorKind, bool isLifted, bool isChecked, IMethodSymbol operatorMethod, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
             base(inConversion, outConversion, operatorKind, isLifted, isChecked, operatorMethod, semanticModel, syntax, type, constantValue, isImplicit)
         {
             TargetImpl = target;
@@ -35,7 +35,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
         private readonly Lazy<IOperation> _lazyTarget;
         private readonly Lazy<IOperation> _lazyValue;
-        public LazyCSharpCompoundAssignmentOperation(Lazy<IOperation> target, Lazy<IOperation> value, Conversion inConversion, Conversion outConversion, Operations.BinaryOperatorKind operatorKind, bool isLifted, bool isChecked, IMethodSymbol operatorMethod, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
+        public LazyCSharpCompoundAssignmentOperation(Lazy<IOperation> target, Lazy<IOperation> value, Conversion inConversion, Conversion outConversion, Microsoft.CodeAnalysis.Operations.BinaryOperatorKind operatorKind, bool isLifted, bool isChecked, IMethodSymbol operatorMethod, SemanticModel semanticModel, SyntaxNode syntax, ITypeSymbol type, Optional<object> constantValue, bool isImplicit) :
             base(inConversion, outConversion, operatorKind, isLifted, isChecked, operatorMethod, semanticModel, syntax, type, constantValue, isImplicit)
         {
             _lazyTarget = target;

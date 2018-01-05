@@ -24,6 +24,17 @@ namespace Microsoft.CodeAnalysis.Operations
         /// Kind of the branch.
         /// </summary>
         BranchKind BranchKind { get; }
+        /// <summary>
+        /// Optional condition of the branch.
+        /// Non-null iff <see cref="BranchKind"/> is <see cref="BranchKind.ConditionalGoTo"/>.
+        /// </summary>
+        IOperation Condition { get; }
+        /// <summary>
+        /// Always false for non-conditional branch operation.
+        /// For conditinal branch operation, indicates if the jump will be executed when the <see cref="Condition"/> is true.
+        /// Otherwise, it will be executed when the <see cref="Condition"/> is false.
+        /// </summary>
+        bool JumpIfConditionTrue { get; }
     }
 }
 

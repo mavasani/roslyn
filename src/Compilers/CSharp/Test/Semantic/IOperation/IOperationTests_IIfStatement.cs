@@ -1164,5 +1164,279 @@ IConditionalOperation (OperationKind.Conditional, Type: null) (Syntax: 'if (d.Ge
 
             VerifyOperationTreeAndDiagnosticsForTest<IfStatementSyntax>(source, expectedOperationTree, expectedDiagnostics);
         }
+
+        [CompilerTrait(CompilerFeature.IOperation)]
+        [Fact]
+        public void ControlFlowGraph_IIfstatementSimpleIf()
+        {
+            string source = @"
+class P
+{
+    private bool M()
+    {
+        bool condition = false;
+        /*<bind>*/if (true)
+        {
+            condition = true;
+        }/*</bind>*/
+
+        return condition;
+    }
+}
+";
+            string expectedFlowGraph = @"
+BB[0](Entry)
+
+  Fall through to BB[1]
+
+BB[1]
+  IBranchOperation (BranchKind.ConditionalGoTo, JumpIfConditionFalse, Label: <afterIfLabel-2>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'if (true) ... }')
+    ILiteralOperation (OperationKind.Literal, Type: System.Boolean, Constant: True) (Syntax: 'true')
+
+  Conditional jump to BB[3]
+  Fall through to BB[2]
+
+BB[2]
+  IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (Syntax: 'condition = true;')
+    Expression: 
+      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Boolean) (Syntax: 'condition = true')
+        Left: 
+          ILocalReferenceOperation: condition (OperationKind.LocalReference, Type: System.Boolean) (Syntax: 'condition')
+        Right: 
+          ILiteralOperation (OperationKind.Literal, Type: System.Boolean, Constant: True) (Syntax: 'true')
+
+  Fall through to BB[3]
+
+BB[3]
+  ILabeledOperation (Label: <afterIfLabel-2>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: 'if (true) ... }')
+    Statement: 
+      null
+
+  Fall through to BB[4](Exit)
+
+BB[4](Exit)
+";
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            VerifyControlFlowGraphAndDiagnosticsForTest<IfStatementSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+        }
+
+        [CompilerTrait(CompilerFeature.IOperation)]
+        [Fact]
+        public void ControlFlowGraph_IIfstatementSimpleIfWithElse()
+        {
+            string source = @"
+class P
+{
+    private void M()
+    {
+        bool condition = false;
+        /*<bind>*/if (true)
+        {
+            condition = true;
+        }
+        else
+        {
+            condition = false;
+        }/*</bind>*/
+    }
+}
+";
+            string expectedFlowGraph = @"
+BB[0](Entry)
+
+  Fall through to BB[1]
+
+BB[1]
+  IBranchOperation (BranchKind.ConditionalGoTo, JumpIfConditionFalse, Label: <alt-2>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'if (true) ... }')
+    ILiteralOperation (OperationKind.Literal, Type: System.Boolean, Constant: True) (Syntax: 'true')
+
+  Conditional jump to BB[3]
+  Fall through to BB[2]
+
+BB[2]
+  IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (Syntax: 'condition = true;')
+    Expression: 
+      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Boolean) (Syntax: 'condition = true')
+        Left: 
+          ILocalReferenceOperation: condition (OperationKind.LocalReference, Type: System.Boolean) (Syntax: 'condition')
+        Right: 
+          ILiteralOperation (OperationKind.Literal, Type: System.Boolean, Constant: True) (Syntax: 'true')
+  IBranchOperation (BranchKind.GoTo, Label: <afterif-3>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'if (true) ... }')
+
+  Fall through to BB[4]
+
+BB[3]
+  ILabeledOperation (Label: <alt-2>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: '{ ... }')
+    Statement: 
+      null
+  IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (Syntax: 'condition = false;')
+    Expression: 
+      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Boolean) (Syntax: 'condition = false')
+        Left: 
+          ILocalReferenceOperation: condition (OperationKind.LocalReference, Type: System.Boolean) (Syntax: 'condition')
+        Right: 
+          ILiteralOperation (OperationKind.Literal, Type: System.Boolean, Constant: False) (Syntax: 'false')
+
+  Fall through to BB[4]
+
+BB[4]
+  ILabeledOperation (Label: <afterif-3>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: 'if (true) ... }')
+    Statement: 
+      null
+
+  Fall through to BB[5](Exit)
+
+BB[5](Exit)
+";
+            var expectedDiagnostics = new DiagnosticDescription[] {
+                // CS0162: Unreachable code detected
+                //             condition = false;
+                Diagnostic(ErrorCode.WRN_UnreachableCode, "condition").WithLocation(13, 13),
+                // CS0219: The variable 'condition' is assigned but its value is never used
+                //         bool condition = false;
+                Diagnostic(ErrorCode.WRN_UnreferencedVarAssg, "condition").WithArguments("condition").WithLocation(6, 14)
+            };
+
+            VerifyControlFlowGraphAndDiagnosticsForTest<IfStatementSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+        }
+
+        [CompilerTrait(CompilerFeature.IOperation)]
+        [Fact]
+        public void ControlFlowGraph_IIfstatementWithMultipleCondition()
+        {
+            string source = @"
+using System;
+class P
+{
+    private void M()
+    {
+        int m = 9;
+        int n = 7;
+        int p = 5;
+        /*<bind>*/if (m >= n && m >= p)
+        {
+            Console.WriteLine(""Nothing is larger than m."");
+        }/*</bind>*/
+    }
+}
+";
+            string expectedFlowGraph = @"
+BB[0](Entry)
+
+  Fall through to BB[1]
+
+BB[1]
+  IVariableDeclarationOperation (1 declarators) (OperationKind.VariableDeclaration, Type: null, IsImplicit) (Syntax: 'm >= n && m >= p')
+    Declarators:
+        IVariableDeclaratorOperation (Symbol: System.Boolean temp_1) (OperationKind.VariableDeclarator, Type: null, IsImplicit) (Syntax: 'm >= n && m >= p')
+          Initializer: 
+            null
+    Initializer: 
+      null
+  IVariableDeclarationOperation (1 declarators) (OperationKind.VariableDeclaration, Type: null, IsImplicit) (Syntax: 'm >= n')
+    Declarators:
+        IVariableDeclaratorOperation (Symbol: System.Boolean temp_2) (OperationKind.VariableDeclarator, Type: null, IsImplicit) (Syntax: 'm >= n')
+          Initializer: 
+            null
+    Initializer: 
+      IVariableInitializerOperation (OperationKind.VariableInitializer, Type: System.Boolean, IsImplicit) (Syntax: 'm >= n')
+        IBinaryOperation (BinaryOperatorKind.GreaterThanOrEqual) (OperationKind.BinaryOperator, Type: System.Boolean) (Syntax: 'm >= n')
+          Left: 
+            ILocalReferenceOperation: m (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'm')
+          Right: 
+            ILocalReferenceOperation: n (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'n')
+  IBranchOperation (BranchKind.ConditionalGoTo, JumpIfConditionFalse, Label: <shortCircuit-3>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'm >= n')
+    ILocalReferenceOperation: temp_2 (OperationKind.LocalReference, Type: System.Boolean, IsImplicit) (Syntax: 'm >= n')
+
+  Conditional jump to BB[3]
+  Fall through to BB[2]
+
+BB[2]
+  IVariableDeclarationOperation (1 declarators) (OperationKind.VariableDeclaration, Type: null, IsImplicit) (Syntax: 'm >= p')
+    Declarators:
+        IVariableDeclaratorOperation (Symbol: System.Boolean temp_3) (OperationKind.VariableDeclarator, Type: null, IsImplicit) (Syntax: 'm >= p')
+          Initializer: 
+            null
+    Initializer: 
+      IVariableInitializerOperation (OperationKind.VariableInitializer, Type: System.Boolean, IsImplicit) (Syntax: 'm >= p')
+        IBinaryOperation (BinaryOperatorKind.GreaterThanOrEqual) (OperationKind.BinaryOperator, Type: System.Boolean) (Syntax: 'm >= p')
+          Left: 
+            ILocalReferenceOperation: m (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'm')
+          Right: 
+            ILocalReferenceOperation: p (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'p')
+  IBranchOperation (BranchKind.ConditionalGoTo, JumpIfConditionFalse, Label: <shortCircuit-3>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'm >= p')
+    ILocalReferenceOperation: temp_3 (OperationKind.LocalReference, Type: System.Boolean, IsImplicit) (Syntax: 'm >= p')
+
+  Conditional jump to BB[3]
+  Fall through to BB[4]
+
+BB[3]
+  ILabeledOperation (Label: <shortCircuit-3>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: 'm >= n && m >= p')
+    Statement: 
+      null
+  IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null, IsImplicit) (Syntax: 'm >= n && m >= p')
+    Expression: 
+      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Boolean, IsImplicit) (Syntax: 'm >= n && m >= p')
+        Left: 
+          ILocalReferenceOperation: temp_1 (OperationKind.LocalReference, Type: System.Boolean, IsImplicit) (Syntax: 'm >= n && m >= p')
+        Right: 
+          ILiteralOperation (OperationKind.Literal, Type: System.Boolean, Constant: ConstantValueDefault(False: Boolean), IsImplicit) (Syntax: 'm >= n && m >= p')
+
+  Fall through to BB[5]
+
+BB[4]
+  IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null, IsImplicit) (Syntax: 'm >= n && m >= p')
+    Expression: 
+      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Boolean, IsImplicit) (Syntax: 'm >= n && m >= p')
+        Left: 
+          ILocalReferenceOperation: temp_1 (OperationKind.LocalReference, Type: System.Boolean, IsImplicit) (Syntax: 'm >= n && m >= p')
+        Right: 
+          ILiteralOperation (OperationKind.Literal, Type: System.Boolean, Constant: ConstantValueOne(True: Boolean), IsImplicit) (Syntax: 'm >= n && m >= p')
+  IBranchOperation (BranchKind.GoTo, Label: <end-4>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'm >= n && m >= p')
+
+  Fall through to BB[5]
+
+BB[5]
+  ILabeledOperation (Label: <end-4>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: 'm >= n && m >= p')
+    Statement: 
+      null
+  IBranchOperation (BranchKind.ConditionalGoTo, JumpIfConditionFalse, Label: <afterIfLabel-2>) (OperationKind.Branch, Type: null, IsImplicit) (Syntax: 'if (m >= n  ... }')
+    ILocalReferenceOperation: temp_1 (OperationKind.LocalReference, Type: System.Boolean, IsImplicit) (Syntax: 'm >= n && m >= p')
+
+  Conditional jump to BB[7]
+  Fall through to BB[6]
+
+BB[6]
+  IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null) (Syntax: 'Console.Wri ...  than m."");')
+    Expression: 
+      IInvocationOperation (void System.Console.WriteLine(System.String value)) (OperationKind.Invocation, Type: System.Void) (Syntax: 'Console.Wri ... r than m."")')
+        Instance Receiver: 
+          null
+        Arguments(1):
+            IArgumentOperation (ArgumentKind.Explicit, Matching Parameter: value) (OperationKind.Argument, Type: null) (Syntax: '""Nothing is ... er than m.""')
+              ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""Nothing is larger than m."") (Syntax: '""Nothing is ... er than m.""')
+              InConversion: CommonConversion (Exists: True, IsIdentity: True, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+              OutConversion: CommonConversion (Exists: True, IsIdentity: True, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+  IArgumentOperation (ArgumentKind.Explicit, Matching Parameter: value) (OperationKind.Argument, Type: null) (Syntax: '""Nothing is ... er than m.""')
+    ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""Nothing is larger than m."") (Syntax: '""Nothing is ... er than m.""')
+    InConversion: CommonConversion (Exists: True, IsIdentity: True, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+    OutConversion: CommonConversion (Exists: True, IsIdentity: True, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+
+  Fall through to BB[7]
+
+BB[7]
+  ILabeledOperation (Label: <afterIfLabel-2>) (OperationKind.Labeled, Type: null, IsImplicit) (Syntax: 'if (m >= n  ... }')
+    Statement: 
+      null
+
+  Fall through to BB[8](Exit)
+
+BB[8](Exit)
+";
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            VerifyControlFlowGraphAndDiagnosticsForTest<IfStatementSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+        }
     }
 }

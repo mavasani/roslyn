@@ -173,6 +173,7 @@ Microsoft.CodeAnalysis.Operations.BinaryOperatorKind.RightShift = 9 -> Microsoft
 Microsoft.CodeAnalysis.Operations.BinaryOperatorKind.Subtract = 2 -> Microsoft.CodeAnalysis.Operations.BinaryOperatorKind
 Microsoft.CodeAnalysis.Operations.BranchKind
 Microsoft.CodeAnalysis.Operations.BranchKind.Break = 2 -> Microsoft.CodeAnalysis.Operations.BranchKind
+Microsoft.CodeAnalysis.Operations.BranchKind.ConditionalGoTo = 4 -> Microsoft.CodeAnalysis.Operations.BranchKind
 Microsoft.CodeAnalysis.Operations.BranchKind.Continue = 1 -> Microsoft.CodeAnalysis.Operations.BranchKind
 Microsoft.CodeAnalysis.Operations.BranchKind.GoTo = 3 -> Microsoft.CodeAnalysis.Operations.BranchKind
 Microsoft.CodeAnalysis.Operations.BranchKind.None = 0 -> Microsoft.CodeAnalysis.Operations.BranchKind
@@ -229,6 +230,8 @@ Microsoft.CodeAnalysis.Operations.IBlockOperation.Locals.get -> System.Collectio
 Microsoft.CodeAnalysis.Operations.IBlockOperation.Operations.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.IOperation>
 Microsoft.CodeAnalysis.Operations.IBranchOperation
 Microsoft.CodeAnalysis.Operations.IBranchOperation.BranchKind.get -> Microsoft.CodeAnalysis.Operations.BranchKind
+Microsoft.CodeAnalysis.Operations.IBranchOperation.Condition.get -> Microsoft.CodeAnalysis.IOperation
+Microsoft.CodeAnalysis.Operations.IBranchOperation.JumpIfConditionTrue.get -> bool
 Microsoft.CodeAnalysis.Operations.IBranchOperation.Target.get -> Microsoft.CodeAnalysis.ILabelSymbol
 Microsoft.CodeAnalysis.Operations.ICaseClauseOperation
 Microsoft.CodeAnalysis.Operations.ICaseClauseOperation.CaseKind.get -> Microsoft.CodeAnalysis.Operations.CaseKind
@@ -504,6 +507,7 @@ abstract Microsoft.CodeAnalysis.Diagnostics.OperationBlockStartAnalysisContext.R
 abstract Microsoft.CodeAnalysis.Diagnostics.OperationBlockStartAnalysisContext.RegisterOperationBlockEndAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.OperationBlockAnalysisContext> action) -> void
 abstract Microsoft.CodeAnalysis.SemanticModel.GetOperationCore(Microsoft.CodeAnalysis.SyntaxNode node, System.Threading.CancellationToken cancellationToken) -> Microsoft.CodeAnalysis.IOperation
 abstract Microsoft.CodeAnalysis.SemanticModel.RootCore.get -> Microsoft.CodeAnalysis.SyntaxNode
+const Microsoft.CodeAnalysis.WellKnownMemberNames.DeconstructMethodName = "Deconstruct" -> string
 override Microsoft.CodeAnalysis.Operations.OperationWalker.DefaultVisit(Microsoft.CodeAnalysis.IOperation operation) -> void
 override Microsoft.CodeAnalysis.Operations.OperationWalker.Visit(Microsoft.CodeAnalysis.IOperation operation) -> void
 override Microsoft.CodeAnalysis.Optional<T>.ToString() -> string
@@ -707,4 +711,3 @@ virtual Microsoft.CodeAnalysis.Operations.OperationVisitor<TArgument, TResult>.V
 virtual Microsoft.CodeAnalysis.Operations.OperationVisitor<TArgument, TResult>.VisitVariableDeclarator(Microsoft.CodeAnalysis.Operations.IVariableDeclaratorOperation operation, TArgument argument) -> TResult
 virtual Microsoft.CodeAnalysis.Operations.OperationVisitor<TArgument, TResult>.VisitVariableInitializer(Microsoft.CodeAnalysis.Operations.IVariableInitializerOperation operation, TArgument argument) -> TResult
 virtual Microsoft.CodeAnalysis.Operations.OperationVisitor<TArgument, TResult>.VisitWhileLoop(Microsoft.CodeAnalysis.Operations.IWhileLoopOperation operation, TArgument argument) -> TResult
-const Microsoft.CodeAnalysis.WellKnownMemberNames.DeconstructMethodName = "Deconstruct" -> string

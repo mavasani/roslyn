@@ -317,10 +317,14 @@ namespace Microsoft.CodeAnalysis.Operations
                         return BinaryOperatorKind.RightShift;
 
                     case CSharp.BinaryOperatorKind.And:
-                        return BinaryOperatorKind.And;
+                        return (operatorKind & CSharp.BinaryOperatorKind.Logical) != 0 ?
+                            BinaryOperatorKind.ConditionalAnd :
+                            BinaryOperatorKind.And;
 
                     case CSharp.BinaryOperatorKind.Or:
-                        return BinaryOperatorKind.Or;
+                        return (operatorKind & CSharp.BinaryOperatorKind.Logical) != 0 ?
+                            BinaryOperatorKind.ConditionalOr :
+                            BinaryOperatorKind.Or;
 
                     case CSharp.BinaryOperatorKind.Xor:
                         return BinaryOperatorKind.ExclusiveOr;

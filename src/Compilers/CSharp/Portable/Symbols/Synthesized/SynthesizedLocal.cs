@@ -21,6 +21,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private readonly SyntaxNode _syntaxOpt;
         private readonly bool _isPinned;
         private readonly RefKind _refKind;
+        private readonly string _name;
 
 #if DEBUG
         private readonly int _createdAtLineNumber;
@@ -33,7 +34,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             SynthesizedLocalKind kind,
             SyntaxNode syntaxOpt = null,
             bool isPinned = false,
-            RefKind refKind = RefKind.None
+            RefKind refKind = RefKind.None,
+            string name = null
 #if DEBUG
             ,
             [CallerLineNumber]int createdAtLineNumber = 0,
@@ -51,6 +53,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _syntaxOpt = syntaxOpt;
             _isPinned = isPinned;
             _refKind = refKind;
+            _name = name;
 
 #if DEBUG
             _createdAtLineNumber = createdAtLineNumber;
@@ -111,7 +114,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public override string Name
         {
-            get { return null; }
+            get { return _name; }
         }
 
         public override TypeSymbol Type

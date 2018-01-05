@@ -147,6 +147,10 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Return VisualBasicOperationCloner.Instance.Visit(operation)
         End Function
 
+        Friend Overrides Function RewriteOperationForFlowGraph(operation As IOperation, containerSymbol As ISymbol, cancellationToken As CancellationToken) As IOperation
+            Throw New NotImplementedException()
+        End Function
+
         ''' <summary>
         ''' Returns what symbol(s), if any, the given expression syntax bound to in the program.
         '''

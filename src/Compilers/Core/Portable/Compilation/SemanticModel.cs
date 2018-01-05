@@ -85,6 +85,7 @@ namespace Microsoft.CodeAnalysis
         }
 
         protected abstract IOperation GetOperationCore(SyntaxNode node, CancellationToken cancellationToken);
+        internal abstract IOperation RewriteOperationForFlowGraph(IOperation operation, ISymbol containerSymbol, CancellationToken cancellationToken);
 
         /// <summary>
         /// Deep Clone given IOperation

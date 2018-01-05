@@ -70,6 +70,9 @@
     <Compile Include="..\..\..\Compilers\Shared\CoreClrShim.cs">
       <Link>Assert\CoreClrShim.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\Workspaces\Core\Portable\Utilities\BidirectionalMap.cs" Link="Compilation\BidirectionalMap.cs" />
+    <Compile Include="..\..\..\Workspaces\Core\Portable\Utilities\Contract.cs" Link="Compilation\Contract.cs" />
+    <Compile Include="..\..\..\Workspaces\Core\Portable\Utilities\IBidirectionalMap.cs" Link="Compilation\IBidirectionalMap.cs" />
     <Compile Update="TestResource.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

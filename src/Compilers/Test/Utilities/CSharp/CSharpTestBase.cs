@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE;
 using Microsoft.CodeAnalysis.CSharp.UnitTests;
 using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Operations.FlowAnalysis;
 using Microsoft.CodeAnalysis.Test.Utilities;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Metadata.Tools;
@@ -1091,12 +1092,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Test.Utilities
             where TSyntaxNode : SyntaxNode
         {
             var (operation, syntax) = GetOperationAndSyntaxForTest<TSyntaxNode>(compilation);
-            return operation != null ? OperationTreeVerifier.GetOperationTree(compilation, operation) : null;
+            return GetOperationTreeForTest(compilation, operation);
         }
 
         protected static string GetOperationTreeForTest(CSharpCompilation compilation, IOperation operation)
         {
             return operation != null ? OperationTreeVerifier.GetOperationTree(compilation, operation) : null;
+        }
+
+        protected static string GetControlFlowGraphForTest<TSyntaxNode>(CSharpCompilation compilation)
+            where TSyntaxNode : SyntaxNode
+        {
+            var (operation, syntax) = GetOperationAndSyntaxForTest<TSyntaxNode>(compilation);
+            return GetControlFlowGraphForTest(compilation, operation);
+        }
+
+        protected static string GetControlFlowGraphForTest(CSharpCompilation compilation, IOperation operation)
+        {
+            return operation != null ? ControlFlowGraphDumper.GetControlFlowGraph(compilation, operation) : null;
         }
 
         protected static string GetOperationTreeForTest<TSyntaxNode>(
@@ -1120,6 +1133,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Test.Utilities
             additionalOperationTreeVerifier?.Invoke(actualOperation, compilation, syntaxNode);
         }
 
+        protected static string GetControlFlowGraphForTest<TSyntaxNode>(
+            string testSrc,
+            CSharpCompilationOptions compilationOptions = null,
+            CSharpParseOptions parseOptions = null,
+            bool useLatestFrameworkReferences = false)
+            where TSyntaxNode : SyntaxNode
+        {
+            var defaultRefs = useLatestFrameworkReferences ? s_latestOperationReferences : s_defaultOperationReferences;
+            var compilation = CreateStandardCompilation(testSrc, defaultRefs, options: compilationOptions ?? TestOptions.ReleaseDll, parseOptions: parseOptions);
+            return GetControlFlowGraphForTest<TSyntaxNode>(compilation);
+        }
+
+        protected static void VerifyControlFlowGraphForTest<TSyntaxNode>(CSharpCompilation compilation, string expectedFlowGraph)
+            where TSyntaxNode : SyntaxNode
+        {
+            var (actualOperation, syntaxNode) = GetOperationAndSyntaxForTest<TSyntaxNode>(compilation);
+            var actualControlFlowGraph = GetControlFlowGraphForTest(compilation, actualOperation);
+            ControlFlowGraphDumper.Verify(expectedFlowGraph, actualControlFlowGraph);
+        }
+        
         protected static void VerifyOperationTreeForTest<TSyntaxNode>(
             string testSrc,
             string expectedOperationTree,
@@ -1178,6 +1211,45 @@ namespace Microsoft.CodeAnalysis.CSharp.Test.Utilities
             var ilReference = CreateMetadataReferenceFromIlSource(ilSource);
             VerifyOperationTreeAndDiagnosticsForTest<TSyntaxNode>(testSrc, expectedOperationTree, expectedDiagnostics, compilationOptions, parseOptions, new[] { ilReference }, additionalOperationTreeVerifier, useLatestFrameworkReferences);
             return ilReference;
+        }
+
+        protected static void VerifyControlFlowGraphForTest<TSyntaxNode>(
+            string testSrc,
+            string expectedControlFlowGraph,
+            CSharpCompilationOptions compilationOptions = null,
+            CSharpParseOptions parseOptions = null,
+            bool useLatestFrameworkReferences = false)
+            where TSyntaxNode : SyntaxNode
+        {
+            var actualControlFlowGraph = GetControlFlowGraphForTest<TSyntaxNode>(testSrc, compilationOptions, parseOptions, useLatestFrameworkReferences);
+            ControlFlowGraphDumper.Verify(expectedControlFlowGraph, actualControlFlowGraph);
+        }
+
+        protected static void VerifyControlFlowGraphAndDiagnosticsForTest<TSyntaxNode>(
+            CSharpCompilation compilation,
+            string expectedControlFlowGraph,
+            DiagnosticDescription[] expectedDiagnostics)
+            where TSyntaxNode : SyntaxNode
+        {
+            var actualDiagnostics = compilation.GetDiagnostics().Where(d => d.Severity != DiagnosticSeverity.Hidden);
+            actualDiagnostics.Verify(expectedDiagnostics);
+            VerifyControlFlowGraphForTest<TSyntaxNode>(compilation, expectedControlFlowGraph);
+        }
+
+        protected static void VerifyControlFlowGraphAndDiagnosticsForTest<TSyntaxNode>(
+            string testSrc,
+            string expectedControlFlowGraph,
+            DiagnosticDescription[] expectedDiagnostics,
+            CSharpCompilationOptions compilationOptions = null,
+            CSharpParseOptions parseOptions = null,
+            MetadataReference[] additionalReferences = null,
+            bool useLatestFrameworkReferences = false)
+            where TSyntaxNode : SyntaxNode
+        {
+            var defaultRefs = useLatestFrameworkReferences ? s_latestOperationReferences : s_defaultOperationReferences;
+            var references = additionalReferences == null ? defaultRefs : additionalReferences.Concat(defaultRefs);
+            var compilation = CreateStandardCompilation(testSrc, references, sourceFileName: "file.cs", options: compilationOptions ?? TestOptions.ReleaseDll, parseOptions: parseOptions);
+            VerifyControlFlowGraphAndDiagnosticsForTest<TSyntaxNode>(compilation, expectedControlFlowGraph, expectedDiagnostics);
         }
 
         #endregion

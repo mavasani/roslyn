@@ -13,6 +13,7 @@ using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
+using Microsoft.CodeAnalysis.CSharp.Operations.FlowAnalysis;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -467,6 +468,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             CheckSyntaxNode(csnode);
 
             return this.GetOperationWorker(csnode, cancellationToken);
+        }
+
+        internal override IOperation RewriteOperationForFlowGraph(IOperation operation, ISymbol containerSymbol, CancellationToken cancellationToken)
+        {
+            var rewriter = new CSharpOperationTreeRewriter(this, containerSymbol);
+            return rewriter.Rewrite(operation);
         }
 
         internal virtual IOperation GetOperationWorker(CSharpSyntaxNode node, CancellationToken cancellationToken)
