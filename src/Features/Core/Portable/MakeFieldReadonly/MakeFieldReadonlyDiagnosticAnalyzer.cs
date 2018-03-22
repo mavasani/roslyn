@@ -33,51 +33,14 @@ namespace Microsoft.CodeAnalysis.MakeFieldReadonly
         {
             context.RegisterCompilationStartAction(compilationStartContext =>
             {
-                bool IsCandidateField(IFieldSymbol symbol) =>
-                        symbol.DeclaredAccessibility == Accessibility.Private &&
-                        !symbol.IsReadOnly &&
-                        !symbol.IsConst &&
-                        !symbol.IsImplicitlyDeclared &&
-                        symbol.Locations.Length == 1 &&
-                        !IsMutableValueType(symbol.Type);
-
                 // Stores the state for fields:
                 //  'isCandidate' : Indicates whether the field is a candidate to be made readonly based on it's declaration and options.
                 //  'written'     : Indicates if there are any writes to the field outside the constructor and field initializer.
                 var fieldStateMap = new ConcurrentDictionary<IFieldSymbol, (bool isCandidate, bool written)>();
 
-                void OnFieldWrite(IFieldSymbol field)
-                {
-                    Debug.Assert(IsCandidateField(field));
-                    Debug.Assert(fieldStateMap.ContainsKey(field));
-
-                    fieldStateMap[field] = (isCandidate: true, written: true);
-                }
-
-                (bool isCandidate, bool written) TryGetOrComputeIsCandidateField(IFieldSymbol fieldSymbol, AnalyzerOptions options, CancellationToken cancellationToken)
-                {
-                    return fieldStateMap.GetOrAdd(fieldSymbol, valueFactory: ComputeIsCandidate);
-
-                    (bool isCandidate, bool written) ComputeIsCandidate(IFieldSymbol field)
-                    {
-                        if (!IsCandidateField(field))
-                        {
-                            return (false, false);
-                        }
-
-                        var option = GetCodeStyleOption(field, options, cancellationToken);
-                        if (option == null || !option.Value)
-                        {
-                            return (false, false);
-                        }
-
-                        return (isCandidate: true, written: false);
-                    }
-                }
-
                 compilationStartContext.RegisterSymbolAction(symbolContext =>
                 {
-                    var _ = TryGetOrComputeIsCandidateField((IFieldSymbol)symbolContext.Symbol, symbolContext.Options, symbolContext.CancellationToken);
+                    tryGetOrComputeIsCandidateField((IFieldSymbol)symbolContext.Symbol, symbolContext.Options, symbolContext.CancellationToken);
                 }, SymbolKind.Field);
 
                 compilationStartContext.RegisterOperationBlockStartAction(operationBlockStartContext =>
@@ -88,34 +51,51 @@ namespace Microsoft.CodeAnalysis.MakeFieldReadonly
                     operationBlockStartContext.RegisterOperationAction(operationContext =>
                     {
                         var fieldReference = (IFieldReferenceOperation)operationContext.Operation;
-                        IFieldSymbol field = fieldReference.Field;
+                        var field = fieldReference.Field;
 
-                        (bool isCandidate, bool written) fieldState = TryGetOrComputeIsCandidateField(field, operationContext.Options, operationContext.CancellationToken);
+                        (bool isCandidate, bool written) = tryGetOrComputeIsCandidateField(field, operationContext.Options, operationContext.CancellationToken);
 
                         // Ignore fields that are not candidates or have already been analyzed to have been written outside the constructor/field initializer.
-                        if (!fieldState.isCandidate || fieldState.written)
+                        if (!isCandidate || written)
                         {
                             return;
                         }
 
                         // Field writes: assignment, increment/decrement or field passed by ref.
-                        bool isFieldAssignemnt = fieldReference.Parent is IAssignmentOperation assignmentOperation && assignmentOperation.Target == fieldReference;
+                        var isFieldAssignemnt = fieldReference.Parent is IAssignmentOperation assignmentOperation &&
+                            assignmentOperation.Target == fieldReference;
                         if (isFieldAssignemnt ||
                             fieldReference.Parent is IIncrementOrDecrementOperation ||
                             fieldReference.Parent is IArgumentOperation argumentOperation && argumentOperation.Parameter.RefKind != RefKind.None)
                         {
-                            // Reads and writes of instance fields inside constructor are ignored, except for the below cases:
-                            //  1. Instance reference of field being written is not the instance being initialized by the constructor.
-                            //  2. Field is being written inside a lambda or local function. 
-                            if (field.ContainingType == operationBlockStartContext.OwningSymbol.ContainingType &&
-                                (isConstructor && fieldReference.Instance?.Kind == OperationKind.InstanceReference && (!isFieldAssignemnt || fieldReference.Parent.Parent?.Kind != OperationKind.ObjectOrCollectionInitializer) ||
-                                 isStaticConstructor && field.IsStatic) &&
-                                !IsInAnonymousFunctionOrLocalFunction(fieldReference))
+                            // Writes to fields inside constructor are ignored, except for the below cases:
+                            //  1. Instance reference of an instance field being written is not the instance being initialized by the constructor.
+                            //  2. Field is being written inside a lambda or local function.
+
+                            // Check if we are in the constructor of the containing type of the written field.
+                            if ((isConstructor || isStaticConstructor) &&
+                                field.ContainingType == operationBlockStartContext.OwningSymbol.ContainingType)
                             {
-                                return;
+                                // For instance fields, ensure that the instance reference is being initialized by the constructor.
+                                var instanceFieldWrittenInCtor = isConstructor &&
+                                    fieldReference.Instance?.Kind == OperationKind.InstanceReference &&
+                                    (!isFieldAssignemnt || fieldReference.Parent.Parent?.Kind != OperationKind.ObjectOrCollectionInitializer);
+                                
+                                // For static fields, ensure that we are in the static constructor.
+                                var staticFieldWrittenInStaticCtor = isStaticConstructor && field.IsStatic;
+
+                                if (instanceFieldWrittenInCtor || staticFieldWrittenInStaticCtor)
+                                {
+                                    // Finally, ensure that the write is not inside a lambda or local function.
+                                    if (!IsInAnonymousFunctionOrLocalFunction(fieldReference))
+                                    {
+                                        // It is safe to ignore this write.
+                                        return;
+                                    }
+                                }
                             }
 
-                            OnFieldWrite(field);
+                            onFieldWrite(field);
                         }
                     }, OperationKind.FieldReference);
                 });
@@ -136,18 +116,53 @@ namespace Microsoft.CodeAnalysis.MakeFieldReadonly
                         }
                     }
                 });
+
+                return;
+
+                // Local functions.
+                bool isCandidateField(IFieldSymbol symbol) =>
+                        symbol.DeclaredAccessibility == Accessibility.Private &&
+                        !symbol.IsReadOnly &&
+                        !symbol.IsConst &&
+                        !symbol.IsImplicitlyDeclared &&
+                        symbol.Locations.Length == 1 &&
+                        !IsMutableValueType(symbol.Type);
+
+                void onFieldWrite(IFieldSymbol field)
+                {
+                    Debug.Assert(isCandidateField(field));
+                    Debug.Assert(fieldStateMap.ContainsKey(field));
+
+                    fieldStateMap[field] = (isCandidate: true, written: true);
+                }
+
+                (bool isCandidate, bool written) tryGetOrComputeIsCandidateField(IFieldSymbol fieldSymbol, AnalyzerOptions options, CancellationToken cancellationToken)
+                {
+                    return fieldStateMap.GetOrAdd(fieldSymbol, valueFactory: ComputeIsCandidate);
+
+                    (bool isCandidate, bool written) ComputeIsCandidate(IFieldSymbol field)
+                    {
+                        if (!isCandidateField(field))
+                        {
+                            return default;
+                        }
+
+                        var option = GetCodeStyleOption(field, options, cancellationToken);
+                        if (option == null || !option.Value)
+                        {
+                            return default;
+                        }
+
+                        return (isCandidate: true, written: false);
+                    }
+                }
             });
         }
 
         private static CodeStyleOption<bool> GetCodeStyleOption(IFieldSymbol field, AnalyzerOptions options, CancellationToken cancellationToken)
         {
             var optionSet = options.GetDocumentOptionSetAsync(field.Locations[0].SourceTree, cancellationToken).GetAwaiter().GetResult();
-            if (optionSet == null)
-            {
-                return null;
-            }
-
-            return optionSet.GetOption(CodeStyleOptions.PreferReadonly, field.Language);
+            return optionSet?.GetOption(CodeStyleOptions.PreferReadonly, field.Language);
         }
 
         private static bool IsInAnonymousFunctionOrLocalFunction(IOperation operation)
@@ -168,7 +183,7 @@ namespace Microsoft.CodeAnalysis.MakeFieldReadonly
             return false;
         }
 
-        private bool IsMutableValueType(ITypeSymbol type)
+        private static bool IsMutableValueType(ITypeSymbol type)
         {
             if (type.TypeKind != TypeKind.Struct)
             {
