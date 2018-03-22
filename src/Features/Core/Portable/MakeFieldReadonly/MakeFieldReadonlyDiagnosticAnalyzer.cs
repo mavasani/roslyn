@@ -33,80 +33,47 @@ namespace Microsoft.CodeAnalysis.MakeFieldReadonly
         {
             context.RegisterCompilationStartAction(compilationStartContext =>
             {
-                // Stores the state for fields:
+                // State map for fields:
                 //  'isCandidate' : Indicates whether the field is a candidate to be made readonly based on it's declaration and options.
                 //  'written'     : Indicates if there are any writes to the field outside the constructor and field initializer.
                 var fieldStateMap = new ConcurrentDictionary<IFieldSymbol, (bool isCandidate, bool written)>();
 
+                // We register following actions in the compilation:
+                // 1. A symbol action for field symbols to ensure the field state is initialized for every field in the compilation.
+                // 2. An operation action for field references to detect if a candidate field is written outside constructor and field initializer, and update field state accordingly.
+                // 3. A compilation end action to report diagnostics for candidate fields that were not written outside constructor and field initializer.
+
                 compilationStartContext.RegisterSymbolAction(symbolContext =>
                 {
-                    tryGetOrComputeIsCandidateField((IFieldSymbol)symbolContext.Symbol, symbolContext.Options, symbolContext.CancellationToken);
+                    _ = TryGetOrInitializeFieldState((IFieldSymbol)symbolContext.Symbol, symbolContext.Options, symbolContext.CancellationToken);
                 }, SymbolKind.Field);
 
-                compilationStartContext.RegisterOperationBlockStartAction(operationBlockStartContext =>
+                compilationStartContext.RegisterOperationAction(operationContext =>
                 {
-                    var isConstructor = operationBlockStartContext.OwningSymbol.IsConstructor();
-                    var isStaticConstructor = operationBlockStartContext.OwningSymbol.IsStaticConstructor();
+                    var fieldReference = (IFieldReferenceOperation)operationContext.Operation;
+                    (bool isCandidate, bool written) = TryGetOrInitializeFieldState(fieldReference.Field, operationContext.Options, operationContext.CancellationToken);
 
-                    operationBlockStartContext.RegisterOperationAction(operationContext =>
+                    // Ignore fields that are not candidates or have already been written outside the constructor/field initializer.
+                    if (!isCandidate || written)
                     {
-                        var fieldReference = (IFieldReferenceOperation)operationContext.Operation;
-                        var field = fieldReference.Field;
+                        return;
+                    }
 
-                        (bool isCandidate, bool written) = tryGetOrComputeIsCandidateField(field, operationContext.Options, operationContext.CancellationToken);
-
-                        // Ignore fields that are not candidates or have already been analyzed to have been written outside the constructor/field initializer.
-                        if (!isCandidate || written)
-                        {
-                            return;
-                        }
-
-                        // Field writes: assignment, increment/decrement or field passed by ref.
-                        var isFieldAssignemnt = fieldReference.Parent is IAssignmentOperation assignmentOperation &&
-                            assignmentOperation.Target == fieldReference;
-                        if (isFieldAssignemnt ||
-                            fieldReference.Parent is IIncrementOrDecrementOperation ||
-                            fieldReference.Parent is IArgumentOperation argumentOperation && argumentOperation.Parameter.RefKind != RefKind.None)
-                        {
-                            // Writes to fields inside constructor are ignored, except for the below cases:
-                            //  1. Instance reference of an instance field being written is not the instance being initialized by the constructor.
-                            //  2. Field is being written inside a lambda or local function.
-
-                            // Check if we are in the constructor of the containing type of the written field.
-                            if ((isConstructor || isStaticConstructor) &&
-                                field.ContainingType == operationBlockStartContext.OwningSymbol.ContainingType)
-                            {
-                                // For instance fields, ensure that the instance reference is being initialized by the constructor.
-                                var instanceFieldWrittenInCtor = isConstructor &&
-                                    fieldReference.Instance?.Kind == OperationKind.InstanceReference &&
-                                    (!isFieldAssignemnt || fieldReference.Parent.Parent?.Kind != OperationKind.ObjectOrCollectionInitializer);
-                                
-                                // For static fields, ensure that we are in the static constructor.
-                                var staticFieldWrittenInStaticCtor = isStaticConstructor && field.IsStatic;
-
-                                if (instanceFieldWrittenInCtor || staticFieldWrittenInStaticCtor)
-                                {
-                                    // Finally, ensure that the write is not inside a lambda or local function.
-                                    if (!IsInAnonymousFunctionOrLocalFunction(fieldReference))
-                                    {
-                                        // It is safe to ignore this write.
-                                        return;
-                                    }
-                                }
-                            }
-
-                            onFieldWrite(field);
-                        }
-                    }, OperationKind.FieldReference);
-                });
+                    // Check if this is a field write outside constructor and field initializer, and update field state accordingly.
+                    if (IsFieldWrite(fieldReference, operationContext.ContainingSymbol))
+                    {
+                        UpdateFieldStateOnWrite(fieldReference.Field);
+                    }
+                }, OperationKind.FieldReference);
 
                 compilationStartContext.RegisterCompilationEndAction(compilationEndContext =>
                 {
+                    // Report diagnostics for candidate fields that are not written outside constructor and field initializer.
                     foreach (var kvp in fieldStateMap)
                     {
                         IFieldSymbol field = kvp.Key;
-                        (bool isCandidate, bool written) fieldState = kvp.Value;
-                        if (fieldState.isCandidate && !fieldState.written)
+                        (bool isCandidate, bool written) = kvp.Value;
+                        if (isCandidate && !written)
                         {
                             var option = GetCodeStyleOption(field, compilationEndContext.Options, compilationEndContext.CancellationToken);
                             var diagnostic = Diagnostic.Create(
@@ -128,7 +95,8 @@ namespace Microsoft.CodeAnalysis.MakeFieldReadonly
                         symbol.Locations.Length == 1 &&
                         !IsMutableValueType(symbol.Type);
 
-                void onFieldWrite(IFieldSymbol field)
+                // Method to update the field state for a candidate field written outside constructor and field initializer.
+                void UpdateFieldStateOnWrite(IFieldSymbol field)
                 {
                     Debug.Assert(isCandidateField(field));
                     Debug.Assert(fieldStateMap.ContainsKey(field));
@@ -136,11 +104,13 @@ namespace Microsoft.CodeAnalysis.MakeFieldReadonly
                     fieldStateMap[field] = (isCandidate: true, written: true);
                 }
 
-                (bool isCandidate, bool written) tryGetOrComputeIsCandidateField(IFieldSymbol fieldSymbol, AnalyzerOptions options, CancellationToken cancellationToken)
+                // Method to get or initialize the field state.
+                (bool isCandidate, bool written) TryGetOrInitializeFieldState(IFieldSymbol fieldSymbol, AnalyzerOptions options, CancellationToken cancellationToken)
                 {
-                    return fieldStateMap.GetOrAdd(fieldSymbol, valueFactory: ComputeIsCandidate);
+                    return fieldStateMap.GetOrAdd(fieldSymbol, valueFactory: InitializeFieldState);
 
-                    (bool isCandidate, bool written) ComputeIsCandidate(IFieldSymbol field)
+                    // Method to initialize the field state.
+                    (bool isCandidate, bool written) InitializeFieldState(IFieldSymbol field)
                     {
                         if (!isCandidateField(field))
                         {
@@ -163,6 +133,51 @@ namespace Microsoft.CodeAnalysis.MakeFieldReadonly
         {
             var optionSet = options.GetDocumentOptionSetAsync(field.Locations[0].SourceTree, cancellationToken).GetAwaiter().GetResult();
             return optionSet?.GetOption(CodeStyleOptions.PreferReadonly, field.Language);
+        }
+
+        private static bool IsFieldWrite(IFieldReferenceOperation fieldReference, ISymbol owningSymbol)
+        {
+            // Field writes: assignment, increment/decrement or field passed by ref.
+            var isFieldAssignemnt = fieldReference.Parent is IAssignmentOperation assignmentOperation &&
+                assignmentOperation.Target == fieldReference;
+            if (isFieldAssignemnt ||
+                fieldReference.Parent is IIncrementOrDecrementOperation ||
+                fieldReference.Parent is IArgumentOperation argumentOperation && argumentOperation.Parameter.RefKind != RefKind.None)
+            {
+                // Writes to fields inside constructor are ignored, except for the below cases:
+                //  1. Instance reference of an instance field being written is not the instance being initialized by the constructor.
+                //  2. Field is being written inside a lambda or local function.
+
+                // Check if we are in the constructor of the containing type of the written field.
+                var isInConstructor = owningSymbol.IsConstructor();
+                var isInStaticConstructor = owningSymbol.IsStaticConstructor();
+                var field = fieldReference.Field;
+                if ((isInConstructor || isInStaticConstructor) &&
+                    field.ContainingType == owningSymbol.ContainingType)
+                {
+                    // For instance fields, ensure that the instance reference is being initialized by the constructor.
+                    var instanceFieldWrittenInCtor = isInConstructor &&
+                        fieldReference.Instance?.Kind == OperationKind.InstanceReference &&
+                        (!isFieldAssignemnt || fieldReference.Parent.Parent?.Kind != OperationKind.ObjectOrCollectionInitializer);
+
+                    // For static fields, ensure that we are in the static constructor.
+                    var staticFieldWrittenInStaticCtor = isInStaticConstructor && field.IsStatic;
+
+                    if (instanceFieldWrittenInCtor || staticFieldWrittenInStaticCtor)
+                    {
+                        // Finally, ensure that the write is not inside a lambda or local function.
+                        if (!IsInAnonymousFunctionOrLocalFunction(fieldReference))
+                        {
+                            // It is safe to ignore this write.
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         private static bool IsInAnonymousFunctionOrLocalFunction(IOperation operation)
