@@ -100,6 +100,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             while (binder != null);
 
+#pragma warning disable CA1508 // 'binder != null' is always 'false'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1567
             Debug.Assert(binder != null);
 
             var executablebinder = new ExecutableCodeBinder(body, methodSymbol, binder ?? this.RootBinder);
@@ -107,6 +109,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             speculativeModel = CreateSpeculative(parentModel, methodSymbol, body, blockBinder, position);
             return true;
         }
+#pragma warning restore CA1508
 
         internal override bool TryGetSpeculativeSemanticModelForMethodBodyCore(SyntaxTreeSemanticModel parentModel, int position, AccessorDeclarationSyntax accessor, out SemanticModel speculativeModel)
         {

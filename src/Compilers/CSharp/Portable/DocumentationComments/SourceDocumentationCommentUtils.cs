@@ -49,7 +49,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     curr = curr.Parent;
                 }
 
+#pragma warning disable CA1508 // '(object)curr != null' is always 'false'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1567
                 if ((object)curr != null)
+#pragma warning restore CA1508
                 {
                     syntaxNode = curr;
                 }

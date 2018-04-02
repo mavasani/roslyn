@@ -2576,8 +2576,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 {
                     return null;
                 }
-
-                Debug.Assert(forcedArity == emittedName.InferredArity);
             }
 
             if (_lazyForwardedTypesFromSource == null)

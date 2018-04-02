@@ -259,7 +259,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
+#pragma warning disable CA1508 // 'binder' is always 'null'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1567
             binder = binder ?? rootBinder.GetBinder(root) ?? rootBinder;
+#pragma warning restore CA1508
             Debug.Assert(binder != null);
 
             if (ownerOfTypeParametersInScope != null)

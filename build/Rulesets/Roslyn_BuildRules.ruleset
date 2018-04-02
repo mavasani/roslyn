@@ -21,6 +21,8 @@
     <Rule Id="CA1055" Action="None" />
     <Rule Id="CA1056" Action="None" />
     <Rule Id="CA1061" Action="None" /> <!-- "do not hide base class methods": currently violations in the compiler -->
+    <Rule Id="CA1062" Action="None" />
+    <Rule Id="CA1508" Action="Warning" />
     <Rule Id="CA1063" Action="None" /> <!-- https://github.com/dotnet/roslyn/issues/25134: Enable rule CA1063 (Implement IDisposable correctly) for Roslyn.sln -->
     <Rule Id="CA1064" Action="None" />
     <Rule Id="CA1065" Action="None" />

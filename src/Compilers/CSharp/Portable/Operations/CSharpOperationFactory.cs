@@ -321,8 +321,7 @@ namespace Microsoft.CodeAnalysis.Operations
             }
 
             Lazy<IOperation> instance = CreateReceiverOperation(boundCall.ReceiverOpt, targetMethod);
-            bool isVirtual = (object)targetMethod != null &&
-                        boundCall.ReceiverOpt != null &&
+            bool isVirtual = boundCall.ReceiverOpt != null &&
                         (targetMethod.IsVirtual || targetMethod.IsAbstract || targetMethod.IsOverride) &&
                         !boundCall.ReceiverOpt.SuppressVirtualCalls;
             Lazy<ImmutableArray<IArgumentOperation>> arguments = new Lazy<ImmutableArray<IArgumentOperation>>(() =>

@@ -200,8 +200,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     IsSuppressed == other.IsSuppressed &&
                     ProjectId == other.ProjectId &&
                     DocumentId == other.DocumentId &&
-                    DataLocation?.OriginalStartLine == other?.DataLocation?.OriginalStartLine &&
-                    DataLocation?.OriginalStartColumn == other?.DataLocation?.OriginalStartColumn;
+                    DataLocation?.OriginalStartLine == other.DataLocation?.OriginalStartLine &&
+                    DataLocation?.OriginalStartColumn == other.DataLocation?.OriginalStartColumn;
         }
 
         public override int GetHashCode()

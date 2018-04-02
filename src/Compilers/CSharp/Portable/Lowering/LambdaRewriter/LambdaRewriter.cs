@@ -407,7 +407,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (closure.ContainingEnvironmentOpt != null)
                 {
-                    containerAsFrame = closure.ContainingEnvironmentOpt?.SynthesizedEnvironment;
+                    containerAsFrame = closure.ContainingEnvironmentOpt.SynthesizedEnvironment;
 
                     closureKind = ClosureKind.General;
                     translatedLambdaContainer = containerAsFrame;
@@ -1426,7 +1426,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                         tmpScope = scope.BoundNode;
                     }
                 });
+#pragma warning disable CA1508 // 'tmpScope != null' is always 'false'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1647
                 Debug.Assert(tmpScope != null);
+#pragma warning restore CA1508
                 lambdaScope = tmpScope;
             }
             else

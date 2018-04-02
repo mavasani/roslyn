@@ -1107,10 +1107,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
                 }
                 catch (BadImageFormatException mrEx)
                 {
+#pragma warning disable CA1508 // '(object)underlyingType == null' is always 'false'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1567
                     if ((object)underlyingType == null)
                     {
                         underlyingType = new UnsupportedMetadataTypeSymbol(mrEx);
                     }
+#pragma warning restore CA1508
                 }
 
                 Interlocked.CompareExchange(ref uncommon.lazyEnumUnderlyingType, underlyingType, null);

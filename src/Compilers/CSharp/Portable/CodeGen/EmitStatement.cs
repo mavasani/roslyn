@@ -1136,8 +1136,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                     else
                     {
                         var value = boundLabel.ConstantValueOpt;
-                        Debug.Assert(value != null
-                            && SwitchConstantValueHelper.IsValidSwitchCaseLabelConstant(value));
+                        Debug.Assert(SwitchConstantValueHelper.IsValidSwitchCaseLabelConstant(value));
 
                         if (firstLabelInSection == null)
                         {

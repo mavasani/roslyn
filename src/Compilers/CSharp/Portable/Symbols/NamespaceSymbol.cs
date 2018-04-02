@@ -256,7 +256,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     {
                         if ((object)nextScope != null)
                         {
+#pragma warning disable CA1508 // '(object)nextScope == null' is always 'false'. Remove or refactor the condition(s) to avoid dead code. 
                             Debug.Assert((object)nextScope == null, "Why did we run into an unmerged namespace?");
+#pragma warning restore CA1508
                             nextScope = null;
                             break;
                         }

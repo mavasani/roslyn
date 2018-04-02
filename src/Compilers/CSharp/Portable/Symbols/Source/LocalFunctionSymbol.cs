@@ -233,11 +233,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             lock (_declarationDiagnostics)
             {
+#pragma warning disable CA1508 // '_lazyReturnType != null' is always 'false'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1649
                 if (_lazyReturnType != null)
                 {
                     diagnostics.Free();
                     return;
                 }
+#pragma warning restore CA1508
 
                 _declarationDiagnostics.AddRangeAndFree(diagnostics);
                 _lazyReturnType = returnType;

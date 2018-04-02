@@ -161,8 +161,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                             curScope = curScope.Parent;
                         }
 
+#pragma warning disable CA1508 // 'curScope' is always 'null'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1567
                         // Now we need to walk up the scopes to find environment captures
                         var oldEnv = curScope?.DeclaredEnvironments[0];
+#pragma warning restore CA1508
                         while (curScope != null)
                         {
                             if (capturedEnvs.Count == 0)

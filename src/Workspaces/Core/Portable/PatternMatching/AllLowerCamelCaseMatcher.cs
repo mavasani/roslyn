@@ -69,7 +69,7 @@ namespace Microsoft.CodeAnalysis.PatternMatching
                     ? new NormalizedTextSpanCollection(result.Value.MatchedSpansInReverse).ToImmutableArray()
                     : ImmutableArray<TextSpan>.Empty;
 
-                result?.Free();
+                result.Free();
                 return GetKind(result.Value);
             }
 

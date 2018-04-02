@@ -619,7 +619,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     if (!hasErrors && (object)labelExpressionConstant != null && FindMatchingSwitchCaseLabel(labelExpressionConstant, caseLabelSyntax) != label)
                     {
-                        diagnostics.Add(ErrorCode.ERR_DuplicateCaseLabel, node.Location, labelExpressionConstant?.GetValueToDisplay() ?? label.Name);
+                        diagnostics.Add(ErrorCode.ERR_DuplicateCaseLabel, node.Location, labelExpressionConstant.GetValueToDisplay() ?? label.Name);
                         hasErrors = true;
                     }
 

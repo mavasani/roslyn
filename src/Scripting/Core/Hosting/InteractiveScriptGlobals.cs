@@ -52,9 +52,6 @@ namespace Microsoft.CodeAnalysis.Scripting.Hosting
                 throw new ArgumentNullException(nameof(objectFormatter));
             }
 
-            Debug.Assert(outputWriter != null);
-            Debug.Assert(objectFormatter != null);
-
             ReferencePaths = new SearchPaths();
             SourcePaths = new SearchPaths();
             Args = new List<string>();

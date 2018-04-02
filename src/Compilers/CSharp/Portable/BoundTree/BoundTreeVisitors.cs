@@ -207,7 +207,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
 #if DEBUG
+#pragma warning disable CA1508 // 'saveRecursionDepth == recursionDepth' is always 'true'. Remove or refactor the condition(s) to avoid dead code.
             Debug.Assert(saveRecursionDepth == recursionDepth);
+#pragma warning restore CA1508
 #endif
             recursionDepth--;
             return result;

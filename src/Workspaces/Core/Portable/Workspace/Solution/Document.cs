@@ -84,7 +84,9 @@ namespace Microsoft.CodeAnalysis
             }
 
             // cache the result if it is not already cached
+#pragma warning disable CA1508 // '_syntaxTreeResultTask == null' is always 'true'. Remove or refactor the condition(s) to avoid dead code. 
             if (_syntaxTreeResultTask == null)
+#pragma warning restore CA1508
             {
                 var result = Task.FromResult(syntaxTree);
                 Interlocked.CompareExchange(ref _syntaxTreeResultTask, result, null);

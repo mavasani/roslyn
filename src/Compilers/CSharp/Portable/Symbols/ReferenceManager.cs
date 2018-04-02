@@ -309,7 +309,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     lock (SymbolCacheAndReferenceManagerStateGuard)
                     {
+#pragma warning disable CA1508 // '(object)compilation._lazyAssemblySymbol == null' is always 'true'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1649
                         if ((object)compilation._lazyAssemblySymbol == null)
+#pragma warning restore CA1508
                         {
                             compilation._lazyAssemblySymbol = assemblySymbol;
                             Debug.Assert(ReferenceEquals(compilation._referenceManager, this));
@@ -475,7 +478,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         lock (SymbolCacheAndReferenceManagerStateGuard)
                         {
+#pragma warning disable CA1508 // '(object)compilation._lazyAssemblySymbol == null' is always 'true'. Remove or refactor the condition(s) to avoid dead code. 
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1649
                             if ((object)compilation._lazyAssemblySymbol == null)
+#pragma warning restore CA1508
                             {
                                 if (IsBound)
                                 {

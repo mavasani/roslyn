@@ -3275,18 +3275,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 if (SyntaxFacts.IsWhitespace(ch) || SyntaxFacts.IsNewLine(ch))
                 {
-                    if (error == null)
-                    {
-                        error = XmlParseErrorCode.XML_InvalidWhitespace;
-                    }
+                    error = XmlParseErrorCode.XML_InvalidWhitespace;
                 }
                 else
                 {
-                    if (error == null)
-                    {
-                        error = XmlParseErrorCode.XML_InvalidToken;
-                        errorArgs = new[] { ch.ToString() };
-                    }
+                    error = XmlParseErrorCode.XML_InvalidToken;
+                    errorArgs = new[] { ch.ToString() };
                 }
             }
 

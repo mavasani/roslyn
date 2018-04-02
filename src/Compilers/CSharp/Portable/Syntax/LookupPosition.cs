@@ -209,7 +209,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             var firstNameToken = explicitInterfaceSpecifier == null ? methodDecl.Identifier : explicitInterfaceSpecifier.GetFirstToken();
 
             var typeParams = methodDecl.TypeParameterList;
-            var firstPostNameToken = typeParams == null ? methodDecl.ParameterList.OpenParenToken : typeParams.LessThanToken;
+            var firstPostNameToken = typeParams.LessThanToken;
 
             // Scope does not include method name.
             return !IsBetweenTokens(position, firstNameToken, firstPostNameToken);

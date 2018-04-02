@@ -200,7 +200,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                 //  consider properties the same is the owning types are the same and 
                 //  the names are equal
-                return ((object)other != null) && other.Name == this.Name
+                return other.Name == this.Name
                     && other.ContainingType.Equals(this.ContainingType);
             }
 

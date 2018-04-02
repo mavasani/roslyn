@@ -139,7 +139,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             // In the case where /warnaserror+ is followed by /warnaserror-:<n> on the command line,
                             // do not promote the warning specified in <n> to an error.
-                            if (!isSpecified && (report == ReportDiagnostic.Default))
+                            if (!isSpecified)
                             {
                                 return ReportDiagnostic.Error;
                             }
