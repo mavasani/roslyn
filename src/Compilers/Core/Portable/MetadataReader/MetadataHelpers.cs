@@ -863,8 +863,10 @@ namespace Microsoft.CodeAnalysis
 
             namespaces = nestedNamespaces;
 
+#pragma warning disable CA1508 // 'types != null' and 'namespaces != null' is always 'true'. Remove or refactor the condition(s) to avoid dead code.
             Debug.Assert(types != null);
             Debug.Assert(namespaces != null);
+#pragma warning restore CA1508
         }
 
         /// <summary>

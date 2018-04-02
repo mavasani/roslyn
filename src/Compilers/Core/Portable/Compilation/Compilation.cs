@@ -162,9 +162,9 @@ namespace Microsoft.CodeAnalysis
             if (options.CryptoKeyContainer != null ||
                 options.CryptoKeyFile != null ||
                 options.DelaySign != null ||
-                !options.CryptoPublicKey.IsEmpty ||
-                (options.DelaySign == true && options.PublicSign))
+                !options.CryptoPublicKey.IsEmpty)
             {
+                Debug.Assert(options.DelaySign == null || (options.DelaySign == true && options.PublicSign));
                 throw new ArgumentException(CodeAnalysisResources.InvalidCompilationOptions, nameof(options));
             }
         }
@@ -2418,7 +2418,6 @@ namespace Microsoft.CodeAnalysis
             Cci.PdbWriter nativePdbWriter = null;
             Stream signingInputStream = null;
             DiagnosticBag metadataDiagnostics = null;
-            DiagnosticBag pdbBag = null;
             Stream peStream = null;
 
             bool deterministic = IsEmitDeterministic;
@@ -2529,7 +2528,10 @@ namespace Microsoft.CodeAnalysis
                     return false;
                 }
 
+#pragma warning disable CA1508 // 'signingInputStream != null' and 'peStream != null' is always 'false'. Remove or refactor the condition(s) to avoid dead code.
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1647
                 if (signingInputStream != null && peStream != null)
+#pragma warning restore CA1508
                 {
                     Debug.Assert(Options.StrongNameProvider != null);
 
@@ -2553,8 +2555,10 @@ namespace Microsoft.CodeAnalysis
             finally
             {
                 nativePdbWriter?.Dispose();
+#pragma warning disable CA1508 // 'signingInputStream' is always 'null'. Remove or refactor the condition(s) to avoid dead code.
+                               // https://github.com/dotnet/roslyn-analyzers/issues/1647
                 signingInputStream?.Dispose();
-                pdbBag?.Free();
+#pragma warning restore CA1508
                 metadataDiagnostics?.Free();
             }
 

@@ -1277,7 +1277,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return string.Join(Environment.NewLine,
-                string.Format(CodeAnalysisResources.ExceptionContext, info?.GetContext()), e.CreateDiagnosticDescription());
+                string.Format(CodeAnalysisResources.ExceptionContext, info.Value.GetContext()), e.CreateDiagnosticDescription());
         }
 
         internal static Diagnostic CreateDriverExceptionDiagnostic(Exception e)

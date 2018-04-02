@@ -62,7 +62,6 @@ namespace Microsoft.CodeAnalysis
 
             if (_lazySecurityActions != null)
             {
-                Debug.Assert(_lazySecurityActions != null);
                 Debug.Assert(_lazySecurityActions.Length == customAttributes.Length);
 
                 for (int i = 0; i < customAttributes.Length; i++)

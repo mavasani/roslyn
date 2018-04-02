@@ -157,7 +157,6 @@ namespace Microsoft.CodeAnalysis
 
             if (parameters[2].Type.SpecialType == SpecialType.System_Int32)
             {
-                Debug.Assert(parameters[2].Type.SpecialType == SpecialType.System_Int32);
                 Debug.Assert(parameters[3].Type.SpecialType == SpecialType.System_Int32);
                 Debug.Assert(parameters[4].Type.SpecialType == SpecialType.System_Int32);
 
