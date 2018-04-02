@@ -26,6 +26,7 @@ namespace Microsoft.CodeAnalysis.CompilerServer
             var port = int.Parse(pipeName);
             var ipAddress = IPAddress.Parse(DefaultAddress);
 #pragma warning disable CA2000 // Dispose objects before losing scope - this seems like a bug. TcpClient cannot be closed here as the returned stream will be disposed. TODO: File a bug.
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var client = new TcpClient();
 #pragma warning restore CA2000 // Dispose objects before losing scope
             await client.ConnectAsync(ipAddress, port).ConfigureAwait(false);

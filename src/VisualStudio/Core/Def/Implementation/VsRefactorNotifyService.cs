@@ -102,9 +102,10 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation
             hierarchyToItemIDsMap = null;
             rqnames = null;
 #pragma warning disable CA2000 // Dispose objects before losing scope
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             if (!TryGetItemIDsAndRQName(workspace, changedDocumentIDs, symbol, out var visualStudioWorkspace, out hierarchyToItemIDsMap, out var rqname))
-#pragma warning restore CA2000 // Dispose objects before losing scope
             {
+#pragma warning restore CA2000 // Dispose objects before losing scope
                 return false;
             }
 

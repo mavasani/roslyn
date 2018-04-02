@@ -424,6 +424,7 @@ namespace Microsoft.CodeAnalysis.Scripting.Hosting
                     else
                     {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to the CacheEntry.
+                        // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                         privateMetadata = CreateModuleMetadata(manifestModuleCopyStream);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                     }

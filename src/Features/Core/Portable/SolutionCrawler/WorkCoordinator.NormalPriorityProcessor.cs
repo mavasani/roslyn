@@ -143,6 +143,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                                 return;
                             }
 #pragma warning disable CA2000 // Dispose objects before losing scope - _workItemQueue has the dispose ownership of the cancellation token source.
+                            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                             // process one of documents remaining
                             if (!_workItemQueue.TryTakeAnyWork(
                                 _currentProjectProcessing, this.Processor.DependencyGraph, this.Processor.DiagnosticAnalyzerService,
@@ -273,9 +274,10 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                                 // (opened document)
                                 // see whether we have work item for the document
 #pragma warning disable CA2000 // Dispose objects before losing scope - _workItemQueue has the dispose ownership of the cancellation token source.
+                                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                                 if (!_workItemQueue.TryTake(documentId, out var workItem, out var documentCancellation))
-#pragma warning restore CA2000 // Dispose objects before losing scope
                                 {
+#pragma warning restore CA2000 // Dispose objects before losing scope
                                     RemoveHigherPriorityDocument(documentId);
                                     continue;
                                 }
@@ -299,9 +301,10 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                     {
                         // remove opened document processed
 #pragma warning disable CA2000 // Dispose objects before losing scope - "projectCache" disposed by the helper method DisposeProjectCache.
+                        // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                         if (_higherPriorityDocumentsNotProcessed.TryRemove(documentId, out var projectCache))
-#pragma warning restore CA2000 // Dispose objects before losing scope
                         {
+#pragma warning restore CA2000 // Dispose objects before losing scope
                             DisposeProjectCache(projectCache);
                         }
                     }

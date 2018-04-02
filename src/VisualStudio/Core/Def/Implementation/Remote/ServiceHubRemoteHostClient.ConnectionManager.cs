@@ -91,9 +91,10 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
             {
                 var queue = _pools.GetOrAdd(serviceName, _ => new ConcurrentQueue<JsonRpcConnection>());
 #pragma warning disable CA2000 // Dispose objects before losing scope - PooledConnection has the dispose ownership of connection.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 if (queue.TryDequeue(out var connection))
-#pragma warning restore CA2000 // Dispose objects before losing scope
                 {
+#pragma warning restore CA2000 // Dispose objects before losing scope
                     return new PooledConnection(this, serviceName, connection);
                 }
 

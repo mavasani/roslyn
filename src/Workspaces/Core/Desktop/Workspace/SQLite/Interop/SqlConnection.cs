@@ -55,6 +55,7 @@ namespace Microsoft.CodeAnalysis.SQLite.Interop
             // see https://sqlite.org/threadsafe.html for more detail
             var flags = OpenFlags.SQLITE_OPEN_CREATE | OpenFlags.SQLITE_OPEN_READWRITE | OpenFlags.SQLITE_OPEN_NOMUTEX | OpenFlags.SQLITE_OPEN_SHAREDCACHE;
 #pragma warning disable CA2000 // Dispose objects before losing scope - handle is wrapped with the returned SqlConnection
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var result = (Result)raw.sqlite3_open_v2(databasePath, out var handle, (int)flags, vfs: null);
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -122,6 +123,7 @@ namespace Microsoft.CodeAnalysis.SQLite.Interop
             if (!_queryToStatement.TryGetValue(query, out var statement))
             {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer of rawStatement to SqlStatement instance.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 var result = (Result)raw.sqlite3_prepare_v2(_handle, query, out var rawStatement);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 ThrowIfNotOk(result);
@@ -212,6 +214,7 @@ namespace Microsoft.CodeAnalysis.SQLite.Interop
         {
             const int ReadOnlyFlags = 0;
 #pragma warning disable CA2000 // Dispose objects before losing scope - disposed with sqlite3_blob_close invocation.
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var result = raw.sqlite3_blob_open(_handle, "main", tableName, columnName, rowId, ReadOnlyFlags, out var blob);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             if (result == raw.SQLITE_ERROR)

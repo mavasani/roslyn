@@ -33,6 +33,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
             {
                 // This can happen only in tests.
 #pragma warning disable CA2000 // Dispose objects before losing scope - escaped with AddOrUpdateAnalyzer saving the analyzer to a field.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 var testAnalyzer = new VisualStudioAnalyzer(analyzerAssemblyFullPath, fileChangeService, this.HostDiagnosticUpdateSource, this.Id, this.Workspace, loader: null, language: this.Language);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 this.AddOrUpdateAnalyzer(analyzerAssemblyFullPath, testAnalyzer);
@@ -42,6 +43,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
             var analyzerLoader = Workspace.Services.GetRequiredService<IAnalyzerService>().GetLoader();
             analyzerLoader.AddDependencyLocation(analyzerAssemblyFullPath);
 #pragma warning disable CA2000 // Dispose objects before losing scope - escaped with AddOrUpdateAnalyzer saving the analyzer to a field.
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var analyzer = new VisualStudioAnalyzer(analyzerAssemblyFullPath, fileChangeService, this.HostDiagnosticUpdateSource, this.Id, this.Workspace, analyzerLoader, this.Language);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             this.AddOrUpdateAnalyzer(analyzerAssemblyFullPath, analyzer);

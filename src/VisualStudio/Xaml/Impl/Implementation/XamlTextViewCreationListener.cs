@@ -110,6 +110,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Xaml
             if (vsDocument == null)
             {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to project
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 if (!TryCreateXamlDocument(project, filePath, out vsDocument))
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 {
@@ -189,6 +190,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Xaml
             if (newDocument == null)
             {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to project.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 if (TryCreateXamlDocument(project, newMoniker, out newDocument))
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 {

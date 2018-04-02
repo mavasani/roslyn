@@ -47,6 +47,7 @@ namespace Microsoft.CodeAnalysis.Host.Mef
             }
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to MefV1HostServices.
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var catalog = new AggregateCatalog(assemblies.Select(a => new AssemblyCatalog(a)));
             var container = new CompositionContainer(catalog, compositionOptions: CompositionOptions.DisableSilentRejection | CompositionOptions.IsThreadSafe);
 #pragma warning restore CA2000 // Dispose objects before losing scope

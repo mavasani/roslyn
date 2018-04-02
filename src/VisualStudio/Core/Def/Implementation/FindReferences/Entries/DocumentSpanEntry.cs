@@ -122,6 +122,7 @@ namespace Microsoft.VisualStudio.LanguageServices.FindUsages
                 // reference highlight span.
                 var newDocument = Document.WithText(textBuffer.AsTextContainer().CurrentText);
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to DisposableToolTip.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 var workspace = new PreviewWorkspace(newDocument.Project.Solution);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 workspace.OpenDocument(newDocument.Id);

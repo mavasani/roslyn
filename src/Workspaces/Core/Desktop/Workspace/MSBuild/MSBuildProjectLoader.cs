@@ -654,6 +654,7 @@ namespace Microsoft.CodeAnalysis.MSBuild
                     var documentationService = _workspace.Services.GetService<IDocumentationProviderService>();
                     var docProvider = documentationService.GetDocumentationProvider(outputFilePath);
 #pragma warning disable CA2000 // Dispose objects before losing scope - metadata instance wrapped within the returned MetadataReference instance.
+                    // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                     var metadata = AssemblyMetadata.CreateFromImage(File.ReadAllBytes(outputFilePath));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 

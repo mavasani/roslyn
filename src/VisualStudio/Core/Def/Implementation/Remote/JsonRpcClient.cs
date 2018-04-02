@@ -36,6 +36,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
             _logger = logger;
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - JsonRpc instance has the dispose ownership of JsonRpcMessageHandler instance.
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             _rpc = new JsonRpc(new JsonRpcMessageHandler(stream, stream), target);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             _rpc.JsonSerializer.Converters.Add(AggregateJsonConverter.Instance);

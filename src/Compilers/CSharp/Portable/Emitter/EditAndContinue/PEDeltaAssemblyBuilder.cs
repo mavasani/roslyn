@@ -105,6 +105,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Emit
 
             ImmutableDictionary<AssemblyIdentity, AssemblyIdentity> assemblyReferenceIdentityMap;
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to CreatePEAssemblyForAssemblyMetadata
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var metadataAssembly = metadataCompilation.GetBoundReferenceManager().CreatePEAssemblyForAssemblyMetadata(AssemblyMetadata.Create(originalMetadata), MetadataImportOptions.All, out assemblyReferenceIdentityMap);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             var metadataDecoder = new MetadataDecoder(metadataAssembly.PrimaryModule);

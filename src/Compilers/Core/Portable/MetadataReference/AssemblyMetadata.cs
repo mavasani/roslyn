@@ -107,6 +107,7 @@ namespace Microsoft.CodeAnalysis
         public static AssemblyMetadata CreateFromImage(ImmutableArray<byte> peImage)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             return Create(ModuleMetadata.CreateFromImage(peImage));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         }
@@ -122,6 +123,7 @@ namespace Microsoft.CodeAnalysis
         public static AssemblyMetadata CreateFromImage(IEnumerable<byte> peImage)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             return Create(ModuleMetadata.CreateFromImage(peImage));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         }
@@ -135,6 +137,7 @@ namespace Microsoft.CodeAnalysis
         public static AssemblyMetadata CreateFromStream(Stream peStream, bool leaveOpen = false)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             return Create(ModuleMetadata.CreateFromStream(peStream, leaveOpen));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         }
@@ -148,6 +151,7 @@ namespace Microsoft.CodeAnalysis
         public static AssemblyMetadata CreateFromStream(Stream peStream, PEStreamOptions options)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             return Create(ModuleMetadata.CreateFromStream(peStream, options));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         }
@@ -163,6 +167,7 @@ namespace Microsoft.CodeAnalysis
         public static AssemblyMetadata CreateFromFile(string path)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             return CreateFromFile(ModuleMetadata.CreateFromFile(path), path);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         }

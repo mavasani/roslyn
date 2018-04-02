@@ -158,6 +158,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
         private ModuleMetadata CreateModuleMetadataFromTemporaryStorage(FileKey moduleFileKey, List<ITemporaryStreamStorage> storages)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope - s_lifetimeMap has the dispose ownership.
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             GetStorageInfoFromTemporaryStorage(moduleFileKey, out var storage, out var stream, out var pImage);
 #pragma warning restore CA2000 // Dispose objects before losing scope
 

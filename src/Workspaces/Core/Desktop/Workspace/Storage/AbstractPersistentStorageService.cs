@@ -150,6 +150,7 @@ namespace Microsoft.CodeAnalysis.Storage
             // try to create it again.  If we can't create it the second time, then there's nothing
             // we can do and we have to store things in memory.
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transferred to ReferenceCountedDisposable
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             if (TryCreatePersistentStorage(solution, workingFolderPath, out var persistentStorage) ||
                 TryCreatePersistentStorage(solution, workingFolderPath, out persistentStorage))
             {

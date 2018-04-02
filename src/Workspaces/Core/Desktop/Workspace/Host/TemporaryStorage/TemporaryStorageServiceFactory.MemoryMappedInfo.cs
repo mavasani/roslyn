@@ -115,6 +115,7 @@ namespace Microsoft.CodeAnalysis.Host
                     {
                         var rawAccessor = RunWithCompactingGCFallback(info => info._memoryMappedFile.Target.CreateViewAccessor(info.Offset, info.Size, MemoryMappedFileAccess.Read), this);
 #pragma warning disable CA2000 // Dispose objects before losing scope - wrapped within a WeakReference below.
+                        // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                         streamAccessor = new ReferenceCountedDisposable<MemoryMappedViewAccessor>(rawAccessor);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                         _weakReadAccessor = new ReferenceCountedDisposable<MemoryMappedViewAccessor>.WeakReference(streamAccessor);

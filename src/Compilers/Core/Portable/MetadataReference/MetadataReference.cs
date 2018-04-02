@@ -122,6 +122,7 @@ namespace Microsoft.CodeAnalysis
             string filePath = null)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope - MetadataImageReference has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var metadata = AssemblyMetadata.CreateFromImage(peImage);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             return new MetadataImageReference(metadata, properties, documentation, filePath, display: null);
@@ -158,6 +159,7 @@ namespace Microsoft.CodeAnalysis
             string filePath = null)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope - MetadataImageReference has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var metadata = AssemblyMetadata.CreateFromImage(peImage);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             return new MetadataImageReference(metadata, properties, documentation, filePath, display: null);
@@ -198,6 +200,7 @@ namespace Microsoft.CodeAnalysis
         {
             // Prefetch data and close the stream. 
 #pragma warning disable CA2000 // Dispose objects before losing scope - MetadataImageReference has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var metadata = AssemblyMetadata.CreateFromStream(peStream, PEStreamOptions.PrefetchEntireImage);
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -239,6 +242,7 @@ namespace Microsoft.CodeAnalysis
 
             // prefetch image, close stream to avoid locking it:
 #pragma warning disable CA2000 // Dispose objects before losing scope - MetadataImageReference has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var module = ModuleMetadata.CreateFromStream(peStream, PEStreamOptions.PrefetchEntireImage);
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -249,6 +253,7 @@ namespace Microsoft.CodeAnalysis
 
             // any additional modules constituting the assembly will be read lazily:
 #pragma warning disable CA2000 // Dispose objects before losing scope - MetadataImageReference has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var assemblyMetadata = AssemblyMetadata.CreateFromFile(module, path);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             return new MetadataImageReference(assemblyMetadata, properties, documentation, path, display: null);
@@ -339,6 +344,7 @@ namespace Microsoft.CodeAnalysis
             // The file is locked by the CLR assembly loader, so we can create a lazily read metadata, 
             // which might also lock the file until the reference is GC'd.
 #pragma warning disable CA2000 // Dispose objects before losing scope - MetadataImageReference has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var metadata = AssemblyMetadata.CreateFromStream(peStream);
 #pragma warning restore CA2000 // Dispose objects before losing scope
 

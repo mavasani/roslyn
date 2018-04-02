@@ -112,6 +112,7 @@ namespace Microsoft.CodeAnalysis
                 // native memory again. this is a way to get around the issue by we getting native memory ourselves and then
                 // give them pointer to the native memory. also we need to handle lifetime ourselves.
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer of metadata instance to s_lifetime
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 metadata = AssemblyMetadata.Create(ModuleMetadata.CreateFromImage(supportNativeMemory.GetPointer(), (int)stream.Length));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -129,6 +130,7 @@ namespace Microsoft.CodeAnalysis
                 // We don't deterministically release the resulting metadata since we don't know 
                 // when we should. So we leave it up to the GC to collect it and release all the associated resources.
 #pragma warning disable CA2000 // Dispose objects before losing scope - escaped with GetReference call below, which wraps the metadata instance.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 metadata = AssemblyMetadata.CreateFromStream(stream);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             }

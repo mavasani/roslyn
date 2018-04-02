@@ -107,6 +107,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                             // okay, there must be at least one item in the map
                             // see whether we have work item for the document
 #pragma warning disable CA2000 // Dispose objects before losing scope - _workItemQueue has the dispose ownership of the cancellation token source.
+                            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                             Contract.ThrowIfFalse(GetNextWorkItem(out var workItem, out var documentCancellation));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 

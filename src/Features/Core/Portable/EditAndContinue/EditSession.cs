@@ -338,6 +338,7 @@ namespace Microsoft.CodeAnalysis.EditAndContinue
                 var allAddedSymbols = await GetAllAddedSymbols(cancellationToken).ConfigureAwait(false);
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to Deltas.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 var pdbStream = new MemoryStream();
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 var updatedMethods = new List<MethodDefinitionHandle>();

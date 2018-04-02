@@ -16,6 +16,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Peek
             var label = string.Format("{0} - ({1}, {2})", fileName, identifierLocation.Start.Line + 1, identifierLocation.Start.Character + 1);
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to IDocumentPeekResult
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var displayInfo = new PeekResultDisplayInfo(label: label, labelTooltip: filePath, title: fileName, titleTooltip: filePath);
 #pragma warning restore CA2000 // Dispose objects before losing scope
 

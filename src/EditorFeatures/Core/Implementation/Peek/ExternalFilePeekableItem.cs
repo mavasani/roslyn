@@ -49,6 +49,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Peek
                 }
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to caller
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 resultCollection.Add(PeekHelpers.CreateDocumentPeekResult(_peekableItem._span.Path, _peekableItem._span.Span, _peekableItem._span.Span, _peekableItem.PeekResultFactory));
 #pragma warning restore CA2000 // Dispose objects before losing scope
             }

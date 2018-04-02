@@ -90,6 +90,7 @@ namespace Microsoft.CodeAnalysis
             }
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - ModuleMetadata has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             return new ModuleMetadata(new PEReader((byte*)peImage, size));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         }
@@ -122,6 +123,7 @@ namespace Microsoft.CodeAnalysis
             }
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - ModuleMetadata has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             return new ModuleMetadata(new PEReader(peImage));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         }
@@ -180,6 +182,7 @@ namespace Microsoft.CodeAnalysis
 
             // ownership of the stream is passed on PEReader:
 #pragma warning disable CA2000 // Dispose objects before losing scope - ModuleMetadata has dispose ownership
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             return new ModuleMetadata(new PEReader(peStream, options));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         }

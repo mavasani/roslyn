@@ -72,9 +72,10 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion
             // text never makes it into the buffer.
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             if (!Workspace.TryGetWorkspace(subjectBuffer.AsTextContainer(), out var workspace))
-#pragma warning restore CA2000 // Dispose objects before losing scope
             {
+#pragma warning restore CA2000 // Dispose objects before losing scope
                 return false;
             }
 

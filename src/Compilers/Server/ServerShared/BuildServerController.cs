@@ -30,6 +30,7 @@ namespace Microsoft.CodeAnalysis.CompilerServer
 
             pipeName = pipeName ?? GetDefaultPipeName();
 #pragma warning disable CA2000 // Dispose objects before losing scope - cancellationTokenSource escaped with the capture in CancelKeyPress event.
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var cancellationTokenSource = new CancellationTokenSource();
 #pragma warning restore CA2000 // Dispose objects before losing scope
             Console.CancelKeyPress += (sender, e) => { cancellationTokenSource.Cancel(); };

@@ -288,6 +288,7 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
             }
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var assemblyMetadata = AssemblyMetadata.Create(builder.ToImmutableAndFree());
 #pragma warning restore CA2000 // Dispose objects before losing scope
             return assemblyMetadata.GetReference(embedInteropTypes: false, display: metadata.Name);
@@ -333,6 +334,7 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
             builder.Add(metadata);
             builder.AddRange(runtimeModules);
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             var assemblyMetadata = AssemblyMetadata.Create(builder.ToImmutableAndFree());
 #pragma warning restore CA2000 // Dispose objects before losing scope
             return assemblyMetadata.GetReference(embedInteropTypes: false, display: metadata.Name);

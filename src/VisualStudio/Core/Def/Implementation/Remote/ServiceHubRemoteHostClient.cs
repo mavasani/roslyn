@@ -54,6 +54,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
             using (Logger.LogBlock(FunctionId.ServiceHubRemoteHostClient_CreateAsync, cancellationToken))
             {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to returned instance.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 var primary = new HubClient("ManagedLanguage.IDE.RemoteHostClient");
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 var timeout = TimeSpan.FromMilliseconds(workspace.Options.GetOption(RemoteHostOptions.RequestServiceTimeoutInMS));
@@ -85,6 +86,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
                 var remoteHostStream = await Connections.RequestServiceAsync(primary, WellKnownRemoteHostServices.RemoteHostService, hostGroup, timeout, cancellationToken).ConfigureAwait(false);
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - wrapped within an ReferenceCountedDisposable instance below.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 var remotableDataRpc = new RemotableDataJsonRpc(
                                           workspace, primary.Logger,
                                           await Connections.RequestServiceAsync(primary, WellKnownServiceHubServices.SnapshotService, hostGroup, timeout, cancellationToken).ConfigureAwait(false));
@@ -94,6 +96,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
                 var maxConnection = workspace.Options.GetOption(RemoteHostOptions.MaxPoolConnection);
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - ConnectionManager instance has the dispose ownership of remotableDataRpc instance.
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 var connectionManager = new ConnectionManager(primary, hostGroup, enableConnectionPool, maxConnection, timeout, new ReferenceCountedDisposable<RemotableDataJsonRpc>(remotableDataRpc));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -131,6 +134,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
             _connectionManager = connectionManager;
 
 #pragma warning disable CA2000 // Dispose objects before losing scope - JsonRpc instance has the dispose ownership of JsonRpcMessageHandler instance.
+            // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
             _rpc = new JsonRpc(new JsonRpcMessageHandler(stream, stream), target: this);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             _rpc.JsonSerializer.Converters.Add(AggregateJsonConverter.Instance);

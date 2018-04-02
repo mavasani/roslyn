@@ -563,6 +563,7 @@ namespace Microsoft.CodeAnalysis.Execution
                 buffer.Offset == 0)
             {
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to CreateFromMetadata
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 pinnedObject = new PinnedObject(buffer.Array, buffer.Count);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             }
@@ -571,6 +572,7 @@ namespace Microsoft.CodeAnalysis.Execution
                 var array = new byte[length];
                 stream.Read(array, 0, (int)length);
 #pragma warning disable CA2000 // Dispose objects before losing scope - dispose ownership transfer to CreateFromMetadata
+                // Audit suppression: https://github.com/dotnet/roslyn/issues/25880
                 pinnedObject = new PinnedObject(array, length);
 #pragma warning restore CA2000 // Dispose objects before losing scope
             }
