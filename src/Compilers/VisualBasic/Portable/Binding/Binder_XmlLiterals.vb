@@ -1015,10 +1015,11 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         ''' Otherwise return a BoundBadExpression containing the arguments.
         ''' </summary>
         Private Function BindInvocationExpressionIfGroupNotNothing(syntax As SyntaxNode, groupOpt As BoundMethodOrPropertyGroup, arguments As ImmutableArray(Of BoundExpression), diagnostics As DiagnosticBag) As BoundExpression
+            Dim result As BoundExpression
             If groupOpt Is Nothing Then
-                Return BadExpression(syntax, arguments, ErrorTypeSymbol.UnknownResultType)
+                result = BadExpression(syntax, arguments, ErrorTypeSymbol.UnknownResultType)
             Else
-                Return BindInvocationExpression(syntax,
+                result = BindInvocationExpression(syntax,
                                                 syntax,
                                                 TypeCharacter.None,
                                                 groupOpt,
@@ -1027,6 +1028,9 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                                                 diagnostics:=diagnostics,
                                                 callerInfoOpt:=Nothing)
             End If
+
+            result.SetWasCompilerGenerated()
+            Return result
         End Function
 
         ''' <summary>

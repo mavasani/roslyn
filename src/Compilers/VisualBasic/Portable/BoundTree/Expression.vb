@@ -3,7 +3,7 @@
 Imports System.Collections.Immutable
 
 Namespace Microsoft.CodeAnalysis.VisualBasic
-    Friend Partial Class BoundBadExpression
+    Partial Friend Class BoundBadExpression
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return StaticCast(Of BoundNode).From(Me.ChildBoundNodes)
@@ -47,7 +47,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundNullableIsTrueOperator
+    Partial Friend Class BoundNullableIsTrueOperator
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.Operand)
@@ -63,7 +63,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundLateInvocation
+    Partial Friend Class BoundLateInvocation
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return StaticCast(Of BoundNode).From(Me.ArgumentsOpt.Insert(0, Me.Member))
@@ -71,7 +71,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundLateAddressOfOperator
+    Partial Friend Class BoundLateAddressOfOperator
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.MemberAccess)
@@ -79,7 +79,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundNoPiaObjectCreationExpression
+    Partial Friend Class BoundNoPiaObjectCreationExpression
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return If(InitializerOpt IsNot Nothing, StaticCast(Of BoundNode).From(InitializerOpt.Initializers), ImmutableArray(Of BoundNode).Empty)
@@ -87,7 +87,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundAnonymousTypeCreationExpression
+    Partial Friend Class BoundAnonymousTypeCreationExpression
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return StaticCast(Of BoundNode).From(Me.Arguments)
@@ -103,7 +103,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundArrayLiteral
+    Partial Friend Class BoundArrayLiteral
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return StaticCast(Of BoundNode).From(Me.Bounds.Add(Me.Initializer))
@@ -111,7 +111,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundQueryExpression
+    Partial Friend Class BoundQueryExpression
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.LastOperator)
@@ -119,11 +119,11 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundQueryPart
+    Partial Friend Class BoundQueryPart
         Protected MustOverride Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
     End Class
 
-    Friend Partial Class BoundQuerySource
+    Partial Friend Class BoundQuerySource
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.Expression)
@@ -131,7 +131,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundToQueryableCollectionConversion
+    Partial Friend Class BoundToQueryableCollectionConversion
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.ConversionCall)
@@ -139,7 +139,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundQueryableSource
+    Partial Friend Class BoundQueryableSource
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.Source)
@@ -147,7 +147,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundQueryClause
+    Partial Friend Class BoundQueryClause
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.UnderlyingExpression)
@@ -155,7 +155,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundOrdering
+    Partial Friend Class BoundOrdering
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.UnderlyingExpression)
@@ -163,7 +163,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundQueryLambda
+    Partial Friend Class BoundQueryLambda
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.Expression)
@@ -171,7 +171,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundRangeVariableAssignment
+    Partial Friend Class BoundRangeVariableAssignment
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.Value)
@@ -179,7 +179,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundAggregateClause
+    Partial Friend Class BoundAggregateClause
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.CapturedGroupOpt, Me.UnderlyingExpression)
@@ -187,7 +187,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundGroupAggregation
+    Partial Friend Class BoundGroupAggregation
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.Group)
@@ -195,7 +195,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         End Property
     End Class
 
-    Friend Partial Class BoundMidResult
+    Partial Friend Class BoundMidResult
         Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
             Get
                 Return ImmutableArray.Create(Of BoundNode)(Me.Original, Me.Start, Me.LengthOpt, Me.Source)
@@ -210,4 +210,93 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End Get
         End Property
     End Class
+
+    Partial Friend Class BoundXmlName
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.XmlNamespace, Me.LocalName, Me.ObjectCreation)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlNamespace
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.XmlNamespace, Me.ObjectCreation)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlDocument
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return StaticCast(Of BoundNode).From(Me.ChildNodes).Insert(0, Me.Declaration)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlDeclaration
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.Version, Me.Encoding, Me.Standalone, Me.ObjectCreation)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlProcessingInstruction
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.Target, Me.Data, Me.ObjectCreation)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlComment
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.Value, Me.ObjectCreation)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlAttribute
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.Name, Me.Value, Me.ObjectCreation)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlElement
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return StaticCast(Of BoundNode).From(Me.ChildNodes).Insert(0, Me.Argument)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlMemberAccess
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.MemberAccess)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlEmbeddedExpression
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.Expression)
+            End Get
+        End Property
+    End Class
+
+    Partial Friend Class BoundXmlCData
+        Protected Overrides ReadOnly Property Children As ImmutableArray(Of BoundNode)
+            Get
+                Return ImmutableArray.Create(Of BoundNode)(Me.Value, Me.ObjectCreation)
+            End Get
+        End Property
+    End Class
+
 End Namespace

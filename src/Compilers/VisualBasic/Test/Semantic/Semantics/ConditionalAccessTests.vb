@@ -1502,8 +1502,14 @@ Null
 
                 Assert.Null(symbolInfo.Symbol)
                 Assert.True(symbolInfo.CandidateSymbols.IsEmpty)
+                compilation.VerifyOperationTree(node1, expectedOperationTree:=<![CDATA[
+
+]]>.Value)
 
                 Dim member = DirectCast(node1.Parent, XmlMemberAccessExpressionSyntax)
+                compilation.VerifyOperationTree(member, expectedOperationTree:=<![CDATA[
+
+]]>.Value)
 
                 Assert.Null(member.Base)
 
@@ -1545,6 +1551,10 @@ Null
                 symbolInfo = semanticModel.GetSymbolInfo(node2)
 
                 Assert.Equal("Function System.Xml.Linq.XContainer.Elements(name As System.Xml.Linq.XName) As System.Collections.Generic.IEnumerable(Of System.Xml.Linq.XElement)", symbolInfo.Symbol.ToTestDisplayString())
+
+                compilation.VerifyOperationTree(node2, expectedOperationTree:=<![CDATA[
+
+]]>.Value)
 
                 Dim member = DirectCast(node2.Parent, XmlMemberAccessExpressionSyntax)
 
@@ -1590,6 +1600,7 @@ Null
                 Assert.Equal("Function System.Xml.Linq.XContainer.Descendants(name As System.Xml.Linq.XName) As System.Collections.Generic.IEnumerable(Of System.Xml.Linq.XElement)", symbolInfo.Symbol.ToTestDisplayString())
 
                 Dim member = DirectCast(node3.Parent, XmlMemberAccessExpressionSyntax)
+                Dim operation = semanticModel.GetOperation(member)
 
                 Assert.Null(member.Base)
 
