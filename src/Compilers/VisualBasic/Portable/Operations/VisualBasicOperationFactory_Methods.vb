@@ -266,18 +266,25 @@ Namespace Microsoft.CodeAnalysis.Operations
         End Function
 
         Private Function GetAnonymousTypeCreationInitializers(expression As BoundAnonymousTypeCreationExpression) As ImmutableArray(Of IOperation)
+            ' For error cases and non-assignment initializers, the binder generates only the argument.
             Debug.Assert(expression.Arguments.Length >= expression.Declarations.Length)
 
             Dim builder = ArrayBuilder(Of IOperation).GetInstance(expression.Arguments.Length)
+            Dim currentDeclarationIndex = 0
             For i As Integer = 0 To expression.Arguments.Length - 1
                 Dim value As IOperation = Create(expression.Arguments(i))
-                If i >= expression.Declarations.Length Then
+
+                ' Find matching declaration for the current argument
+                If currentDeclarationIndex >= expression.Declarations.Length OrElse
+                    i <> expression.Declarations(currentDeclarationIndex).PropertyIndex Then
+                    ' No matching declaration, just retain the argument.
                     builder.Add(value)
                     Continue For
                 End If
 
                 Dim isRef As Boolean = False
-                Dim target As IOperation = Create(expression.Declarations(i))
+                Dim target As IOperation = Create(expression.Declarations(currentDeclarationIndex))
+                currentDeclarationIndex = currentDeclarationIndex + 1
                 Dim syntax As SyntaxNode = If(value.Syntax?.Parent, expression.Syntax)
                 Dim type As ITypeSymbol = target.Type
                 Dim constantValue As [Optional](Of Object) = value.ConstantValue
@@ -285,6 +292,7 @@ Namespace Microsoft.CodeAnalysis.Operations
                 builder.Add(assignment)
             Next i
 
+            Debug.Assert(currentDeclarationIndex = expression.Declarations.Length)
             Return builder.ToImmutableAndFree()
         End Function
 
