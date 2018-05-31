@@ -4655,16 +4655,21 @@ oneMoreTime:
 
             if (operation.Initializer != null)
             {
-                SpillEvalStack();
-
-                int initializerCaptureId = _availableCaptureId++;
-                AddStatement(new FlowCapture(initializerCaptureId, initializedInstance.Syntax, initializedInstance));
-
-                initializedInstance = new FlowCaptureReference(initializerCaptureId, initializedInstance.Syntax, initializedInstance.Type, initializedInstance.ConstantValue);
-                HandleObjectOrCollectionInitializer(operation.Initializer, initializedInstance);
+                CaptureInstanceAndHandleObjectOrCollectionInitializer(operation.Initializer, initializedInstance);
             }
 
             return initializedInstance;
+        }
+
+        private void CaptureInstanceAndHandleObjectOrCollectionInitializer(IObjectOrCollectionInitializerOperation initializer, IOperation initializedInstance)
+        {
+            SpillEvalStack();
+
+            int initializerCaptureId = _availableCaptureId++;
+            AddStatement(new FlowCapture(initializerCaptureId, initializedInstance.Syntax, initializedInstance));
+
+            initializedInstance = new FlowCaptureReference(initializerCaptureId, initializedInstance.Syntax, initializedInstance.Type, initializedInstance.ConstantValue);
+            HandleObjectOrCollectionInitializer(initializer, initializedInstance);
         }
 
         private void HandleObjectOrCollectionInitializer(IObjectOrCollectionInitializerOperation initializer, IOperation initializedInstance)
@@ -4882,16 +4887,13 @@ oneMoreTime:
 
         public override IOperation VisitObjectOrCollectionInitializer(IObjectOrCollectionInitializerOperation operation, int? captureIdForResult)
         {
-            // PROTOTYPE(dataflow): It looks like we need to handle the standalone case, happens in error scenarios,
-            //                      see DefaultValueNonNullForNullableParameterTypeWithMissingNullableReference_IndexerInObjectCreationInitializer unit-test.
-            //                      For now will just visit children and recreate the node, should add tests to confirm that this is an appropriate
-            //                      rewrite (probably not appropriate, see comment in VisitMemberInitializer).  
-
-            IOperation save = _currentInitializedInstance;
-            _currentInitializedInstance = null;
-            PushArray(operation.Initializers);
-            _currentInitializedInstance = save;
-            return new ObjectOrCollectionInitializerExpression(PopArray(operation.Initializers), semanticModel: null, operation.Syntax, operation.Type, operation.ConstantValue, operation.IsImplicit);
+            // For error scenarios, we can have an IObjectOrCollectionInitializerOperation which is not an IObjectCreationOperation.
+            // We generate an invalid operation instance for such an initializer.
+            Debug.Assert(operation.Parent.Kind != OperationKind.ObjectCreation);
+            Debug.Assert(operation.Parent.Type != null);
+            var initializedInstance = operation.Parent;
+            CaptureInstanceAndHandleObjectOrCollectionInitializer(operation, initializedInstance);
+            return initializedInstance;
         }
 
         public override IOperation VisitMemberInitializer(IMemberInitializerOperation operation, int? captureIdForResult)

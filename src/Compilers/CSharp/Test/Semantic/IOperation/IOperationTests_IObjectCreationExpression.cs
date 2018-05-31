@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.CSharp.Test.Utilities;
 using Microsoft.CodeAnalysis.Test.Utilities;
 using Roslyn.Test.Utilities;
 using Xunit;
@@ -7763,6 +7764,121 @@ Block[B2] - Exit
     Statements (0)
 ";
             VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+        }
+
+        [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
+        [Fact]
+        public void ObjectCreationFlow_53()
+        {
+            string source = @"
+class P
+{
+    private int _number = 0;
+    public int this[int x]
+    {
+        get { return _number; }
+        set { _number = value; }
+    }
+
+    void M1(P p, int a, int b)
+    /*<bind>*/{
+        p = new P() { [a] = b };
+    }/*</bind>*/
+}
+";
+            var expectedDiagnostics = new DiagnosticDescription[] {
+                // (2,7): error CS0518: Predefined type 'System.Object' is not defined or imported
+                // class P
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "P").WithArguments("System.Object").WithLocation(2, 7),
+                // (5,21): error CS0518: Predefined type 'System.Int32' is not defined or imported
+                //     public int this[int x]
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "int").WithArguments("System.Int32").WithLocation(5, 21),
+                // (5,12): error CS0518: Predefined type 'System.Int32' is not defined or imported
+                //     public int this[int x]
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "int").WithArguments("System.Int32").WithLocation(5, 12),
+                // (8,9): error CS0518: Predefined type 'System.Void' is not defined or imported
+                //         set { _number = value; }
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "set { _number = value; }").WithArguments("System.Void").WithLocation(8, 9),
+                // (11,13): error CS0518: Predefined type 'System.Object' is not defined or imported
+                //     void M1(P p, int a, int b)
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "P").WithArguments("System.Object").WithLocation(11, 13),
+                // (11,18): error CS0518: Predefined type 'System.Int32' is not defined or imported
+                //     void M1(P p, int a, int b)
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "int").WithArguments("System.Int32").WithLocation(11, 18),
+                // (11,25): error CS0518: Predefined type 'System.Int32' is not defined or imported
+                //     void M1(P p, int a, int b)
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "int").WithArguments("System.Int32").WithLocation(11, 25),
+                // (11,5): error CS0518: Predefined type 'System.Void' is not defined or imported
+                //     void M1(P p, int a, int b)
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "void").WithArguments("System.Void").WithLocation(11, 5),
+                // (4,13): error CS0518: Predefined type 'System.Int32' is not defined or imported
+                //     private int _number = 0;
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "int").WithArguments("System.Int32").WithLocation(4, 13),
+                // (4,27): error CS0518: Predefined type 'System.Int32' is not defined or imported
+                //     private int _number = 0;
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "0").WithArguments("System.Int32").WithLocation(4, 27),
+                // (13,17): error CS0518: Predefined type 'System.Object' is not defined or imported
+                //         p = new P() { [a] = b };
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "P").WithArguments("System.Object").WithLocation(13, 17),
+                // (13,17): error CS0518: Predefined type 'System.Void' is not defined or imported
+                //         p = new P() { [a] = b };
+                Diagnostic(ErrorCode.ERR_PredefinedTypeNotFound, "P").WithArguments("System.Void").WithLocation(13, 17),
+                // (2,7): error CS1729: 'object' does not contain a constructor that takes 0 arguments
+                // class P
+                Diagnostic(ErrorCode.ERR_BadCtorArgCount, "P").WithArguments("object", "0").WithLocation(2, 7)
+            };
+
+            string expectedFlowGraph = @"
+Block[B0] - Entry
+    Statements (0)
+    Next (Regular) Block[B1]
+Block[B1] - Block
+    Predecessors: [B0]
+    Statements (5)
+        IFlowCaptureOperation: 0 (OperationKind.FlowCapture, Type: null, IsImplicit) (Syntax: 'p')
+          Value: 
+            IParameterReferenceOperation: p (OperationKind.ParameterReference, Type: P) (Syntax: 'p')
+
+        IFlowCaptureOperation: 1 (OperationKind.FlowCapture, Type: null, IsInvalid, IsImplicit) (Syntax: 'new P() { [a] = b }')
+          Value: 
+            IInvalidOperation (OperationKind.Invalid, Type: P, IsInvalid, IsImplicit) (Syntax: 'new P() { [a] = b }')
+              Children(0)
+
+        IFlowCaptureOperation: 2 (OperationKind.FlowCapture, Type: null, IsImplicit) (Syntax: 'a')
+          Value: 
+            IParameterReferenceOperation: a (OperationKind.ParameterReference, Type: System.Int32[missing]) (Syntax: 'a')
+
+        ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Int32[missing]) (Syntax: '[a] = b')
+          Left: 
+            IPropertyReferenceOperation: System.Int32[missing] P.this[System.Int32[missing] x] { get; set; } (OperationKind.PropertyReference, Type: System.Int32[missing]) (Syntax: '[a]')
+              Instance Receiver: 
+                IFlowCaptureReferenceOperation: 1 (OperationKind.FlowCaptureReference, Type: P, IsInvalid, IsImplicit) (Syntax: 'new P() { [a] = b }')
+              Arguments(1):
+                  IArgumentOperation (ArgumentKind.Explicit, Matching Parameter: x) (OperationKind.Argument, Type: null) (Syntax: 'a')
+                    IFlowCaptureReferenceOperation: 2 (OperationKind.FlowCaptureReference, Type: System.Int32[missing], IsImplicit) (Syntax: 'a')
+                    InConversion: CommonConversion (Exists: True, IsIdentity: True, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+                    OutConversion: CommonConversion (Exists: True, IsIdentity: True, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+          Right: 
+            IParameterReferenceOperation: b (OperationKind.ParameterReference, Type: System.Int32[missing]) (Syntax: 'b')
+
+        IExpressionStatementOperation (OperationKind.ExpressionStatement, Type: null, IsInvalid) (Syntax: 'p = new P() { [a] = b };')
+          Expression: 
+            ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: P, IsInvalid) (Syntax: 'p = new P() { [a] = b }')
+              Left: 
+                IFlowCaptureReferenceOperation: 0 (OperationKind.FlowCaptureReference, Type: P, IsImplicit) (Syntax: 'p')
+              Right: 
+                IInvalidOperation (OperationKind.Invalid, Type: P, IsInvalid) (Syntax: 'new P() { [a] = b }')
+                  Children(1):
+                      IInvalidOperation (OperationKind.Invalid, Type: P, IsInvalid, IsImplicit) (Syntax: 'new P() { [a] = b }')
+                        Children(0)
+
+    Next (Regular) Block[B2]
+Block[B2] - Exit
+    Predecessors: [B1]
+    Statements (0)
+";
+            var compilation = CreateEmptyCompilation(source, options: TestOptions.ReleaseDll, parseOptions: TestOptions.RegularWithFlowAnalysisFeature);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(compilation, expectedFlowGraph, expectedDiagnostics);
         }
     }
 }
