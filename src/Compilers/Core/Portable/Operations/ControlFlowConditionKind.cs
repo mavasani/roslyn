@@ -14,9 +14,19 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
         None,
 
         /// <summary>
-        /// Indicates a conditional control flow 
+        /// Indicates a conditional control flow exit from a <see cref="BasicBlock"/>,
+        /// with a non-null <see cref="BasicBlock.BranchValue"/> and <see cref="BasicBlock.ConditionalSuccessor"/>.
+        /// If <see cref="BasicBlock.BranchValue"/> evaluates to <code>false</code>,
+        /// then the branch <see cref="BasicBlock.ConditionalSuccessor"/> is taken.
         /// </summary>
         WhenFalse,
+
+        /// <summary>
+        /// Indicates a conditional control flow exit from a <see cref="BasicBlock"/>,
+        /// with a non-null <see cref="BasicBlock.BranchValue"/> and <see cref="BasicBlock.ConditionalSuccessor"/>.
+        /// If <see cref="BasicBlock.BranchValue"/> evaluates to <code>true</code>,
+        /// then the branch <see cref="BasicBlock.ConditionalSuccessor"/> is taken.
+        /// </summary>
         WhenTrue
     }
 }

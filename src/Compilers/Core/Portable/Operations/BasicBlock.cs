@@ -6,7 +6,11 @@ using System.Diagnostics;
 namespace Microsoft.CodeAnalysis.FlowAnalysis
 {
     /// <summary>
-    /// PROTOTYPE(dataflow): Add documentation
+    /// Represents a basic block in a <see cref="ControlFlowGraph"/> with a sequence of <see cref="Operations"/>.
+    /// Once basic block is entered, all operations in a basic block are always executed.
+    /// Optional <see cref="BranchValue"/>, if non-null, is evaluated after the operations.
+    /// Control flow leaves the basic block by taking either the <see cref="ConditionalSuccessor"/> branch or
+    /// the <see cref="FallThroughSuccessor"/> branch.
     /// </summary>
     public sealed class BasicBlock
     {
@@ -37,13 +41,35 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
             EnclosingRegion = region;
         }
 
+        /// <summary>
+        /// Basic block kind.
+        /// </summary>
         public BasicBlockKind Kind { get; }
 
+        /// <summary>
+        /// Sequence of operations in the basic block.
+        /// Once basic block is entered, all operations in a basic block are always executed.
+        /// </summary>
         public ImmutableArray<IOperation> Operations { get; }
 
+        /// <summary>
+        /// Optional branch value, which if non-null, is evaluated after <see cref="Operations"/>.
+        /// For conditional branches, this value is used to represent the condition which determines if
+        /// <see cref="ConditionalSuccessor"/> is taken or not.
+        /// For non-conditional branches, this value is used to represent the return or throw value associated
+        /// with the <see cref="FallThroughSuccessor"/>.
+        /// </summary>
         public IOperation BranchValue { get; }
 
+        /// <summary>
+        /// Indicates the condition kind for the branch out of the basic block.
+        /// </summary>
         public ControlFlowConditionKind ConditionKind { get; }
+
+        /// <summary>
+        /// Optional fall through branch executed at the end of the basic block.
+        /// This branch is null for exit block, and non-null for all other basic blocks.
+        /// </summary>
         public ControlFlowBranch FallThroughSuccessor
         {
             get
@@ -56,6 +82,11 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
             }
         }
 
+        /// <summary>
+        /// Optional conditional branch out of the basic block.
+        /// If non-null, this branch may be taken at the end of the basic block based
+        /// on the <see cref="ConditionKind"/> and <see cref="BranchValue"/>.
+        /// </summary>
         public ControlFlowBranch ConditionalSuccessor
         {
             get
@@ -68,6 +99,11 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
             }
         }
 
+        /// <summary>
+        /// List of basic blocks which have a control flow branch to this basic block.
+        /// Basic blocks whose <see cref="FallThroughSuccessor"/> or <see cref="ConditionalSuccessor"/> have
+        /// this basic block as it's destination block."/>
+        /// </summary>
         public ImmutableArray<ControlFlowBranch> Predecessors
         {
             get
@@ -79,12 +115,18 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
             }
         }
 
+        /// <summary>
+        /// Basic block ordinal, which is unique for every basic block in a <see cref="ControlFlowGraph"/>.
+        /// </summary>
         public int Ordinal { get; }
 
+        /// <summary>
+        /// Indicates if control flow can reach this basic block from the entry block of the graph.
+        /// </summary>
         public bool IsReachable { get; }
 
         /// <summary>
-        /// Enclosing region
+        /// Enclosing region.
         /// </summary>
         public ControlFlowRegion EnclosingRegion { get; }
 
