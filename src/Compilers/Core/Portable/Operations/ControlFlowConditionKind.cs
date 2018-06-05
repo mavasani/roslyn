@@ -3,11 +3,19 @@
 namespace Microsoft.CodeAnalysis.FlowAnalysis
 {
     /// <summary>
-    /// PROTOTYPE(dataflow): Add documentation
+    /// Represents kind of conditional control flow exit from a <see cref="BasicBlock"/>.
     /// </summary>
     public enum ControlFlowConditionKind
     {
+        /// <summary>
+        /// Indicates no conditional control flow exit from a <see cref="BasicBlock"/>.
+        /// Associated <see cref="BasicBlock.ConditionalSuccessor"/> is null.
+        /// </summary>
         None,
+
+        /// <summary>
+        /// Indicates a conditional control flow 
+        /// </summary>
         WhenFalse,
         WhenTrue
     }
