@@ -3,10 +3,11 @@
 namespace Microsoft.CodeAnalysis.Operations
 {
     /// <summary>
-    /// Represents a method body operation.
+    /// Represents a method body operation which could contain an expression body and/or a block body operation.
     /// <para>
     /// Current usage:
-    ///  (1) C# method body
+    ///  (1) C# method body, where the body could be be written both as an expression body and a block body in valid code.
+    ///      Note that this operation is *not* generated for symbol initializers.
     /// </para>
     /// </summary>
     /// <remarks>
