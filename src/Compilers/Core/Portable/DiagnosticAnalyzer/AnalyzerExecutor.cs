@@ -54,6 +54,21 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ConcurrentDictionary<IOperation, ControlFlowGraph> _lazyControlFlowGraphMap;
 
         /// <summary>
+        /// Gate to guard <see cref="_pendingMemberSymbolsMapOpt"/> and <see cref="_pendingSymbolEndActionsOpt"/>.
+        /// </summary>
+        private readonly object _symbolEndActionsGate = new object();
+
+        /// <summary>
+        /// Map from (symbol, analyzer) to count of its member symbols whose symbol declared events are not yet processed.
+        /// </summary>
+        private Dictionary<(ISymbol, DiagnosticAnalyzer), HashSet<ISymbol>> _pendingMemberSymbolsMapOpt;
+
+        /// <summary>
+        /// Symbol declared events for symbols with pending symbol end analysis for given analyzer.
+        /// </summary>
+        private Dictionary<(ISymbol, DiagnosticAnalyzer), (ImmutableArray<SymbolEndAnalyzerAction>, SymbolDeclaredCompilationEvent)> _pendingSymbolEndActionsOpt;
+
+        /// <summary>
         /// Creates <see cref="AnalyzerExecutor"/> to execute analyzer actions with given arguments
         /// </summary>
         /// <param name="compilation">Compilation to be used in the analysis.</param>
@@ -240,6 +255,81 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
+        /// Executes the symbol start actions.
+        /// </summary>
+        /// <param name="actions"><see cref="AnalyzerActions"/> whose symbol start actions are to be executed.</param>
+        /// <param name="symbolScope">Symbol scope to store the analyzer actions.</param>
+        public void ExecuteSymbolStartActions(
+            ISymbol symbol,
+            DiagnosticAnalyzer analyzer,
+            ImmutableArray<SymbolStartAnalyzerAction> actions,
+            HostSymbolStartAnalysisScope symbolScope)
+        {
+            foreach (var startAction in actions)
+            {
+                Debug.Assert(startAction.Analyzer == analyzer);
+                _cancellationToken.ThrowIfCancellationRequested();
+
+                var context = new AnalyzerSymbolStartAnalysisContext(startAction.Analyzer, symbolScope,
+                    symbol, _compilation, _analyzerOptions, _cancellationToken);
+
+                ExecuteAndCatchIfThrows(
+                    startAction.Analyzer,
+                    data => data.action(data.context),
+                    (action: startAction.Action, context: context),
+                    new AnalysisContextInfo(_compilation, symbol));
+            }
+
+            var symbolEndActions = symbolScope.GetAnalyzerActions(analyzer);
+            if (symbolEndActions.SymbolEndActionsCount > 0)
+            {
+                var dependentSymbols = getDependentSymbols();
+                lock (_symbolEndActionsGate)
+                {
+                    _pendingMemberSymbolsMapOpt = _pendingMemberSymbolsMapOpt ?? new Dictionary<(ISymbol, DiagnosticAnalyzer), HashSet<ISymbol>>();
+                    _pendingMemberSymbolsMapOpt.Add((symbol, analyzer), dependentSymbols);
+                }
+            }
+
+            return;
+
+            HashSet<ISymbol> getDependentSymbols()
+            {
+                HashSet<ISymbol> memberSet = null;
+                switch (symbol.Kind)
+                {
+                    case SymbolKind.NamedType:
+                        processMembers(((INamedTypeSymbol)symbol).GetMembers());
+                        break;
+
+                    case SymbolKind.Namespace:
+                        processMembers(((INamespaceSymbol)symbol).GetMembers());
+                        break;
+                }
+
+                return memberSet;
+
+                void processMembers(IEnumerable<ISymbol> members)
+                {
+                    foreach (var member in members)
+                    {
+                        if (!member.IsImplicitlyDeclared)
+                        {
+                            memberSet = memberSet ?? new HashSet<ISymbol>();
+                            memberSet.Add(member);
+                        }
+
+                        if (member.Kind != symbol.Kind &&
+                            member is INamedTypeSymbol typeMember)
+                        {
+                            processMembers(typeMember.GetMembers());
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Tries to executes compilation actions or compilation end actions.
         /// </summary>
         /// <param name="compilationActions">Compilation actions to be executed.</param>
@@ -340,7 +430,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     return true;
                 }
 
-                return IsEventComplete(symbolDeclaredEvent, analyzer, analysisStateOpt);
+                return IsSymbolComplete(symbol, analyzer, analysisStateOpt);
             }
             finally
             {
@@ -389,6 +479,208 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                         analyzerStateOpt?.ProcessedActions.Add(symbolAction);
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tries to execute the symbol end actions on the given namespace or type containing symbol for the process member symbol for the given analyzer.
+        /// </summary>
+        /// <param name="containingSymbol">Symbol whose actions are to be executed.</param>
+        /// <param name="processedMemberSymbol">Completed member symbol.</param>
+        /// <param name="analyzer">Analyzer whose actions are to be executed.</param>
+        /// <param name="getTopMostNodeForAnalysis">Delegate to get topmost declaration node for a symbol declaration reference.</param>
+        /// <param name="analysisStateOpt">An optional object to track analysis state.</param>
+        /// <returns>
+        /// True, if successfully executed the actions for the given analysis scope OR all the actions have already been executed for the given analysis scope.
+        /// False, if there are some pending actions.
+        /// </returns>
+        public bool TryExecuteSymbolEndActionsForContainer(
+            INamespaceOrTypeSymbol containingSymbol,
+            ISymbol processedMemberSymbol,
+            DiagnosticAnalyzer analyzer,
+            Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis,
+            AnalysisState analysisStateOpt,
+            out SymbolDeclaredCompilationEvent containingSymbolDeclaredEvent)
+        {
+            Debug.Assert(containingSymbol != null);
+
+            containingSymbolDeclaredEvent = null;
+            (ImmutableArray<SymbolEndAnalyzerAction> symbolEndActions, SymbolDeclaredCompilationEvent symbolDeclaredEvent) containerEndActionsAndEvent;
+            lock (_symbolEndActionsGate)
+            {
+                if (_pendingMemberSymbolsMapOpt == null ||
+                    !_pendingMemberSymbolsMapOpt.TryGetValue((containingSymbol, analyzer), out var pendingMemberSymbols))
+                {
+                    return false;
+                }
+
+                var removed = pendingMemberSymbols.Remove(processedMemberSymbol);
+                Debug.Assert(removed);
+
+                if (pendingMemberSymbols.Count > 0 ||
+                    _pendingSymbolEndActionsOpt == null ||
+                    !_pendingSymbolEndActionsOpt.TryGetValue((containingSymbol, analyzer), out containerEndActionsAndEvent))
+                {
+                    return false;
+                }
+
+                _pendingSymbolEndActionsOpt.Remove((containingSymbol, analyzer));
+            }
+
+            var endActions = containerEndActionsAndEvent.symbolEndActions;
+            containingSymbolDeclaredEvent = containerEndActionsAndEvent.symbolDeclaredEvent;
+            return TryExecuteSymbolEndActionsCore(endActions, analyzer, containingSymbolDeclaredEvent, getTopMostNodeForAnalysis, analysisStateOpt);
+        }
+
+        /// <summary>
+        /// Tries to execute the symbol end actions on the given symbol for the given analyzer.
+        /// </summary>
+        /// <param name="symbolEndActions">Symbol actions to be executed.</param>
+        /// <param name="analyzer">Analyzer whose actions are to be executed.</param>
+        /// <param name="symbolDeclaredEvent">Symbol event to be analyzed.</param>
+        /// <param name="getTopMostNodeForAnalysis">Delegate to get topmost declaration node for a symbol declaration reference.</param>
+        /// <param name="analysisStateOpt">An optional object to track analysis state.</param>
+        /// <returns>
+        /// True, if successfully executed the actions for the given analysis scope OR all the actions have already been executed for the given analysis scope.
+        /// False, if there are some pending actions.
+        /// </returns>
+        public bool TryExecuteSymbolEndActions(
+            ImmutableArray<SymbolEndAnalyzerAction> symbolEndActions,
+            DiagnosticAnalyzer analyzer,
+            SymbolDeclaredCompilationEvent symbolDeclaredEvent,
+            Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis,
+            AnalysisState analysisStateOpt)
+        {
+            Debug.Assert(!symbolEndActions.IsEmpty);
+
+            var symbol = symbolDeclaredEvent.Symbol;
+            lock (_symbolEndActionsGate)
+            {
+                Debug.Assert(_pendingMemberSymbolsMapOpt != null);
+                Debug.Assert(_pendingSymbolEndActionsOpt == null ||
+                    !_pendingSymbolEndActionsOpt.ContainsKey((symbolDeclaredEvent.Symbol, analyzer)));
+
+                if (_pendingMemberSymbolsMapOpt.TryGetValue((symbol, analyzer), out var pendingMemberSymbols) &&
+                    pendingMemberSymbols?.Count > 0)
+                {
+                    // At least one member is not complete, so mark the event for later processing of symbol end actions.
+                    MarkPendingSymbolEndAnalysis_NoLock(symbol, analyzer, symbolEndActions, symbolDeclaredEvent);
+                    return false;
+                }
+            }
+
+            return TryExecuteSymbolEndActionsCore(symbolEndActions, analyzer, symbolDeclaredEvent, getTopMostNodeForAnalysis, analysisStateOpt);
+        }
+
+        private bool TryExecuteSymbolEndActionsCore(
+            ImmutableArray<SymbolEndAnalyzerAction> symbolEndActions,
+            DiagnosticAnalyzer analyzer,
+            SymbolDeclaredCompilationEvent symbolDeclaredEvent,
+            Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis,
+            AnalysisState analysisStateOpt)
+        {
+            var symbol = symbolDeclaredEvent.Symbol;
+            
+#if DEBUG
+            lock (_symbolEndActionsGate)
+            {
+                Debug.Assert(!symbolEndActions.IsEmpty);
+                Debug.Assert(_pendingMemberSymbolsMapOpt != null);
+                Debug.Assert(!_pendingMemberSymbolsMapOpt.TryGetValue((symbol, analyzer), out var pendingMemberSymbols) ||
+                        pendingMemberSymbols == null ||
+                        pendingMemberSymbols.Count == 0);
+                Debug.Assert(_pendingSymbolEndActionsOpt == null ||
+                    !_pendingSymbolEndActionsOpt.ContainsKey((symbolDeclaredEvent.Symbol, analyzer)));
+            }
+#endif
+
+            AnalyzerStateData analyzerStateOpt = null;
+
+            try
+            {
+                if (TryStartSymbolEndAnalysis(symbol, analyzer, analysisStateOpt, out analyzerStateOpt))
+                {
+                    ExecuteSymbolEndActionsCore(symbolEndActions, analyzer, symbolDeclaredEvent, getTopMostNodeForAnalysis, analyzerStateOpt);
+                    analysisStateOpt?.MarkSymbolEndAnalysisComplete(symbol, analyzer);
+
+                    lock (_symbolEndActionsGate)
+                    {
+                        _pendingMemberSymbolsMapOpt.Remove((symbol, analyzer));
+                    }
+
+                    return true;
+                }
+
+                if (!IsSymbolEndAnalysisComplete(symbol, analyzer, analysisStateOpt))
+                {
+                    lock (_symbolEndActionsGate)
+                    {
+                        MarkPendingSymbolEndAnalysis_NoLock(symbol, analyzer, symbolEndActions, symbolDeclaredEvent);
+                    }
+
+                    return false;
+                }
+
+                return true;
+            }
+            finally
+            {
+                analyzerStateOpt?.ResetToReadyState();
+            }
+        }
+
+        private void MarkPendingSymbolEndAnalysis_NoLock(
+            ISymbol symbol,
+            DiagnosticAnalyzer analyzer,
+            ImmutableArray<SymbolEndAnalyzerAction> symbolEndActions,
+            SymbolDeclaredCompilationEvent symbolDeclaredEvent)
+        {
+            _pendingSymbolEndActionsOpt = _pendingSymbolEndActionsOpt ?? new Dictionary<(ISymbol, DiagnosticAnalyzer), (ImmutableArray<SymbolEndAnalyzerAction>, SymbolDeclaredCompilationEvent)>();
+            _pendingSymbolEndActionsOpt.Add((symbol, analyzer), (symbolEndActions, symbolDeclaredEvent));
+        }
+
+        [Conditional("DEBUG")]
+        public void VerifyAllSymbolEndActionsExecuted()
+        {
+            lock (_symbolEndActionsGate)
+            {
+                Debug.Assert(_pendingMemberSymbolsMapOpt == null || _pendingMemberSymbolsMapOpt.Count == 0);
+                Debug.Assert(_pendingSymbolEndActionsOpt == null || _pendingSymbolEndActionsOpt.Count == 0);
+            }
+        }
+
+        private void ExecuteSymbolEndActionsCore(
+            ImmutableArray<SymbolEndAnalyzerAction> symbolEndActions,
+            DiagnosticAnalyzer analyzer,
+            SymbolDeclaredCompilationEvent symbolDeclaredEvent,
+            Func<ISymbol, SyntaxReference, Compilation, SyntaxNode> getTopMostNodeForAnalysis,
+            AnalyzerStateData analyzerStateOpt)
+        {
+            Debug.Assert(getTopMostNodeForAnalysis != null);
+
+            var symbol = symbolDeclaredEvent.Symbol;
+            var addDiagnostic = GetAddDiagnostic(symbol, symbolDeclaredEvent.DeclaringSyntaxReferences, analyzer, getTopMostNodeForAnalysis);
+            Func<Diagnostic, bool> isSupportedDiagnostic = d => IsSupportedDiagnostic(analyzer, d);
+
+            foreach (var symbolAction in symbolEndActions)
+            {
+                var action = symbolAction.Action;
+
+                if (ShouldExecuteAction(analyzerStateOpt, symbolAction))
+                {
+                    _cancellationToken.ThrowIfCancellationRequested();
+
+                    var context = new SymbolAnalysisContext(symbol, _compilation, _analyzerOptions, addDiagnostic,
+                        isSupportedDiagnostic, _cancellationToken);
+
+                    ExecuteAndCatchIfThrows(
+                        symbolAction.Analyzer,
+                        data => data.action(data.context),
+                        (action: action, context: context),
+                        new AnalysisContextInfo(_compilation, symbol));
+
+                    analyzerStateOpt?.ProcessedActions.Add(symbolAction);
                 }
             }
         }
@@ -1583,6 +1875,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return analysisStateOpt == null || analysisStateOpt.TryStartAnalyzingSymbol(symbol, analyzer, out analyzerStateOpt);
         }
 
+        private static bool TryStartSymbolEndAnalysis(ISymbol symbol, DiagnosticAnalyzer analyzer, AnalysisState analysisStateOpt, out AnalyzerStateData analyzerStateOpt)
+        {
+            analyzerStateOpt = null;
+            return analysisStateOpt == null || analysisStateOpt.TryStartSymbolEndAnalysis(symbol, analyzer, out analyzerStateOpt);
+        }
+
         private static bool TryStartAnalyzingDeclaration(ISymbol symbol, int declarationIndex, DiagnosticAnalyzer analyzer, AnalysisScope analysisScope, AnalysisState analysisStateOpt, out DeclarationAnalyzerStateData analyzerStateOpt)
         {
             Debug.Assert(analysisScope.Analyzers.Contains(analyzer));
@@ -1615,6 +1913,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private static bool IsEventComplete(CompilationEvent compilationEvent, DiagnosticAnalyzer analyzer, AnalysisState analysisStateOpt)
         {
             return analysisStateOpt == null || analysisStateOpt.IsEventComplete(compilationEvent, analyzer);
+        }
+
+        private static bool IsSymbolComplete(ISymbol symbol, DiagnosticAnalyzer analyzer, AnalysisState analysisStateOpt)
+        {
+            return analysisStateOpt == null || analysisStateOpt.IsSymbolComplete(symbol, analyzer);
+        }
+
+        private static bool IsSymbolEndAnalysisComplete(ISymbol symbol, DiagnosticAnalyzer analyzer, AnalysisState analysisStateOpt)
+        {
+            return analysisStateOpt == null || analysisStateOpt.IsSymbolEndAnalysisComplete(symbol, analyzer);
         }
 
         private static bool IsDeclarationComplete(ISymbol symbol, int declarationIndex, DiagnosticAnalyzer analyzer, AnalysisState analysisStateOpt)

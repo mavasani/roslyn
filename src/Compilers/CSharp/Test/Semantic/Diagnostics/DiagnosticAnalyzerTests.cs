@@ -906,7 +906,7 @@ public class B
         {
             string source = @"";
             var analyzers = new DiagnosticAnalyzer[] { new AnalyzerWithBasicCompilerDiagnosticId() };
-            
+
             CreateCompilationWithMscorlib45(source)
                 .VerifyDiagnostics()
                 .VerifyAnalyzerDiagnostics(analyzers, null, null, logAnalyzerExceptionAsDiagnostics: false,
@@ -1209,7 +1209,6 @@ class MyClass
 
             TestEffectiveSeverity(DiagnosticSeverity.Warning, expectedEffectiveSeverity: ReportDiagnostic.Suppress, generalOption: generalOption, isEnabledByDefault: enabledByDefault);
         }
-
 
         [Fact()]
         [WorkItem(1107500, "http://vstfdevdiv:8080/DevDiv2/DevDiv/_workitems/edit/1107500")]
@@ -2542,6 +2541,448 @@ Block[B2] - Exit
                     ControlFlowGraphVerifier.VerifyGraph(compilation, expectedFlowGraph, actualFlowGraph);
                 }
             }
+        }
+
+        private static void TestSymbolStartAnalyzerCore(SymbolStartAnalyzer analyzer, params DiagnosticDescription[] diagnostics)
+        {
+            TestSymbolStartAnalyzerCore(new DiagnosticAnalyzer[] { analyzer }, diagnostics);
+        }
+
+        private static void TestSymbolStartAnalyzerCore(DiagnosticAnalyzer[] analyzers, params DiagnosticDescription[] diagnostics)
+        {
+            var source = @"
+#pragma warning disable CS0219 // unused local
+#pragma warning disable CS0067 // unused event
+
+class C1
+{
+    void M1() { int localInTypeInGlobalNamespace = 0; }
+}
+
+class C2
+{
+    class NestedType
+    {
+        void M2() { int localInNestedType = 0; }
+    }
+}
+
+namespace N1 { }
+
+namespace N2
+{
+    namespace N3
+    {
+        class C3
+        {
+            void M3(int p) { int localInTypeInNamespace = 0; }
+            void M4() { }
+        }
+    }
+}
+
+namespace N2.N3
+{
+    class C4
+    {
+        public int f1 = 0;
+    }
+}
+
+namespace N4
+{
+    class C5
+    {
+        void M5() { }
+    }
+    class C6
+    {
+        void M6() { }
+        void M7() { }
+    }
+}
+
+namespace N5
+{
+    partial class C7
+    {
+        void M8() { }
+        int P1 { get; set; }
+        public event System.EventHandler e1;
+    }
+    partial class C7
+    {
+        void M9() { }
+        void M10() { }
+    }
+}
+";
+            // Invoke multiple times to ensure no race conditions.
+            for (int i = 0; i < 1000; i++)
+            {
+                var tree = CSharpSyntaxTree.ParseText(source);
+                var compilation = CreateCompilationWithMscorlib45(new[] { tree });
+                compilation.VerifyDiagnostics();
+
+                compilation.VerifyAnalyzerDiagnostics(analyzers, expected: diagnostics);
+            }
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_NoRegisteredSymbolKinds()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: true),
+                Diagnostic("AD0001").WithArguments("Microsoft.CodeAnalysis.CommonDiagnosticAnalyzers+SymbolStartAnalyzer", "System.ArgumentException", @"Argument cannot be empty.
+Parameter name: symbolKinds").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_SingleRegisteredSymbolKinds_NamedType()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, SymbolKind.NamedType),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("NestedType").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C7").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_SingleRegisteredSymbolKinds_Namespace()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, SymbolKind.Namespace),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N5").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_SingleRegisteredSymbolKinds_Method()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, SymbolKind.Method),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("set_P1").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_SingleRegisteredSymbolKinds_Field()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, SymbolKind.Field),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("f1").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_SingleRegisteredSymbolKinds_Property()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, SymbolKind.Property),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("P1").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_SingleRegisteredSymbolKinds_Event()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, SymbolKind.Event),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("e1").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_SingleRegisteredSymbolKinds_Parameter()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, SymbolKind.Parameter));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_MultipleRegisteredSymbolKinds_NamespaceAndMethods()
+        {
+            var symbolKinds = new[] { SymbolKind.Namespace, SymbolKind.Method};
+
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, symbolKinds),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("set_P1").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_MultipleRegisteredSymbolKinds_NamedTypeAndMethods()
+        {
+            var symbolKinds = new[] { SymbolKind.NamedType, SymbolKind.Method};
+
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, symbolKinds),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("NestedType").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("set_P1").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_MultipleRegisteredSymbolKinds_All()
+        {
+            var symbolKinds = new[] { SymbolKind.NamedType, SymbolKind.Namespace, SymbolKind.Method,
+                SymbolKind.Field, SymbolKind.Property, SymbolKind.Event, SymbolKind.Parameter };
+
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: true, symbolKinds),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("NestedType").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C2").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C3").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C4").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C5").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C6").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C7").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N2").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N3").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N4").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N5").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("set_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("e1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("f1").WithLocation(1, 1));
+
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, symbolKinds),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("NestedType").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("set_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("e1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("f1").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_MultipleRegisteredSymbolKinds_MultipleAnalyzerInstances()
+        {
+            var symbolKinds = new[] { SymbolKind.NamedType, SymbolKind.Namespace, SymbolKind.Method,
+                SymbolKind.Field, SymbolKind.Property, SymbolKind.Event, SymbolKind.Parameter };
+
+            var analyzer1 = new SymbolStartAnalyzer(topLevelAction: true, symbolKinds);
+            var analyzer2 = new SymbolStartAnalyzer(topLevelAction: false, symbolKinds);
+            TestSymbolStartAnalyzerCore(new DiagnosticAnalyzer[] { analyzer1, analyzer2 },
+                // analyzer1
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("NestedType").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C2").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C3").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C4").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C5").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C6").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("C7").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N2").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N3").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N4").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("N5").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("set_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("e1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("f1").WithLocation(1, 1),
+                // analyzer2
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("NestedType").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("set_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("e1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("f1").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_RegisteredNestedActions_OperationInNamespace()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, OperationKind.VariableDeclarationGroup, SymbolKind.Namespace),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N5").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("N3", "M3", "int localInTypeInNamespace = 0;").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_RegisteredNestedActions_OperationInNamedType()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, OperationKind.VariableDeclarationGroup, SymbolKind.NamedType),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("NestedType").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C7").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("C1", "M1", "int localInTypeInGlobalNamespace = 0;").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("NestedType", "M2", "int localInNestedType = 0;").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("C3", "M3", "int localInTypeInNamespace = 0;").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_RegisteredNestedActions_OperationInMethod()
+        {
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, OperationKind.VariableDeclarationGroup, SymbolKind.NamedType),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartTopLevelRuleId").WithArguments("set_P1").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("C1", "M1", "int localInTypeInGlobalNamespace = 0;").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("NestedType", "M2", "int localInNestedType = 0;").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("C3", "M3", "int localInTypeInNamespace = 0;").WithLocation(1, 1));
+        }
+
+        [Fact]
+        public void TestSymbolStartAnalyzer_RegisteredNestedActions_OperationInAllSymbolKinds()
+        {
+            var symbolKinds = new[] { SymbolKind.NamedType, SymbolKind.Namespace, SymbolKind.Method,
+                SymbolKind.Field, SymbolKind.Property, SymbolKind.Event, SymbolKind.Parameter };
+
+            TestSymbolStartAnalyzerCore(new SymbolStartAnalyzer(topLevelAction: false, OperationKind.VariableDeclarationGroup, symbolKinds),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("NestedType").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("C7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("N5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M2").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M3").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M4").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M5").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M6").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M7").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M8").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M9").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("M10").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("get_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("set_P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("P1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("e1").WithLocation(1, 1),
+                Diagnostic("SymbolStartCompilationLevelRuleId").WithArguments("f1").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("C1", "M1", "int localInTypeInGlobalNamespace = 0;").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("NestedType", "M2", "int localInNestedType = 0;").WithLocation(1, 1),
+                Diagnostic("OperationRuleId").WithArguments("C3", "M3", "int localInTypeInNamespace = 0;").WithLocation(1, 1));
         }
     }
 }

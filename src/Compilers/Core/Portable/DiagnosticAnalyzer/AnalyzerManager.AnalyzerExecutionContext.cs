@@ -12,8 +12,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     {
         private sealed class AnalyzerExecutionContext
         {
-            private readonly object _gate = new object();
+            private readonly DiagnosticAnalyzer _analyzer;
+            private readonly object _gate;
 
+            public AnalyzerExecutionContext(DiagnosticAnalyzer analyzer)
+            {
+                _analyzer = analyzer;
+                _gate = new object();
+            }
+                        
             /// <summary>
             /// Task to compute HostSessionStartAnalysisScope for session wide analyzer actions, i.e. AnalyzerActions registered by analyzer's Initialize method.
             /// These are run only once per every analyzer. 
@@ -26,11 +33,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             private Task<HostCompilationStartAnalysisScope> _lazyCompilationScopeTask;
 
             /// <summary>
+            /// Task to compute HostSymbolStartAnalysisScope for per-symbol analyzer actions, i.e. AnalyzerActions registered by analyzer's SymbolStartActions.
+            /// </summary>
+            private Dictionary<ISymbol, Task<HostSymbolStartAnalysisScope>> _lazySymbolScopeTasks;
+
+            /// <summary>
             /// Supported descriptors for diagnostic analyzer.
             /// </summary>
             private ImmutableArray<DiagnosticDescriptor> _lazyDescriptors = default(ImmutableArray<DiagnosticDescriptor>);
 
-            public Task<HostSessionStartAnalysisScope> GetSessionAnalysisScopeTask(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+            public Task<HostSessionStartAnalysisScope> GetSessionAnalysisScopeTask(AnalyzerExecutor analyzerExecutor)
             {
                 lock (_gate)
                 {
@@ -43,7 +55,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     task = Task.Run(() =>
                     {
                         var sessionScope = new HostSessionStartAnalysisScope();
-                        analyzerExecutor.ExecuteInitializeMethod(analyzer, sessionScope);
+                        analyzerExecutor.ExecuteInitializeMethod(_analyzer, sessionScope);
                         return sessionScope;
                     }, analyzerExecutor.CancellationToken);
 
@@ -71,7 +83,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                         _lazyCompilationScopeTask = Task.Run(() =>
                         {
                             var compilationAnalysisScope = new HostCompilationStartAnalysisScope(sessionScope);
-                            analyzerExecutor.ExecuteCompilationStartActions(sessionScope.CompilationStartActions, compilationAnalysisScope);
+                            analyzerExecutor.ExecuteCompilationStartActions(sessionScope.GetAnalyzerActions(_analyzer).CompilationStartActions, compilationAnalysisScope);
                             return compilationAnalysisScope;
                         }, analyzerExecutor.CancellationToken);
                     }
@@ -85,6 +97,38 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 lock (_gate)
                 {
                     _lazyCompilationScopeTask = null;
+                }
+            }
+
+            public Task<HostSymbolStartAnalysisScope> GetSymbolAnalysisScopeAsync(
+                ISymbol symbol,
+                ImmutableArray<SymbolStartAnalyzerAction> symbolStartActions,
+                AnalyzerExecutor analyzerExecutor)
+            {
+                lock (_gate)
+                {
+                    _lazySymbolScopeTasks = _lazySymbolScopeTasks ?? new Dictionary<ISymbol, Task<HostSymbolStartAnalysisScope>>();
+                    if (!_lazySymbolScopeTasks.TryGetValue(symbol, out var symbolScopeTask))
+                    {
+                        symbolScopeTask = Task.Run(() =>
+                        {
+                            var symbolAnalysisScope = new HostSymbolStartAnalysisScope();
+                            analyzerExecutor.ExecuteSymbolStartActions(symbol, _analyzer, symbolStartActions, symbolAnalysisScope);
+                            return symbolAnalysisScope;
+                        }, analyzerExecutor.CancellationToken);
+
+                        _lazySymbolScopeTasks.Add(symbol, symbolScopeTask);
+                    }
+
+                    return symbolScopeTask;
+                }
+            }
+
+            public void ClearSymbolScopeTask(ISymbol symbol)
+            {
+                lock (_gate)
+                {
+                    _lazySymbolScopeTasks?.Remove(symbol);
                 }
             }
 

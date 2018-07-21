@@ -18,20 +18,46 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         internal DiagnosticAnalyzer Analyzer { get { return _analyzer; } }
     }
 
-    internal sealed class SymbolAnalyzerAction : AnalyzerAction
+    internal sealed class SymbolAnalyzerAction : BaseSymbolAnalyzerAction<SymbolAnalysisContext>
+    {
+        public SymbolAnalyzerAction(Action<SymbolAnalysisContext> action, ImmutableArray<SymbolKind> kinds, DiagnosticAnalyzer analyzer)
+            : base(action, kinds, analyzer)
+        {
+        }
+    }
+
+    internal sealed class SymbolStartAnalyzerAction : BaseSymbolAnalyzerAction<SymbolStartAnalysisContext>
+    {
+        public SymbolStartAnalyzerAction(Action<SymbolStartAnalysisContext> action, ImmutableArray<SymbolKind> kinds, DiagnosticAnalyzer analyzer)
+            : base(action, kinds, analyzer)
+        {
+        }
+    }
+
+    internal abstract class BaseSymbolAnalyzerAction<TSymbolAnalysisContext> : AnalyzerAction
+    {
+        public Action<TSymbolAnalysisContext> Action { get; }
+        public ImmutableArray<SymbolKind> Kinds { get; }
+
+        protected BaseSymbolAnalyzerAction(Action<TSymbolAnalysisContext> action, ImmutableArray<SymbolKind> kinds, DiagnosticAnalyzer analyzer)
+            : base(analyzer)
+        {
+            Action = action;
+            Kinds = kinds;
+        }
+    }
+
+    internal sealed class SymbolEndAnalyzerAction : AnalyzerAction
     {
         private readonly Action<SymbolAnalysisContext> _action;
-        private readonly ImmutableArray<SymbolKind> _kinds;
 
-        public SymbolAnalyzerAction(Action<SymbolAnalysisContext> action, ImmutableArray<SymbolKind> kinds, DiagnosticAnalyzer analyzer)
+        public SymbolEndAnalyzerAction(Action<SymbolAnalysisContext> action, DiagnosticAnalyzer analyzer)
             : base(analyzer)
         {
             _action = action;
-            _kinds = kinds;
         }
 
         public Action<SymbolAnalysisContext> Action { get { return _action; } }
-        public ImmutableArray<SymbolKind> Kinds { get { return _kinds; } }
     }
 
     internal sealed class SyntaxNodeAnalyzerAction<TLanguageKindEnum> : AnalyzerAction where TLanguageKindEnum : struct
