@@ -9,7 +9,7 @@ namespace Microsoft.CodeAnalysis.Formatting
     {
         public static PerLanguageOption<bool> UseTabs { get; } =
             new PerLanguageOption<bool>(nameof(FormattingOptions), nameof(UseTabs), defaultValue: false,
-                storageLocations: new EditorConfigStorageLocation<bool>("indent_style", s => s == "tab"));
+                storageLocations: new EditorConfigStorageLocation<bool>("indent_style", s => s == "tab", getValueString: o => o.HasValue && o.Value ? "tab" : null));
 
         // This is also serialized by the Visual Studio-specific LanguageSettingsPersister
         public static PerLanguageOption<int> TabSize { get; } = 

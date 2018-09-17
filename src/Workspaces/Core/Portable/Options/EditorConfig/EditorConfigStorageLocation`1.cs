@@ -13,8 +13,9 @@ namespace Microsoft.CodeAnalysis.Options
         public string KeyName { get; }
 
         private readonly Func<string, Type, Optional<T>> _parseValue;
+        private readonly Func<T, string> _getValueString;
 
-        public EditorConfigStorageLocation(string keyName, Func<string, Optional<T>> parseValue)
+        public EditorConfigStorageLocation(string keyName, Func<string, Optional<T>> parseValue, Func<T, string> getValueString)
         {
             if (parseValue == null)
             {
@@ -25,6 +26,8 @@ namespace Microsoft.CodeAnalysis.Options
 
             // If we're explicitly given a parsing function we can throw away the type when parsing
             _parseValue = (s, type) => parseValue(s);
+
+            _getValueString = getValueString ?? throw new ArgumentNullException(nameof(getValueString));
         }
 
         public bool TryGetOption(object underlyingOption, IReadOnlyDictionary<string, object> allRawConventions, Type type, out object result)
@@ -46,6 +49,12 @@ namespace Microsoft.CodeAnalysis.Options
 
             result = null;
             return false;
+        }
+
+        public string GetValueString(object value)
+        {
+            var optionalValue = (Optional<T>)value;
+            return optionalValue.HasValue ? _getValueString(optionalValue.Value) : null;
         }
     }
 }

@@ -1,10 +1,13 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis.CodeStyle;
 using Microsoft.CodeAnalysis.Options;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
 {
@@ -65,49 +68,63 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             nameof(CodeStyleOptions), nameof(PreferExpressionBodiedConstructors),
             defaultValue: NeverWithSilentEnforcement,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_constructors", s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement)),
+                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_constructors",
+                    s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement),
+                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedConstructors)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedMethods = new Option<CodeStyleOption<ExpressionBodyPreference>>(
             nameof(CodeStyleOptions), nameof(PreferExpressionBodiedMethods),
             defaultValue: NeverWithSilentEnforcement,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_methods", s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement)),
+                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_methods",
+                    s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement),
+                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedMethods)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedOperators = new Option<CodeStyleOption<ExpressionBodyPreference>>(
             nameof(CodeStyleOptions), nameof(PreferExpressionBodiedOperators),
             defaultValue: NeverWithSilentEnforcement,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_operators", s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement)),
+                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_operators",
+                    s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement),
+                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedOperators)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedProperties = new Option<CodeStyleOption<ExpressionBodyPreference>>(
             nameof(CodeStyleOptions), nameof(PreferExpressionBodiedProperties),
             defaultValue: WhenPossibleWithSilentEnforcement,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_properties", s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement)),
+                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_properties",
+                    s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement),
+                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedProperties)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedIndexers = new Option<CodeStyleOption<ExpressionBodyPreference>>(
             nameof(CodeStyleOptions), nameof(PreferExpressionBodiedIndexers),
             defaultValue: WhenPossibleWithSilentEnforcement,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_indexers", s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement)),
+                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_indexers",
+                    s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement),
+                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedIndexers)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedAccessors = new Option<CodeStyleOption<ExpressionBodyPreference>>(
             nameof(CodeStyleOptions), nameof(PreferExpressionBodiedAccessors), 
             defaultValue: WhenPossibleWithSilentEnforcement,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_accessors", s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement)),
+                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_accessors",
+                    s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement),
+                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedAccessors)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedLambdas = new Option<CodeStyleOption<ExpressionBodyPreference>>(
             nameof(CodeStyleOptions), nameof(PreferExpressionBodiedLambdas),
             defaultValue: WhenPossibleWithSilentEnforcement,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_lambdas", s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement)),
+                new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_lambdas",
+                    s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement),
+                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedLambdas)}")});
 
         public static CodeStyleOption<ExpressionBodyPreference> ParseExpressionBodyPreference(
@@ -135,6 +152,20 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             }
 
             return @default;
+        }
+
+        private static string GetExpressionBodyPreferenceEditorConfigString(CodeStyleOption<ExpressionBodyPreference> value)
+        {
+            Debug.Assert(value.Notification != null);
+
+            switch (value.Value)
+            {
+                case ExpressionBodyPreference.Never: return $"false:{value.Notification.ToString()}";
+                case ExpressionBodyPreference.WhenPossible: return $"true:{value.Notification.ToString()}";
+                case ExpressionBodyPreference.WhenOnSingleLine: return $"when_on_single_line:{value.Notification.ToString()}";
+                default:
+                    throw new NotSupportedException();
+            }
         }
 
         public static readonly Option<CodeStyleOption<bool>> PreferBraces = new Option<CodeStyleOption<bool>>(

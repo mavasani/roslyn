@@ -1,11 +1,53 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Linq;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Formatting
 {
     public static partial class CSharpFormattingOptions
     {
+        private static readonly BidirectionalMap<string, SpacingWithinParenthesesOption> s_spacingWithinParenthesisOptionsMap =
+            new BidirectionalMap<string, SpacingWithinParenthesesOption>(new[]
+            {
+                KeyValuePairUtil.Create("expressions", SpacingWithinParenthesesOption.Expressions),
+                KeyValuePairUtil.Create("type_casts", SpacingWithinParenthesesOption.TypeCasts),
+                KeyValuePairUtil.Create("control_flow_statements", SpacingWithinParenthesesOption.ControlFlowStatements),
+            });
+
+        private static readonly BidirectionalMap<string, BinaryOperatorSpacingOptions> s_binaryOperatorSpacingOptionsMap =
+            new BidirectionalMap<string, BinaryOperatorSpacingOptions>(new[]
+            {
+                KeyValuePairUtil.Create("ignore", BinaryOperatorSpacingOptions.Ignore),
+                KeyValuePairUtil.Create("none", BinaryOperatorSpacingOptions.Remove),
+                KeyValuePairUtil.Create("before_and_after", BinaryOperatorSpacingOptions.Single),
+            });
+
+        private static readonly BidirectionalMap<string, LabelPositionOptions> s_labelPositionOptionsMap =
+            new BidirectionalMap<string, LabelPositionOptions>(new[]
+            {
+                KeyValuePairUtil.Create("flush_left", LabelPositionOptions.LeftMost),
+                KeyValuePairUtil.Create("no_change", LabelPositionOptions.NoIndent),
+                KeyValuePairUtil.Create("one_less_than_current", LabelPositionOptions.OneLess),
+            });
+
+        private static readonly BidirectionalMap<string, NewLineOption> s_newLineOptionsMap =
+            new BidirectionalMap<string, NewLineOption>(new[]
+            {
+                KeyValuePairUtil.Create("accessors", NewLineOption.Accessors),
+                KeyValuePairUtil.Create("types", NewLineOption.Types),
+                KeyValuePairUtil.Create("methods", NewLineOption.Methods),
+                KeyValuePairUtil.Create("properties", NewLineOption.Properties),
+                KeyValuePairUtil.Create("indexers", NewLineOption.Indexers),
+                KeyValuePairUtil.Create("events", NewLineOption.Events),
+                KeyValuePairUtil.Create("anonymous_methods", NewLineOption.AnonymousMethods),
+                KeyValuePairUtil.Create("control_blocks", NewLineOption.ControlBlocks),
+                KeyValuePairUtil.Create("anonymous_types", NewLineOption.AnonymousTypes),
+                KeyValuePairUtil.Create("object_collection_array_initalizers", NewLineOption.ObjectCollectionsArrayInitializers),
+                KeyValuePairUtil.Create("lambdas", NewLineOption.Lambdas),
+                KeyValuePairUtil.Create("local_functions", NewLineOption.LocalFunction),
+            });
+
         internal static bool DetermineIfSpaceOptionIsSet(string value, SpacingWithinParenthesesOption parenthesesSpacingOption)
             => (from v in value.Split(',').Select(v => v.Trim())
                 let option = ConvertToSpacingOption(v)
@@ -14,37 +56,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                 .Any();
 
         private static SpacingWithinParenthesesOption? ConvertToSpacingOption(string value)
-        {
-            switch (value)
-            {
-                case "expressions": return SpacingWithinParenthesesOption.Expressions;
-                case "type_casts": return SpacingWithinParenthesesOption.TypeCasts;
-                case "control_flow_statements": return SpacingWithinParenthesesOption.ControlFlowStatements;
-                default: return null;
-            }
-        }
+            => s_spacingWithinParenthesisOptionsMap.GetValueOrDefault(value);
+
+        private static string GetSpacingWithParenthesesEditorConfigString(SpacingWithinParenthesesOption value)
+            => s_spacingWithinParenthesisOptionsMap.TryGetKey(value, out string key) ? key : null;
 
         internal static BinaryOperatorSpacingOptions ParseEditorConfigSpacingAroundBinaryOperator(string binaryOperatorSpacingValue)
-        {
-            switch (binaryOperatorSpacingValue)
-            {
-                case "ignore": return BinaryOperatorSpacingOptions.Ignore;
-                case "none": return BinaryOperatorSpacingOptions.Remove;
-                case "before_and_after": return BinaryOperatorSpacingOptions.Single;
-                default: return BinaryOperatorSpacingOptions.Single;
-            }
-        }
+            => s_binaryOperatorSpacingOptionsMap.TryGetValue(binaryOperatorSpacingValue, out var value) ? value : BinaryOperatorSpacingOptions.Single;
 
-        internal static LabelPositionOptions ParseEditorConfigLablePositioning(string lableIndentationValue)
-        {
-            switch (lableIndentationValue)
-            {
-                case "flush_left": return LabelPositionOptions.LeftMost;
-                case "no_change": return LabelPositionOptions.NoIndent;
-                case "one_less_than_current": return LabelPositionOptions.OneLess;
-                default: return LabelPositionOptions.NoIndent;
-            }
-        }
+        private static string GetSpacingAroundBinaryOperatorEditorConfigString(BinaryOperatorSpacingOptions value)
+            => s_binaryOperatorSpacingOptionsMap.TryGetKey(value, out string key) ? key : null;
+
+        internal static LabelPositionOptions ParseEditorConfigLabelPositioning(string labelIndentationValue)
+            => s_labelPositionOptionsMap.TryGetValue(labelIndentationValue, out var value) ? value : LabelPositionOptions.NoIndent;
+        private static string GetLabelPositionOptionEditorConfigString(LabelPositionOptions value)
+            => s_labelPositionOptionsMap.TryGetKey(value, out string key) ? key : null;
 
         internal static bool DetermineIfNewLineOptionIsSet(string value, NewLineOption optionName)
         {
@@ -67,26 +93,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                     .Any();
         }
 
-
         private static NewLineOption? ConvertToNewLineOption(string value)
-        {
-            switch (value.Trim())
-            {
-                case "accessors": return NewLineOption.Accessors;
-                case "types": return NewLineOption.Types;
-                case "methods": return NewLineOption.Methods;
-                case "properties": return NewLineOption.Properties;
-                case "indexers": return NewLineOption.Indexers;
-                case "events": return NewLineOption.Events;
-                case "anonymous_methods": return NewLineOption.AnonymousMethods;
-                case "control_blocks": return NewLineOption.ControlBlocks;
-                case "anonymous_types": return NewLineOption.AnonymousTypes;
-                case "object_collection_array_initalizers": return NewLineOption.ObjectCollectionsArrayInitializers;
-                case "lambdas": return NewLineOption.Lambdas;
-                case "local_functions": return NewLineOption.LocalFunction;
-                default: return null;
-            }
-        }
+            => s_newLineOptionsMap.GetValueOrDefault(value);
+        private static string GetNewLineOptionEditorConfigString(NewLineOption value)
+            => s_newLineOptionsMap.TryGetKey(value, out string key) ? key : null;
 
         internal static bool DetermineIfIgnoreSpacesAroundVariableDeclarationIsSet(string value)
             => value.Trim() == "ignore";

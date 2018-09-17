@@ -43,17 +43,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public static Option<bool> SpaceWithinExpressionParentheses { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(SpaceWithinExpressionParentheses), defaultValue: false,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_space_between_parentheses", s => DetermineIfSpaceOptionIsSet(s, SpacingWithinParenthesesOption.Expressions)),
+                new EditorConfigStorageLocation<bool>("csharp_space_between_parentheses",
+                    s => DetermineIfSpaceOptionIsSet(s, SpacingWithinParenthesesOption.Expressions),
+                    v => v ? GetSpacingWithParenthesesEditorConfigString(SpacingWithinParenthesesOption.Expressions) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.SpaceWithinExpressionParentheses")});
 
         public static Option<bool> SpaceWithinCastParentheses { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(SpaceWithinCastParentheses), defaultValue: false,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_space_between_parentheses", s => DetermineIfSpaceOptionIsSet(s, SpacingWithinParenthesesOption.TypeCasts)),
+                new EditorConfigStorageLocation<bool>("csharp_space_between_parentheses",
+                    s => DetermineIfSpaceOptionIsSet(s, SpacingWithinParenthesesOption.TypeCasts),
+                    v => v ? GetSpacingWithParenthesesEditorConfigString(SpacingWithinParenthesesOption.TypeCasts) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.SpaceWithinCastParentheses")});
 
         public static Option<bool> SpaceWithinOtherParentheses { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(SpaceWithinOtherParentheses), defaultValue: false,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_space_between_parentheses", s => DetermineIfSpaceOptionIsSet(s, SpacingWithinParenthesesOption.ControlFlowStatements)),
+                new EditorConfigStorageLocation<bool>("csharp_space_between_parentheses",
+                    s => DetermineIfSpaceOptionIsSet(s, SpacingWithinParenthesesOption.ControlFlowStatements),
+                    v => v ? GetSpacingWithParenthesesEditorConfigString(SpacingWithinParenthesesOption.ControlFlowStatements) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.SpaceWithinOtherParentheses")});
 
         public static Option<bool> SpaceAfterCast { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(SpaceAfterCast), defaultValue: false,
@@ -63,7 +69,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public static Option<bool> SpacesIgnoreAroundVariableDeclaration { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(SpacesIgnoreAroundVariableDeclaration), defaultValue: false,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_space_around_declaration_statements", s => DetermineIfIgnoreSpacesAroundVariableDeclarationIsSet(s)),
+                new EditorConfigStorageLocation<bool>("csharp_space_around_declaration_statements",
+                    s => DetermineIfIgnoreSpacesAroundVariableDeclarationIsSet(s),
+                    v => v ? "ignore" : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.SpacesIgnoreAroundVariableDeclaration")});
 
         public static Option<bool> SpaceBeforeOpenSquareBracket { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(SpaceBeforeOpenSquareBracket), defaultValue: false,
@@ -123,7 +131,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public static Option<BinaryOperatorSpacingOptions> SpacingAroundBinaryOperator { get; } = new Option<BinaryOperatorSpacingOptions>(nameof(CSharpFormattingOptions), nameof(SpacingAroundBinaryOperator), defaultValue: BinaryOperatorSpacingOptions.Single,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<BinaryOperatorSpacingOptions>("csharp_space_around_binary_operators", s => ParseEditorConfigSpacingAroundBinaryOperator(s)),
+                new EditorConfigStorageLocation<BinaryOperatorSpacingOptions>("csharp_space_around_binary_operators",
+                    s => ParseEditorConfigSpacingAroundBinaryOperator(s),
+                    v => GetSpacingAroundBinaryOperatorEditorConfigString(v)),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.SpacingAroundBinaryOperator")});
 
         public static Option<bool> IndentBraces { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(IndentBraces), defaultValue: false,
@@ -155,7 +165,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public static Option<LabelPositionOptions> LabelPositioning { get; } = new Option<LabelPositionOptions>(nameof(CSharpFormattingOptions), nameof(LabelPositioning), defaultValue: LabelPositionOptions.OneLess,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<LabelPositionOptions>("csharp_indent_labels", s => ParseEditorConfigLablePositioning(s)),
+                new EditorConfigStorageLocation<LabelPositionOptions>("csharp_indent_labels",
+                    s => ParseEditorConfigLabelPositioning(s),
+                    v => GetLabelPositionOptionEditorConfigString(v)),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.LabelPositioning")});
 
         public static Option<bool> WrappingPreserveSingleLine { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(WrappingPreserveSingleLine), defaultValue: true,
@@ -170,47 +182,65 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public static Option<bool> NewLinesForBracesInTypes { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInTypes), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Types)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Types),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.Types) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesBracesType")});
 
         public static Option<bool> NewLinesForBracesInMethods { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInMethods), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Methods)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Methods),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.Methods) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesForBracesInMethods")});
 
         public static Option<bool> NewLinesForBracesInProperties { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInProperties), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Properties)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Properties),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.Properties) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesForBracesInProperties")});
 
         public static Option<bool> NewLinesForBracesInAccessors { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInAccessors), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Accessors)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Accessors),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.Accessors) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesForBracesInAccessors")});
 
         public static Option<bool> NewLinesForBracesInAnonymousMethods { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInAnonymousMethods), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.AnonymousMethods)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.AnonymousMethods),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.AnonymousMethods) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesForBracesInAnonymousMethods")});
 
         public static Option<bool> NewLinesForBracesInControlBlocks { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInControlBlocks), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.ControlBlocks)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.ControlBlocks),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.ControlBlocks) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesForBracesInControlBlocks")});
 
         public static Option<bool> NewLinesForBracesInAnonymousTypes { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInAnonymousTypes), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.AnonymousTypes)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.AnonymousTypes),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.AnonymousTypes) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesForBracesInAnonymousTypes")});
 
         public static Option<bool> NewLinesForBracesInObjectCollectionArrayInitializers { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInObjectCollectionArrayInitializers), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.ObjectCollectionsArrayInitializers)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.ObjectCollectionsArrayInitializers),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.ObjectCollectionsArrayInitializers) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesForBracesInObjectCollectionArrayInitializers")});
 
         public static Option<bool> NewLinesForBracesInLambdaExpressionBody { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLinesForBracesInLambdaExpressionBody), defaultValue: true,
             storageLocations: new OptionStorageLocation[] {
-                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace", value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Lambdas)),
+                new EditorConfigStorageLocation<bool>("csharp_new_line_before_open_brace",
+                    value => DetermineIfNewLineOptionIsSet(value, NewLineOption.Lambdas),
+                    value => true ? GetNewLineOptionEditorConfigString(NewLineOption.Lambdas) : null),
                 new RoamingProfileStorageLocation("TextEditor.CSharp.Specific.NewLinesForBracesInLambdaExpressionBody")});
 
         public static Option<bool> NewLineForElse { get; } = new Option<bool>(nameof(CSharpFormattingOptions), nameof(NewLineForElse), defaultValue: true,
