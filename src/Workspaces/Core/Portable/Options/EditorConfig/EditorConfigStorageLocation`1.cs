@@ -9,7 +9,7 @@ namespace Microsoft.CodeAnalysis.Options
     /// <summary>
     /// Specifies that an option should be read from an .editorconfig file.
     /// </summary>
-    internal sealed class EditorConfigStorageLocation<T> : OptionStorageLocation, IEditorConfigStorageLocation
+    internal sealed class EditorConfigStorageLocation<T> : OptionStorageLocation, IEditorConfigStorageLocationWithKey
     {
         public string KeyName { get; }
 
@@ -18,6 +18,15 @@ namespace Microsoft.CodeAnalysis.Options
 
         public EditorConfigStorageLocation(string keyName, Func<string, Optional<T>> parseValue, Func<T, string> getEditorConfigStringForValue)
             : this (keyName, parseValue, (value, optionSet) => getEditorConfigStringForValue(value))
+        {
+            if (getEditorConfigStringForValue == null)
+            {
+                throw new ArgumentNullException(nameof(getEditorConfigStringForValue));
+            }
+        }
+
+        public EditorConfigStorageLocation(string keyName, Func<string, Optional<T>> parseValue, Func<OptionSet, string> getEditorConfigStringForValue)
+            : this(keyName, parseValue, (value, optionSet) => getEditorConfigStringForValue(optionSet))
         {
             if (getEditorConfigStringForValue == null)
             {
@@ -70,5 +79,6 @@ namespace Microsoft.CodeAnalysis.Options
             var editorConfigstring = _getEditorConfigStringForValue(value, optionSet);
             Debug.Assert(!string.IsNullOrEmpty(editorConfigstring));
             return editorConfigstring;
+        }
     }
 }

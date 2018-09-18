@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System.Collections.Immutable;
 using System.Diagnostics;
 using Microsoft.CodeAnalysis.Options;
 using Roslyn.Utilities;
@@ -19,53 +20,105 @@ namespace Microsoft.CodeAnalysis.CodeStyle
         internal static readonly CodeStyleOption<bool> TrueWithSuggestionEnforcement = new CodeStyleOption<bool>(value: true, notification: NotificationOption.Suggestion);
         internal static readonly CodeStyleOption<bool> FalseWithSuggestionEnforcement = new CodeStyleOption<bool>(value: false, notification: NotificationOption.Suggestion);
 
+        static CodeStyleOptions()
+        {
+            //internal enum CodeStyleOptionsGroup
+            //{
+            //    PredefinedTypeNameUsage,
+            //    Parentheses,
+            //    Modifier,
+            //    ExpressionLevelPreferences,
+            //}
+            var groupedCodeStyleOptionsBuilder = ImmutableDictionary.CreateBuilder<CodeStyleOptionsGroup, ImmutableArray<IOption>>();
+
+            #region ThisOrMe options
+            var builder = ImmutableArray.CreateBuilder<IOption>();
+
+            QualifyFieldAccess = new PerLanguageOption<CodeStyleOption<bool>>(
+                nameof(CodeStyleOptions), nameof(QualifyFieldAccess), defaultValue: CodeStyleOption<bool>.Default,
+                storageLocations: new OptionStorageLocation[]{
+                    EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_qualification_for_field"),
+                    new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.QualifyFieldAccess")});
+            builder.Add(QualifyFieldAccess);
+
+            QualifyPropertyAccess = new PerLanguageOption<CodeStyleOption<bool>>(
+                nameof(CodeStyleOptions), nameof(QualifyPropertyAccess), defaultValue: CodeStyleOption<bool>.Default,
+                storageLocations: new OptionStorageLocation[]{
+                    EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_qualification_for_property"),
+                    new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.QualifyPropertyAccess")});
+            builder.Add(QualifyPropertyAccess);
+
+            QualifyMethodAccess = new PerLanguageOption<CodeStyleOption<bool>>(
+                nameof(CodeStyleOptions), nameof(QualifyMethodAccess), defaultValue: CodeStyleOption<bool>.Default,
+                storageLocations: new OptionStorageLocation[]{
+                    EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_qualification_for_method"),
+                    new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.QualifyMethodAccess")});
+            builder.Add(QualifyMethodAccess);
+
+            QualifyEventAccess = new PerLanguageOption<CodeStyleOption<bool>>(
+                nameof(CodeStyleOptions), nameof(QualifyEventAccess), defaultValue: CodeStyleOption<bool>.Default,
+                storageLocations: new OptionStorageLocation[]{
+                    EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_qualification_for_event"),
+                    new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.QualifyEventAccess")});
+            builder.Add(QualifyEventAccess);
+
+            groupedCodeStyleOptionsBuilder.Add(CodeStyleOptionsGroup.ThisOrMe, builder.ToImmutable());
+            #endregion
+
+            #region PredefinedTypeNameUsage
+            builder.Clear();
+
+            PreferIntrinsicPredefinedTypeKeywordInDeclaration = new PerLanguageOption<CodeStyleOption<bool>>(
+                nameof(CodeStyleOptions), nameof(PreferIntrinsicPredefinedTypeKeywordInDeclaration), defaultValue: TrueWithSilentEnforcement,
+                storageLocations: new OptionStorageLocation[]{
+                    EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_predefined_type_for_locals_parameters_members"),
+                    new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.PreferIntrinsicPredefinedTypeKeywordInDeclaration.CodeStyle")});
+            builder.Add(PreferIntrinsicPredefinedTypeKeywordInDeclaration);
+
+            PreferIntrinsicPredefinedTypeKeywordInMemberAccess = new PerLanguageOption<CodeStyleOption<bool>>(
+                nameof(CodeStyleOptions), nameof(PreferIntrinsicPredefinedTypeKeywordInMemberAccess), defaultValue: TrueWithSilentEnforcement,
+                storageLocations: new OptionStorageLocation[]{
+                    EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_predefined_type_for_member_access"),
+                    new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.PreferIntrinsicPredefinedTypeKeywordInMemberAccess.CodeStyle")});
+            builder.Add(PreferIntrinsicPredefinedTypeKeywordInMemberAccess);
+
+            groupedCodeStyleOptionsBuilder.Add(CodeStyleOptionsGroup.PredefinedTypeNameUsage, builder.ToImmutable());
+            #endregion
+
+            GroupedCodeStyleOptions = groupedCodeStyleOptionsBuilder.ToImmutable();
+        }
+
+        internal static ImmutableDictionary<CodeStyleOptionsGroup, ImmutableArray<IOption>> GroupedCodeStyleOptions { get; }
+
         /// <summary>
         /// This option says if we should simplify away the <see langword="this"/>. or <see langword="Me"/>. in field access expressions.
         /// </summary>
-        public static readonly PerLanguageOption<CodeStyleOption<bool>> QualifyFieldAccess = new PerLanguageOption<CodeStyleOption<bool>>(nameof(CodeStyleOptions), nameof(QualifyFieldAccess), defaultValue: CodeStyleOption<bool>.Default,
-            storageLocations: new OptionStorageLocation[]{
-                EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_qualification_for_field"),
-                new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.QualifyFieldAccess")});
+        public static readonly PerLanguageOption<CodeStyleOption<bool>> QualifyFieldAccess;
 
         /// <summary>
         /// This option says if we should simplify away the <see langword="this"/>. or <see langword="Me"/>. in property access expressions.
         /// </summary>
-        public static readonly PerLanguageOption<CodeStyleOption<bool>> QualifyPropertyAccess = new PerLanguageOption<CodeStyleOption<bool>>(nameof(CodeStyleOptions), nameof(QualifyPropertyAccess), defaultValue: CodeStyleOption<bool>.Default,
-            storageLocations: new OptionStorageLocation[]{
-                EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_qualification_for_property"),
-                new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.QualifyPropertyAccess")});
+        public static readonly PerLanguageOption<CodeStyleOption<bool>> QualifyPropertyAccess;
 
         /// <summary>
         /// This option says if we should simplify away the <see langword="this"/>. or <see langword="Me"/>. in method access expressions.
         /// </summary>
-        public static readonly PerLanguageOption<CodeStyleOption<bool>> QualifyMethodAccess = new PerLanguageOption<CodeStyleOption<bool>>(nameof(CodeStyleOptions), nameof(QualifyMethodAccess), defaultValue: CodeStyleOption<bool>.Default,
-            storageLocations: new OptionStorageLocation[]{
-                EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_qualification_for_method"),
-                new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.QualifyMethodAccess")});
+        public static readonly PerLanguageOption<CodeStyleOption<bool>> QualifyMethodAccess;
 
         /// <summary>
         /// This option says if we should simplify away the <see langword="this"/>. or <see langword="Me"/>. in event access expressions.
         /// </summary>
-        public static readonly PerLanguageOption<CodeStyleOption<bool>> QualifyEventAccess = new PerLanguageOption<CodeStyleOption<bool>>(nameof(CodeStyleOptions), nameof(QualifyEventAccess), defaultValue: CodeStyleOption<bool>.Default,
-            storageLocations: new OptionStorageLocation[]{
-                EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_qualification_for_event"),
-                new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.QualifyEventAccess")});
+        public static readonly PerLanguageOption<CodeStyleOption<bool>> QualifyEventAccess;
 
         /// <summary>
         /// This option says if we should prefer keyword for Intrinsic Predefined Types in Declarations
         /// </summary>
-        public static readonly PerLanguageOption<CodeStyleOption<bool>> PreferIntrinsicPredefinedTypeKeywordInDeclaration = new PerLanguageOption<CodeStyleOption<bool>>(nameof(CodeStyleOptions), nameof(PreferIntrinsicPredefinedTypeKeywordInDeclaration), defaultValue: TrueWithSilentEnforcement,
-            storageLocations: new OptionStorageLocation[]{
-                EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_predefined_type_for_locals_parameters_members"),
-                new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.PreferIntrinsicPredefinedTypeKeywordInDeclaration.CodeStyle")});
+        public static readonly PerLanguageOption<CodeStyleOption<bool>> PreferIntrinsicPredefinedTypeKeywordInDeclaration;
 
         /// <summary>
         /// This option says if we should prefer keyword for Intrinsic Predefined Types in Member Access Expression
         /// </summary>
-        public static readonly PerLanguageOption<CodeStyleOption<bool>> PreferIntrinsicPredefinedTypeKeywordInMemberAccess = new PerLanguageOption<CodeStyleOption<bool>>(nameof(CodeStyleOptions), nameof(PreferIntrinsicPredefinedTypeKeywordInMemberAccess), defaultValue: TrueWithSilentEnforcement,
-            storageLocations: new OptionStorageLocation[]{
-                EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_predefined_type_for_member_access"),
-                new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.PreferIntrinsicPredefinedTypeKeywordInMemberAccess.CodeStyle")});
+        public static readonly PerLanguageOption<CodeStyleOption<bool>> PreferIntrinsicPredefinedTypeKeywordInMemberAccess;
 
         internal static readonly PerLanguageOption<CodeStyleOption<bool>> PreferThrowExpression = new PerLanguageOption<CodeStyleOption<bool>>(
             nameof(CodeStyleOptions),
@@ -251,7 +304,7 @@ namespace Microsoft.CodeAnalysis.CodeStyle
             }
 
             Debug.Assert(s_accessibilityModifiersRequiredMap.ContainsValue(option.Value));
-            return $"{s_accessibilityModifiersRequiredMap.GetKeyOrDefault(option.Value)}:{option.Notification.ToString()}";
+            return $"{s_accessibilityModifiersRequiredMap.GetKeyOrDefault(option.Value)}:{option.Notification.ToEditorConfigString()}";
         }
 
         private static readonly CodeStyleOption<ParenthesesPreference> s_alwaysForClarityPreference =
@@ -323,7 +376,17 @@ namespace Microsoft.CodeAnalysis.CodeStyle
         {
             Debug.Assert(s_parenthesesPreferenceMap.ContainsValue(option.Value));
             var value = s_parenthesesPreferenceMap.GetKeyOrDefault(option.Value) ?? s_parenthesesPreferenceMap.GetKeyOrDefault(ParenthesesPreference.AlwaysForClarity);
-            return option.Notification == null ? value : $"{value}:{option.Notification.ToString()}";
+            return option.Notification == null ? value : $"{value}:{option.Notification.ToEditorConfigString()}";
         }
+    }
+
+    internal enum CodeStyleOptionsGroup
+    {
+        Usings,
+        ThisOrMe,
+        PredefinedTypeNameUsage,
+        Parentheses,
+        Modifier,
+        ExpressionLevelPreferences,
     }
 }
