@@ -2,6 +2,7 @@
 
 using System;
 using Microsoft.CodeAnalysis.Options;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Formatting
 {
@@ -9,7 +10,7 @@ namespace Microsoft.CodeAnalysis.Formatting
     {
         public static PerLanguageOption<bool> UseTabs { get; } =
             new PerLanguageOption<bool>(nameof(FormattingOptions), nameof(UseTabs), defaultValue: false,
-                storageLocations: new EditorConfigStorageLocation<bool>("indent_style", s => s == "tab", getValueString: o => o.HasValue && o.Value ? "tab" : null));
+                storageLocations: new EditorConfigStorageLocation<bool>("indent_style", s => s == "tab", getEditorConfigStringForValue: isSet => isSet ? "tab" : null));
 
         // This is also serialized by the Visual Studio-specific LanguageSettingsPersister
         public static PerLanguageOption<int> TabSize { get; } = 
@@ -27,22 +28,25 @@ namespace Microsoft.CodeAnalysis.Formatting
 
         public static PerLanguageOption<string> NewLine { get; } =
             new PerLanguageOption<string>(nameof(FormattingOptions), nameof(NewLine), defaultValue: "\r\n",
-                storageLocations: new EditorConfigStorageLocation<string>("end_of_line", ParseEditorConfigEndOfLine));
+                storageLocations: new EditorConfigStorageLocation<string>("end_of_line", ParseEditorConfigEndOfLine, GetEndOfLineEditorConfigString));
 
         internal static Option<bool> InsertFinalNewLine { get; } =
             new Option<bool>(nameof(FormattingOptions), nameof(InsertFinalNewLine), defaultValue: false,
                 storageLocations: EditorConfigStorageLocation.ForBoolOption("insert_final_newline"));
 
-        private static Optional<string> ParseEditorConfigEndOfLine(string endOfLineValue)
-        {
-            switch (endOfLineValue)
+        private static readonly BidirectionalMap<string, string> s_parenthesesPreferenceMap =
+            new BidirectionalMap<string, string>(new[]
             {
-                case "lf": return "\n";
-                case "cr": return "\r";
-                case "crlf": return "\r\n";
-                default: return NewLine.DefaultValue;
-            }
-        }
+                KeyValuePairUtil.Create("lf", "\n"),
+                KeyValuePairUtil.Create("cr", "\r"),
+                KeyValuePairUtil.Create("crlf", "\r\n"),
+            });
+
+        private static Optional<string> ParseEditorConfigEndOfLine(string endOfLineValue)
+            => s_parenthesesPreferenceMap.TryGetValue(endOfLineValue, out var parsedOption) ? parsedOption : NewLine.DefaultValue;
+
+        private static string GetEndOfLineEditorConfigString(string option)
+            => s_parenthesesPreferenceMap.TryGetKey(option, out var editorConfigString) ? editorConfigString : null;
 
         internal static PerLanguageOption<bool> DebugMode { get; } = new PerLanguageOption<bool>(nameof(FormattingOptions), nameof(DebugMode), defaultValue: false);
 

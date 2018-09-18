@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using Microsoft.CodeAnalysis.Options;
+using Roslyn.Utilities;
 using static Microsoft.CodeAnalysis.CodeStyle.CodeStyleHelpers;
 
 namespace Microsoft.CodeAnalysis.CodeStyle
@@ -197,7 +198,9 @@ namespace Microsoft.CodeAnalysis.CodeStyle
             new PerLanguageOption<CodeStyleOption<AccessibilityModifiersRequired>>(
                 nameof(CodeStyleOptions), nameof(RequireAccessibilityModifiers), defaultValue: s_requireAccessibilityModifiersDefault,
                 storageLocations: new OptionStorageLocation[]{
-                    new EditorConfigStorageLocation<CodeStyleOption<AccessibilityModifiersRequired>>("dotnet_style_require_accessibility_modifiers", s => ParseAccessibilityModifiersRequired(s)),
+                    new EditorConfigStorageLocation<CodeStyleOption<AccessibilityModifiersRequired>>("dotnet_style_require_accessibility_modifiers",
+                        s => ParseAccessibilityModifiersRequired(s),
+                        v => GetAccessibilityModifiersRequiredEditorConfigString(v)),
                     new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.RequireAccessibilityModifiers")});
 
         internal static readonly PerLanguageOption<CodeStyleOption<bool>> PreferReadonly = new PerLanguageOption<CodeStyleOption<bool>>(
@@ -207,6 +210,15 @@ namespace Microsoft.CodeAnalysis.CodeStyle
             storageLocations: new OptionStorageLocation[]{
                 EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_readonly_field"),
                 new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.PreferReadonly") });
+
+        private static readonly BidirectionalMap<string, AccessibilityModifiersRequired> s_accessibilityModifiersRequiredMap =
+            new BidirectionalMap<string, AccessibilityModifiersRequired>(new[]
+            {
+                KeyValuePairUtil.Create("never", AccessibilityModifiersRequired.Never),
+                KeyValuePairUtil.Create("always", AccessibilityModifiersRequired.Always),
+                KeyValuePairUtil.Create("for_non_interface_members", AccessibilityModifiersRequired.ForNonInterfaceMembers),
+                KeyValuePairUtil.Create("omit_if_default", AccessibilityModifiersRequired.OmitIfDefault),
+            });
 
         private static CodeStyleOption<AccessibilityModifiersRequired> ParseAccessibilityModifiersRequired(string optionString)
         {
@@ -221,21 +233,25 @@ namespace Microsoft.CodeAnalysis.CodeStyle
 
                 if (notificationOpt != null)
                 {
-                    switch (value)
-                    {
-                        case "never":
-                            return new CodeStyleOption<AccessibilityModifiersRequired>(AccessibilityModifiersRequired.Never, notificationOpt);
-                        case "always":
-                            return new CodeStyleOption<AccessibilityModifiersRequired>(AccessibilityModifiersRequired.Always, notificationOpt);
-                        case "for_non_interface_members":
-                            return new CodeStyleOption<AccessibilityModifiersRequired>(AccessibilityModifiersRequired.ForNonInterfaceMembers, notificationOpt);
-                        case "omit_if_default":
-                            return new CodeStyleOption<AccessibilityModifiersRequired>(AccessibilityModifiersRequired.OmitIfDefault, notificationOpt);
-                    }
+                    Debug.Assert(s_accessibilityModifiersRequiredMap.ContainsKey(value));
+                    return new CodeStyleOption<AccessibilityModifiersRequired>(s_accessibilityModifiersRequiredMap.GetValueOrDefault(value), notificationOpt);
                 }
             }
 
             return s_requireAccessibilityModifiersDefault;
+        }
+
+        private static string GetAccessibilityModifiersRequiredEditorConfigString(CodeStyleOption<AccessibilityModifiersRequired> option)
+        {
+            // If they provide 'never', they don't need a notification level.
+            if (option.Notification == null)
+            {
+                Debug.Assert(s_accessibilityModifiersRequiredMap.ContainsValue(AccessibilityModifiersRequired.Never));
+                return s_accessibilityModifiersRequiredMap.GetKeyOrDefault(AccessibilityModifiersRequired.Never);
+            }
+
+            Debug.Assert(s_accessibilityModifiersRequiredMap.ContainsValue(option.Value));
+            return $"{s_accessibilityModifiersRequiredMap.GetKeyOrDefault(option.Value)}:{option.Notification.ToString()}";
         }
 
         private static readonly CodeStyleOption<ParenthesesPreference> s_alwaysForClarityPreference =
@@ -253,7 +269,8 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                 storageLocations: new OptionStorageLocation[]{
                     new EditorConfigStorageLocation<CodeStyleOption<ParenthesesPreference>>(
                         styleName,
-                        s => ParseParenthesesPreference(s, defaultValue)),
+                        s => ParseParenthesesPreference(s, defaultValue),
+                        v => GetParenthesesPreferenceEditorConfigString(v)),
                     new RoamingProfileStorageLocation($"TextEditor.%LANGUAGE%.Specific.{fieldName}Preference")});
         }
 
@@ -281,25 +298,32 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                 s_neverIfUnnecessaryPreference,
                 "dotnet_style_parentheses_in_other_operators");
 
+        private static readonly BidirectionalMap<string, ParenthesesPreference> s_parenthesesPreferenceMap =
+            new BidirectionalMap<string, ParenthesesPreference>(new[]
+            {
+                KeyValuePairUtil.Create("always_for_clarity", ParenthesesPreference.AlwaysForClarity),
+                KeyValuePairUtil.Create("never_if_unnecessary", ParenthesesPreference.NeverIfUnnecessary),
+            });
+
         private static Optional<CodeStyleOption<ParenthesesPreference>> ParseParenthesesPreference(
             string optionString, Optional<CodeStyleOption<ParenthesesPreference>> defaultValue)
         {
             if (TryGetCodeStyleValueAndOptionalNotification(optionString,
                     out var value, out var notificationOpt))
             {
-                value.Trim();
-                notificationOpt = notificationOpt ?? NotificationOption.Silent;
-
-                switch (value)
-                {
-                case "always_for_clarity":
-                    return new CodeStyleOption<ParenthesesPreference>(ParenthesesPreference.AlwaysForClarity, notificationOpt);
-                case "never_if_unnecessary":
-                    return new CodeStyleOption<ParenthesesPreference>(ParenthesesPreference.NeverIfUnnecessary, notificationOpt);
-                }
+                Debug.Assert(s_parenthesesPreferenceMap.ContainsKey(value));
+                return new CodeStyleOption<ParenthesesPreference>(s_parenthesesPreferenceMap.GetValueOrDefault(value),
+                                                                  notificationOpt ?? NotificationOption.Silent);
             }
 
             return defaultValue;
+        }
+
+        private static string GetParenthesesPreferenceEditorConfigString(CodeStyleOption<ParenthesesPreference> option)
+        {
+            Debug.Assert(s_parenthesesPreferenceMap.ContainsValue(option.Value));
+            var value = s_parenthesesPreferenceMap.GetKeyOrDefault(option.Value) ?? s_parenthesesPreferenceMap.GetKeyOrDefault(ParenthesesPreference.AlwaysForClarity);
+            return option.Notification == null ? value : $"{value}:{option.Notification.ToString()}";
         }
     }
 }

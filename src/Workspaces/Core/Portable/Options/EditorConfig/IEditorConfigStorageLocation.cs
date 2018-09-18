@@ -8,10 +8,5 @@ namespace Microsoft.CodeAnalysis.Options
     internal interface IEditorConfigStorageLocation
     {
         bool TryGetOption(object underlyingOption, IReadOnlyDictionary<string, object> allRawConventions, Type type, out object value);
-
-        /// <summary>
-        /// Gets the editorconfig string representation for the current value of the option.
-        /// </summary>
-        string GetValueString(object value);
     }
 }

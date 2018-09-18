@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Linq;
+using Microsoft.CodeAnalysis.Options;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Formatting
@@ -58,8 +59,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
         private static SpacingWithinParenthesesOption? ConvertToSpacingOption(string value)
             => s_spacingWithinParenthesisOptionsMap.GetValueOrDefault(value);
 
-        private static string GetSpacingWithParenthesesEditorConfigString(SpacingWithinParenthesesOption value)
-            => s_spacingWithinParenthesisOptionsMap.TryGetKey(value, out string key) ? key : null;
+        private static string GetSpacingWithParenthesesEditorConfigString(bool isValueSet, OptionSet option)
+            => isValueSet && s_spacingWithinParenthesisOptionsMap.TryGetKey(option, out string key) ? key : null;
 
         internal static BinaryOperatorSpacingOptions ParseEditorConfigSpacingAroundBinaryOperator(string binaryOperatorSpacingValue)
             => s_binaryOperatorSpacingOptionsMap.TryGetValue(binaryOperatorSpacingValue, out var value) ? value : BinaryOperatorSpacingOptions.Single;
@@ -95,8 +96,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         private static NewLineOption? ConvertToNewLineOption(string value)
             => s_newLineOptionsMap.GetValueOrDefault(value);
-        private static string GetNewLineOptionEditorConfigString(NewLineOption value)
-            => s_newLineOptionsMap.TryGetKey(value, out string key) ? key : null;
+        private static string TryGetNewLineOptionEditorConfigString(bool isValueSet, NewLineOption option)
+            => isValueSet && s_newLineOptionsMap.TryGetKey(option, out string key) ? key : null;
 
         internal static bool DetermineIfIgnoreSpacesAroundVariableDeclarationIsSet(string value)
             => value.Trim() == "ignore";

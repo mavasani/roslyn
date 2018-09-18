@@ -70,7 +70,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             storageLocations: new OptionStorageLocation[] {
                 new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_constructors",
                     s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement),
-                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
+                    GetExpressionBodyPreferenceEditorConfigString),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedConstructors)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedMethods = new Option<CodeStyleOption<ExpressionBodyPreference>>(
@@ -79,7 +79,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             storageLocations: new OptionStorageLocation[] {
                 new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_methods",
                     s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement),
-                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
+                    GetExpressionBodyPreferenceEditorConfigString),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedMethods)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedOperators = new Option<CodeStyleOption<ExpressionBodyPreference>>(
@@ -88,7 +88,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             storageLocations: new OptionStorageLocation[] {
                 new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_operators",
                     s => ParseExpressionBodyPreference(s, NeverWithSilentEnforcement),
-                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
+                    GetExpressionBodyPreferenceEditorConfigString),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedOperators)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedProperties = new Option<CodeStyleOption<ExpressionBodyPreference>>(
@@ -97,7 +97,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             storageLocations: new OptionStorageLocation[] {
                 new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_properties",
                     s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement),
-                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
+                    GetExpressionBodyPreferenceEditorConfigString),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedProperties)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedIndexers = new Option<CodeStyleOption<ExpressionBodyPreference>>(
@@ -106,7 +106,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             storageLocations: new OptionStorageLocation[] {
                 new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_indexers",
                     s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement),
-                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
+                    GetExpressionBodyPreferenceEditorConfigString),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedIndexers)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedAccessors = new Option<CodeStyleOption<ExpressionBodyPreference>>(
@@ -115,7 +115,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             storageLocations: new OptionStorageLocation[] {
                 new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_accessors",
                     s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement),
-                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
+                    GetExpressionBodyPreferenceEditorConfigString),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedAccessors)}")});
 
         public static readonly Option<CodeStyleOption<ExpressionBodyPreference>> PreferExpressionBodiedLambdas = new Option<CodeStyleOption<ExpressionBodyPreference>>(
@@ -124,7 +124,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeStyle
             storageLocations: new OptionStorageLocation[] {
                 new EditorConfigStorageLocation<CodeStyleOption<ExpressionBodyPreference>>("csharp_style_expression_bodied_lambdas",
                     s => ParseExpressionBodyPreference(s, WhenPossibleWithSilentEnforcement),
-                    v => GetExpressionBodyPreferenceEditorConfigString(v)),
+                    GetExpressionBodyPreferenceEditorConfigString),
                 new RoamingProfileStorageLocation($"TextEditor.CSharp.Specific.{nameof(PreferExpressionBodiedLambdas)}")});
 
         public static CodeStyleOption<ExpressionBodyPreference> ParseExpressionBodyPreference(
