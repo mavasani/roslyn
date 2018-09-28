@@ -158,5 +158,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     Hash.CombineValues(_formatArguments));
             }
         }
+
+        internal static string[] GetCustomTags(bool isUnneccessary, bool isConfigurable, params string[] customTags)
+        {
+            if (customTags.Length == 0 && isConfigurable)
+            {
+                return isUnneccessary ? DiagnosticCustomTags.Unnecessary : DiagnosticCustomTags.Microsoft;
+            }
+
+            var customTagsBuilder = ArrayBuilder<string>.GetInstance();
+            customTagsBuilder.AddRange(customTags.Concat(DiagnosticCustomTags.Microsoft));
+
+            if (!isConfigurable)
+            {
+                customTagsBuilder.Add(WellKnownDiagnosticTags.NotConfigurable);
+            }
+
+            if (isUnneccessary)
+            {
+                customTagsBuilder.Add(WellKnownDiagnosticTags.Unnecessary);
+            }
+
+            return customTagsBuilder.ToArrayAndFree();
+        }
     }
 }

@@ -2,6 +2,7 @@
 [*.{cs,vb}]
 # Local functions are camelCase
 dotnet_naming_style.local_function_style.capitalization = camel_case
+dotnet_style_unused_expression_assignment_preference = discard_variable:error
 
 # CSharp code style settings:
 [*.cs]
