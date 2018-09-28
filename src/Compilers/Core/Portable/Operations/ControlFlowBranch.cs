@@ -11,7 +11,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
     /// Represents a control flow branch from a <see cref="Source"/> basic block to a <see cref="Destination"/>
     /// basic block in a <see cref="ControlFlowGraph"/>.
     /// </summary>
-    public sealed class ControlFlowBranch
+    public sealed class ControlFlowBranch : IControlFlowBranch
     {
         private ImmutableArray<ControlFlowRegion> _lazyLeavingRegions;
         private ImmutableArray<ControlFlowRegion> _lazyFinallyRegions;
@@ -156,5 +156,9 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
                 return _lazyFinallyRegions;
             }
         }
+
+        #region IControlFlowBranch implementation
+        IBasicBlock IControlFlowBranch.Destination => this.Destination;
+        #endregion
     }
 }

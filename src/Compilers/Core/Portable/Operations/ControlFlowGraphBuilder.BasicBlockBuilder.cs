@@ -1,17 +1,14 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
 using Microsoft.CodeAnalysis.PooledObjects;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis
 {
     internal partial class ControlFlowGraphBuilder
     {
-        internal sealed class BasicBlockBuilder
+        internal sealed class BasicBlockBuilder : IBasicBlock
         {
             public int Ordinal;
             public readonly BasicBlockKind Kind;
@@ -306,10 +303,34 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
                 _predecessor2 = null;
             }
 
-            internal struct Branch
+            #region IBasicBlock implementation
+            ImmutableArray<IOperation> IBasicBlock.Operations => this.StatementsOpt.ToImmutable();
+
+            IControlFlowBranch IBasicBlock.FallThroughSuccessor => this.FallThrough;
+
+            IControlFlowBranch IBasicBlock.ConditionalSuccessor => this.Conditional;
+
+            ControlFlowRegion IBasicBlock.EnclosingRegion => this.Region;
+
+            BasicBlockKind IBasicBlock.Kind => this.Kind;
+
+            IOperation IBasicBlock.BranchValue => this.BranchValue;
+
+            ControlFlowConditionKind IBasicBlock.ConditionKind => this.ConditionKind;
+
+            int IBasicBlock.Ordinal => this.Ordinal;
+
+            bool IBasicBlock.IsReachable => this.IsReachable;
+            #endregion
+
+            internal struct Branch : IControlFlowBranch
             {
                 public ControlFlowBranchSemantics Kind { get; set; }
                 public BasicBlockBuilder Destination { get; set; }
+
+                IBasicBlock IControlFlowBranch.Destination => this.Destination;
+
+                ControlFlowBranchSemantics IControlFlowBranch.Semantics => this.Kind;
             }
         }
     }

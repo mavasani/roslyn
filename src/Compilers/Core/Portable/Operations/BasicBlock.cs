@@ -12,7 +12,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
     /// Control flow leaves the basic block by taking either the <see cref="ConditionalSuccessor"/> branch or
     /// the <see cref="FallThroughSuccessor"/> branch.
     /// </summary>
-    public sealed class BasicBlock
+    public sealed class BasicBlock : IBasicBlock
     {
 #if DEBUG
         private bool _successorsAreSealed;
@@ -128,6 +128,10 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
         /// Enclosing region.
         /// </summary>
         public ControlFlowRegion EnclosingRegion { get; }
+
+        IControlFlowBranch IBasicBlock.FallThroughSuccessor => this.FallThroughSuccessor;
+
+        IControlFlowBranch IBasicBlock.ConditionalSuccessor => this.ConditionalSuccessor;
 
         internal void SetSuccessors(ControlFlowBranch successor, ControlFlowBranch conditionalSuccessor)
         {
