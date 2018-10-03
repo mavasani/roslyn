@@ -85,6 +85,10 @@ namespace Microsoft.CodeAnalysis
                         return ValueUsageInfo.Read;
                 }
             }
+            else if (operation.Parent is IDeclarationExpressionOperation declarationExpression)
+            {
+                return declarationExpression.GetValueUsageInfo();
+            }
             else if (IsInLeftOfDeconstructionAssignment(operation))
             {
                 return ValueUsageInfo.Write;

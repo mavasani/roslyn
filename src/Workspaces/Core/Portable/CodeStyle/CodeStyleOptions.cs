@@ -200,6 +200,21 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                 EditorConfigStorageLocation.ForBoolCodeStyleOption("dotnet_style_prefer_conditional_expression_over_return"),
                 new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.PreferConditionalExpressionOverReturn")});
 
+        private static readonly CodeStyleOption<UnusedExpressionAssignmentPreference> s_preferExplicitAssignmentForUnusedExpressionValuesNone =
+            new CodeStyleOption<UnusedExpressionAssignmentPreference>(CodeStyle.UnusedExpressionAssignmentPreference.None, NotificationOption.Silent);
+        private static readonly CodeStyleOption<UnusedExpressionAssignmentPreference> s_preferExplicitAssignmentForUnusedExpressionValuesDiscard =
+            new CodeStyleOption<UnusedExpressionAssignmentPreference>(CodeStyle.UnusedExpressionAssignmentPreference.DiscardVariable, NotificationOption.Silent);
+
+        internal static readonly PerLanguageOption<CodeStyleOption<UnusedExpressionAssignmentPreference>> UnusedExpressionAssignment = CreateOption(
+            CodeStyleOptionGroups.ExpressionLevelPreferences, nameof(UnusedExpressionAssignment),
+            defaultValue: s_preferExplicitAssignmentForUnusedExpressionValuesDiscard,
+            storageLocations: new OptionStorageLocation[]{
+                new EditorConfigStorageLocation<CodeStyleOption<UnusedExpressionAssignmentPreference>>(
+                    "dotnet_style_unused_expression_assignment_preference",
+                    s => ParseUnusedExpressionAssignmentPreference(s),
+                    GetUnusedExpressionAssignmentPreferenceEditorConfigString),
+                new RoamingProfileStorageLocation($"TextEditor.%LANGUAGE%.Specific.{nameof(UnusedExpressionAssignment)}Preference")});
+
         private static readonly CodeStyleOption<AccessibilityModifiersRequired> s_requireAccessibilityModifiersDefault =
             new CodeStyleOption<AccessibilityModifiersRequired>(AccessibilityModifiersRequired.ForNonInterfaceMembers, NotificationOption.Silent);
 
@@ -315,6 +330,13 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                 KeyValuePairUtil.Create("never_if_unnecessary", ParenthesesPreference.NeverIfUnnecessary),
             });
 
+        private static readonly BidirectionalMap<string, UnusedExpressionAssignmentPreference> s_unusedExpressionAssignmentPreferenceMap =
+            new BidirectionalMap<string, UnusedExpressionAssignmentPreference>(new[]
+            {
+                KeyValuePairUtil.Create("none", UnusedExpressionAssignmentPreference.None),
+                KeyValuePairUtil.Create("discard_variable", UnusedExpressionAssignmentPreference.DiscardVariable),
+                KeyValuePairUtil.Create("unused_local_variable", UnusedExpressionAssignmentPreference.UnusedLocalVariable),
+            });
 
         static CodeStyleOptions()
         {
@@ -341,6 +363,25 @@ namespace Microsoft.CodeAnalysis.CodeStyle
         {
             Debug.Assert(s_parenthesesPreferenceMap.ContainsValue(option.Value));
             var value = s_parenthesesPreferenceMap.GetKeyOrDefault(option.Value) ?? s_parenthesesPreferenceMap.GetKeyOrDefault(ParenthesesPreference.AlwaysForClarity);
+            return option.Notification == null ? value : $"{value}:{option.Notification.ToEditorConfigString()}";
+        }
+
+        private static Optional<CodeStyleOption<UnusedExpressionAssignmentPreference>> ParseUnusedExpressionAssignmentPreference(string optionString)
+        {
+            if (TryGetCodeStyleValueAndOptionalNotification(optionString,
+                out var value, out var notificationOpt))
+            {
+                return new CodeStyleOption<UnusedExpressionAssignmentPreference>(
+                    s_unusedExpressionAssignmentPreferenceMap.GetValueOrDefault(value), notificationOpt ?? NotificationOption.Silent);
+            }
+
+            return s_preferExplicitAssignmentForUnusedExpressionValuesNone;
+        }
+
+        private static string GetUnusedExpressionAssignmentPreferenceEditorConfigString(CodeStyleOption<UnusedExpressionAssignmentPreference> option)
+        {
+            Debug.Assert(s_unusedExpressionAssignmentPreferenceMap.ContainsValue(option.Value));
+            var value = s_unusedExpressionAssignmentPreferenceMap.GetKeyOrDefault(option.Value) ?? s_unusedExpressionAssignmentPreferenceMap.GetKeyOrDefault(CodeStyle.UnusedExpressionAssignmentPreference.None);
             return option.Notification == null ? value : $"{value}:{option.Notification.ToEditorConfigString()}";
         }
     }

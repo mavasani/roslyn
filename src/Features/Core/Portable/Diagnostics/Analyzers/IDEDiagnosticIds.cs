@@ -84,6 +84,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         public const string UseExpressionBodyForLambdaExpressionsDiagnosticId = "IDE0053";
 
+        public const string ExpressionValueIsUnusedDiagnosticId = "IDE0055";
+        public const string ValueAssignedIsUnusedDiagnosticId = "IDE0056";
+
         // Analyzer error Ids
         public const string AnalyzerChangedId = "IDE1001";
         public const string AnalyzerDependencyConflictId = "IDE1002";

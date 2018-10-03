@@ -43,26 +43,11 @@ namespace Microsoft.CodeAnalysis.CodeQuality
             bool isEnabledByDefault = true,
             bool isConfigurable = true,
             params string[] customTags)
-        {
-            var customTagsBuilder = ArrayBuilder<string>.GetInstance();
-            customTagsBuilder.AddRange(customTags.Concat(WellKnownDiagnosticTags.Telemetry));
-
-            if (!isConfigurable)
-            {
-                customTagsBuilder.Add(WellKnownDiagnosticTags.NotConfigurable);
-            }
-
-            if (isUnneccessary)
-            {
-                customTagsBuilder.Add(WellKnownDiagnosticTags.Unnecessary);
-            }
-
-            return new DiagnosticDescriptor(
-                id, title, messageFormat,
-                DiagnosticCategory.CodeQuality,
-                DiagnosticSeverity.Info,
-                isEnabledByDefault,
-                customTags: customTagsBuilder.ToArrayAndFree());
-        }
+            =>  new DiagnosticDescriptor(
+                    id, title, messageFormat,
+                    DiagnosticCategory.CodeQuality,
+                    DiagnosticSeverity.Info,
+                    isEnabledByDefault,
+                    customTags: DiagnosticHelper.GetCustomTags(isUnneccessary, isConfigurable, customTags));
     }
 }

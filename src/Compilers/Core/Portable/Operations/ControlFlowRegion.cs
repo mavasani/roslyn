@@ -142,10 +142,5 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
             }
 #endif
         }
-
-        internal bool ContainsBlock(int destinationOrdinal)
-        {
-            return FirstBlockOrdinal <= destinationOrdinal && LastBlockOrdinal >= destinationOrdinal;
-        }
     }
 }

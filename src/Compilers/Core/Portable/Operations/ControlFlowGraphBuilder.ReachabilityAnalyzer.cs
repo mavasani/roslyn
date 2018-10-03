@@ -1,19 +1,18 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using Microsoft.CodeAnalysis.PooledObjects;
-using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis
 {
     internal sealed partial class ControlFlowGraphBuilder
     {
-        internal sealed class ReachabilityAnalyzer : IDataFlowAnalyzer<bool, BasicBlockBuilder, BasicBlockBuilder.Branch>
+        internal sealed class ReachabilityAnalyzer : IDataFlowAnalyzer<bool>
         {
             private BitVector _visited = BitVector.Empty;
             private ReachabilityAnalyzer() { }
 
             public static void Run(ArrayBuilder<BasicBlockBuilder> blocks)
-                => CustomDataFlowAnalysis<BasicBlockBuilder, BasicBlockBuilder.Branch, ReachabilityAnalyzer, bool>.Run(blocks, new ReachabilityAnalyzer());
+                => CustomDataFlowAnalysis<ReachabilityAnalyzer, bool>.Run(blocks.ToImmutable(), new ReachabilityAnalyzer());
 
             public bool AnalyzeUnreachableBlocks => false;
 
@@ -22,6 +21,12 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
                 SetCurrentAnalysisData(basicBlock, isReachable: true);
                 return true;
             }
+
+            public bool AnalyzeNonConditionalBranch(BasicBlockBuilder basicBlock, bool currentAnalysisData)
+                => currentAnalysisData;
+
+            public (bool fallThroughSuccessorData, bool conditionalSuccessorData) AnalyzeConditionalBranch(BasicBlockBuilder basicBlock, bool currentAnalysisData)
+                => (currentAnalysisData, currentAnalysisData);
 
             public void SetCurrentAnalysisData(BasicBlockBuilder basicBlock, bool isReachable)
             {
@@ -37,8 +42,9 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
 
             public bool IsEqual(bool analysisData1, bool analysisData2) => analysisData1 == analysisData2;
 
-            public (bool fallThroughSuccessorData, bool conditionalSuccessorData) SplitForConditionalBranch(BasicBlockBuilder basicBlock, bool currentAnalysisData)
-                => (currentAnalysisData, currentAnalysisData);
+            public void Dispose()
+            {
+            }
         }
     }
 }

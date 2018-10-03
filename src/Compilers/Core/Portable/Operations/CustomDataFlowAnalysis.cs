@@ -1,16 +1,22 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System.Collections.Immutable;
 using System.Diagnostics;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis
 {
-    internal static class CustomDataFlowAnalysis<TBasicBlock, TControlFlowBranch, TDataFlowAnalyzer, TBlockAnalysisData>
-        where TBasicBlock : IBasicBlock
-        where TControlFlowBranch: IControlFlowBranch
-        where TDataFlowAnalyzer: IDataFlowAnalyzer<TBlockAnalysisData, TBasicBlock, TControlFlowBranch>
+#if WORKSPACE
+    using TBasicBlock = BasicBlock;
+    using TControlFlowBranch = ControlFlowBranch;
+#else
+    using TBasicBlock = BasicBlockBuilder;
+    using TControlFlowBranch = BasicBlockBuilder.Branch;
+#endif
+
+    internal static class CustomDataFlowAnalysis<TDataFlowAnalyzer, TBlockAnalysisData>
+        where TDataFlowAnalyzer: IDataFlowAnalyzer<TBlockAnalysisData>
     {
         /// <summary>
         /// Runs dataflow analysis for the given <paramref name="analyzer"/> on the given <paramref name="blocks"/>.
@@ -18,14 +24,14 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
         /// <param name="blocks">Blocks on which to execute analysis.</param>
         /// <param name="analyzer">Dataflow analyzer.</param>
         /// <returns>Block analysis data for the last block.</returns>
-        internal static TBlockAnalysisData Run(ArrayBuilder<TBasicBlock> blocks, TDataFlowAnalyzer analyzer)
+        internal static TBlockAnalysisData Run(ImmutableArray<TBasicBlock> blocks, TDataFlowAnalyzer analyzer)
         {
             var continueDispatchAfterFinally = PooledDictionary<ControlFlowRegion, bool>.GetInstance();
             var dispatchedExceptionsFromRegions = PooledHashSet<ControlFlowRegion>.GetInstance();
             int firstBlockOrdinal = 0;
-            int lastBlockOrdinal = blocks.Count - 1;
+            int lastBlockOrdinal = blocks.Length - 1;
 
-            var unreachableBlocksToVisit = ArrayBuilder<IBasicBlock>.GetInstance();
+            var unreachableBlocksToVisit = ArrayBuilder<TBasicBlock>.GetInstance();
             if (analyzer.AnalyzeUnreachableBlocks)
             {
                 for (int i = firstBlockOrdinal; i <= lastBlockOrdinal; i++)
@@ -51,28 +57,28 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
         }
 
         private static TBlockAnalysisData RunCore(
-            ArrayBuilder<TBasicBlock> blocks,
+            ImmutableArray<TBasicBlock> blocks,
             TDataFlowAnalyzer analyzer,
             int firstBlockOrdinal,
             int lastBlockOrdinal,
             TBlockAnalysisData initialAnalysisData,
-            ArrayBuilder<IBasicBlock> unreachableBlocksToVisit,
-            ArrayBuilder<IBasicBlock> outOfRangeBlocksToVisit,
+            ArrayBuilder<TBasicBlock> unreachableBlocksToVisit,
+            ArrayBuilder<TBasicBlock> outOfRangeBlocksToVisit,
             PooledDictionary<ControlFlowRegion, bool> continueDispatchAfterFinally,
             PooledHashSet<ControlFlowRegion> dispatchedExceptionsFromRegions)
         {
-            var toVisit = ArrayBuilder<IBasicBlock>.GetInstance();
+            var toVisit = ArrayBuilder<TBasicBlock>.GetInstance();
 
             var firstBlock = blocks[firstBlockOrdinal];
             analyzer.SetCurrentAnalysisData(firstBlock, initialAnalysisData);
             toVisit.Push(firstBlock);
 
-            var processedBlocks = PooledHashSet<IBasicBlock>.GetInstance();
+            var processedBlocks = PooledHashSet<TBasicBlock>.GetInstance();
             TBlockAnalysisData resultAnalysisData = default;
 
             do
             {
-                IBasicBlock current;
+                TBasicBlock current;
                 if (toVisit.Count > 0)
                 {
                     current = toVisit.Pop();
@@ -103,7 +109,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
                         continue;
                     }
 
-                    analyzer.SetCurrentAnalysisData((TBasicBlock)current, analyzer.GetInitialAnalysisData());
+                    analyzer.SetCurrentAnalysisData(current, analyzer.GetInitialAnalysisData());
                 }
 
                 if (current.Ordinal < firstBlockOrdinal || current.Ordinal > lastBlockOrdinal)
@@ -118,13 +124,13 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
                     dispatchedExceptionsFromRegions.Remove(current.EnclosingRegion);
                 }
 
-                TBlockAnalysisData fallThroughAnalysisData = analyzer.AnalyzeBlock((TBasicBlock)current);
+                TBlockAnalysisData fallThroughAnalysisData = analyzer.AnalyzeBlock(current);
                 bool fallThroughSuccessorIsReachable = true;
 
                 if (current.ConditionKind != ControlFlowConditionKind.None)
                 {
                     TBlockAnalysisData conditionalSuccessorAnalysisData;
-                    (fallThroughAnalysisData, conditionalSuccessorAnalysisData) = analyzer.SplitForConditionalBranch((TBasicBlock)current, fallThroughAnalysisData);
+                    (fallThroughAnalysisData, conditionalSuccessorAnalysisData) = analyzer.AnalyzeConditionalBranch(current, fallThroughAnalysisData);
 
                     bool conditionalSuccesorIsReachable = true;
                     if (current.BranchValue.ConstantValue.HasValue && current.BranchValue.ConstantValue.Value is bool constant)
@@ -144,15 +150,15 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
                         followBranch(current, current.ConditionalSuccessor, conditionalSuccessorAnalysisData);
                     }
                 }
-
-                if (current.Ordinal == lastBlockOrdinal)
+                else
                 {
-                    resultAnalysisData = fallThroughAnalysisData;
+                    fallThroughAnalysisData = analyzer.AnalyzeNonConditionalBranch(current, fallThroughAnalysisData);
                 }
 
                 if (fallThroughSuccessorIsReachable || analyzer.AnalyzeUnreachableBlocks)
                 {
-                    IControlFlowBranch branch = current.FallThroughSuccessor;
+
+                    TControlFlowBranch branch = current.FallThroughSuccessor;
                     followBranch(current, branch, fallThroughAnalysisData);
 
                     if (current.EnclosingRegion.Kind == ControlFlowRegionKind.Finally &&
@@ -162,6 +168,11 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
                             branch.Semantics != ControlFlowBranchSemantics.Rethrow &&
                             current.FallThroughSuccessor.Semantics == ControlFlowBranchSemantics.StructuredExceptionHandling;
                     }
+                }
+
+                if (current.Ordinal == lastBlockOrdinal)
+                {
+                    resultAnalysisData = fallThroughAnalysisData;
                 }
 
                 // We are using very simple approach: 
@@ -177,8 +188,14 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
             toVisit.Free();
             return resultAnalysisData;
 
-            void followBranch(IBasicBlock current, IControlFlowBranch branch, TBlockAnalysisData currentAnalsisData)
+            void followBranch(TBasicBlock current, TControlFlowBranch branch, TBlockAnalysisData currentAnalsisData)
             {
+#if WORKSPACE
+                if (branch == null)
+                {
+                    return;
+                }
+#endif
                 switch (branch.Semantics)
                 {
                     case ControlFlowBranchSemantics.None:
@@ -196,7 +213,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
 
                         if (stepThroughFinally(current.EnclosingRegion, branch.Destination, ref currentAnalsisData))
                         {
-                            var destination = (TBasicBlock)branch.Destination;
+                            var destination = branch.Destination;
                             var currentDestinationData = analyzer.GetCurrentAnalysisData(destination);
                             var mergedAnalysisData = analyzer.Merge(currentDestinationData, currentAnalsisData);
                             if (!analyzer.IsEqual(currentDestinationData, mergedAnalysisData) &&
@@ -215,7 +232,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
             }
 
             // Returns whether we should proceed to the destination after finallies were taken care of.
-            bool stepThroughFinally(ControlFlowRegion region, IBasicBlock destination, ref TBlockAnalysisData currentAnalysisData)
+            bool stepThroughFinally(ControlFlowRegion region, TBasicBlock destination, ref TBlockAnalysisData currentAnalysisData)
             {
                 int destinationOrdinal = destination.Ordinal;
                 while (!region.ContainsBlock(destinationOrdinal))
@@ -243,7 +260,6 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis
             bool stepThroughSingleFinally(ControlFlowRegion @finally, ref TBlockAnalysisData currentAnalysisData)
             {
                 Debug.Assert(@finally.Kind == ControlFlowRegionKind.Finally);
-
                 var previousAnalysisData = analyzer.GetCurrentAnalysisData(blocks[@finally.FirstBlockOrdinal]);
                 var mergedAnalysisData = analyzer.Merge(previousAnalysisData, currentAnalysisData);
                 if (!analyzer.IsEqual(previousAnalysisData, mergedAnalysisData))

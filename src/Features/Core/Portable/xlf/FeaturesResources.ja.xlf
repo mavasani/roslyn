@@ -62,6 +62,11 @@
         <target state="new">Convert to tuple</target>
         <note />
       </trans-unit>
+      <trans-unit id="Expression_value_is_never_used">
+        <source>Expression value is never used</source>
+        <target state="new">Expression value is never used</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Fix_typo_0">
         <source>Fix typo '{0}'</source>
         <target state="translated">'{0}' の入力ミスを修正します</target>
@@ -120,6 +125,16 @@
       <trans-unit id="Use_interpolated_verbatim_string">
         <source>Use interpolated verbatim string</source>
         <target state="new">Use interpolated verbatim string</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Value_assigned_to_0_is_never_used">
+        <source>Value assigned to '{0}' is never used</source>
+        <target state="new">Value assigned to '{0}' is never used</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Value_assigned_to_symbol_is_never_used">
+        <source>Value assigned to symbol is never used</source>
+        <target state="new">Value assigned to symbol is never used</target>
         <note />
       </trans-unit>
       <trans-unit id="generic_overload">

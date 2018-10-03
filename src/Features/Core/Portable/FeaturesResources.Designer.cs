@@ -1235,6 +1235,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Expression value is never used.
+        /// </summary>
+        internal static string Expression_value_is_never_used {
+            get {
+                return ResourceManager.GetString("Expression_value_is_never_used", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Extension methods.
         /// </summary>
         internal static string Extension_methods {
@@ -3949,6 +3958,24 @@ namespace Microsoft.CodeAnalysis {
         internal static string Using_ref_structs_will_prevent_the_debug_session_from_continuing {
             get {
                 return ResourceManager.GetString("Using_ref_structs_will_prevent_the_debug_session_from_continuing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Value assigned to &apos;{0}&apos; is never used.
+        /// </summary>
+        internal static string Value_assigned_to_0_is_never_used {
+            get {
+                return ResourceManager.GetString("Value_assigned_to_0_is_never_used", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Value assigned to symbol is never used.
+        /// </summary>
+        internal static string Value_assigned_to_symbol_is_never_used {
+            get {
+                return ResourceManager.GetString("Value_assigned_to_symbol_is_never_used", resourceCulture);
             }
         }
         
