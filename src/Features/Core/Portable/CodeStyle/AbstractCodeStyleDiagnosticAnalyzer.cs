@@ -85,11 +85,12 @@ namespace Microsoft.CodeAnalysis.CodeStyle
             LocalizableString messageFormat,
             bool isUnneccessary = false,
             bool isConfigurable = true,
+            DiagnosticSeverity defaultSeverity = DiagnosticSeverity.Hidden,
             params string[] customTags)
             =>  new DiagnosticDescriptor(
                     id, title, messageFormat,
                     DiagnosticCategory.Style,
-                    DiagnosticSeverity.Hidden,
+                    defaultSeverity,
                     isEnabledByDefault: true,
                     customTags: DiagnosticHelper.GetCustomTags(isUnneccessary, isConfigurable, customTags));
         

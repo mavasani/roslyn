@@ -209,7 +209,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedMembers
                         // while the increment operation '_f2++' is child of a return statement, which uses the result of the increment.
                         // For the above test, '_f1' can be safely removed without affecting the semantics of the program, while '_f2' cannot be removed.
 
-                        if (memberReference.Parent.Parent?.Type == null)
+                        if (memberReference.Parent.Parent is IExpressionStatementOperation)
                         {
                             valueUsageInfo = ValueUsageInfo.Write;
                         }

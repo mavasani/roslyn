@@ -18,6 +18,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             IDEDiagnosticIds.ExpressionValueIsUnusedDiagnosticId,
             new LocalizableResourceString(nameof(FeaturesResources.Expression_value_is_never_used), FeaturesResources.ResourceManager, typeof(FeaturesResources)),
             new LocalizableResourceString(nameof(FeaturesResources.Expression_value_is_never_used), FeaturesResources.ResourceManager, typeof(FeaturesResources)),
+            defaultSeverity: DiagnosticSeverity.Info,
             isUnneccessary: true);
 
         // IDE0056: "Value assigned to '{0}' is never used"
@@ -25,6 +26,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             IDEDiagnosticIds.ValueAssignedIsUnusedDiagnosticId,
             new LocalizableResourceString(nameof(FeaturesResources.Value_assigned_to_symbol_is_never_used), FeaturesResources.ResourceManager, typeof(FeaturesResources)),
             new LocalizableResourceString(nameof(FeaturesResources.Value_assigned_to_0_is_never_used), FeaturesResources.ResourceManager, typeof(FeaturesResources)),
+            defaultSeverity: DiagnosticSeverity.Info,
             isUnneccessary: true);
 
         private readonly bool _supportsDisard;
@@ -77,7 +79,8 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             var value = ((IExpressionStatementOperation)context.Operation).Operation;
             if (value.Type == null ||
                 value.Type.SpecialType == SpecialType.System_Void ||
-                value is IAssignmentOperation)
+                value is IAssignmentOperation ||
+                value is IIncrementOrDecrementOperation)
             {
                 return;
             }

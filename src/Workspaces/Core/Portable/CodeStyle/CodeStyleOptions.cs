@@ -372,7 +372,7 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                 out var value, out var notificationOpt))
             {
                 return new CodeStyleOption<UnusedExpressionAssignmentPreference>(
-                    s_unusedExpressionAssignmentPreferenceMap.GetValueOrDefault(value), notificationOpt ?? NotificationOption.Silent);
+                    s_unusedExpressionAssignmentPreferenceMap.GetValueOrDefault(value), notificationOpt ?? NotificationOption.Suggestion);
             }
 
             return s_preferExplicitAssignmentForUnusedExpressionValuesNone;
