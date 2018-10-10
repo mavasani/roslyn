@@ -204,6 +204,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
                     }
                     break;
+
+                case BoundKind.SuppressNullableWarningExpression:
+                    {
+                        var outer = (BoundSuppressNullableWarningExpression)expr;
+                        var inner = CheckValue(outer.Expression, valueKind, diagnostics);
+                        return outer.Update(inner, inner.Type);
+                    }
             }
 
             bool hasResolutionErrors = false;
@@ -315,6 +322,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case BoundKind.EventAccess:
                     return CheckEventValueKind((BoundEventAccess)expr, valueKind, diagnostics);
+
+                case BoundKind.SuppressNullableWarningExpression:
+                    // https://github.com/dotnet/roslyn/issues/29710 We can reach this assertion
+                    Debug.Assert(false);
+                    return CheckValueKind(node, ((BoundSuppressNullableWarningExpression)expr).Expression, valueKind, checkingReceiver, diagnostics);
             }
 
             // easy out for a very common RValue case.
@@ -905,7 +917,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // change from Dev10 which reports this error for struct types only,
                     // not for type parameters constrained to "struct".
 
-                    Debug.Assert((object)propertySymbol.Type != null);
+                    Debug.Assert(!propertySymbol.Type.IsNull);
                     Error(diagnostics, ErrorCode.ERR_ReturnNotLValue, expr.Syntax, propertySymbol);
                 }
                 else
@@ -1432,7 +1444,7 @@ moreArguments:
 
                         if (parameter.RefKind == RefKind.In &&
                             inParametersMatchedWithArgs?[i] != true &&
-                            parameter.Type.IsByRefLikeType == false)
+                            parameter.Type.TypeSymbol.IsByRefLikeType == false)
                         {
                             return parameter;
                         }
@@ -1616,7 +1628,7 @@ moreArguments:
         {
             Debug.Assert((object)field != null);
             Debug.Assert(RequiresAssignableVariable(kind));
-            Debug.Assert((object)field.Type != null);
+            Debug.Assert(!field.Type.IsNull);
 
             // It's clearer to say that the address can't be taken than to say that the field can't be modified
             // (even though the latter message gives more explanation of why).
@@ -2201,6 +2213,12 @@ moreArguments:
                     return Math.Max(consEscape,
                                     GetValEscape(conditional.Alternative, scopeOfTheContainingExpression));
 
+                case BoundKind.NullCoalescingOperator:
+                    var coalescingOp = (BoundNullCoalescingOperator)expr;
+
+                    return Math.Max(GetValEscape(coalescingOp.LeftOperand, scopeOfTheContainingExpression),
+                                    GetValEscape(coalescingOp.RightOperand, scopeOfTheContainingExpression));
+
                 case BoundKind.FieldAccess:
                     var fieldAccess = (BoundFieldAccess)expr;
                     var fieldSymbol = fieldAccess.FieldSymbol;
@@ -2347,7 +2365,6 @@ moreArguments:
                 case BoundKind.AsOperator:
                 case BoundKind.AwaitExpression:
                 case BoundKind.ConditionalAccess:
-                case BoundKind.NullCoalescingOperator:
                 case BoundKind.ArrayAccess:
                     // only possible in error cases (if possible at all)
                     return scopeOfTheContainingExpression;
@@ -2503,6 +2520,11 @@ moreArguments:
                     }
 
                     return CheckValEscape(conditional.Alternative.Syntax, conditional.Alternative, escapeFrom, escapeTo, checkingReceiver: false, diagnostics: diagnostics);
+
+                case BoundKind.NullCoalescingOperator:
+                    var coalescingOp = (BoundNullCoalescingOperator)expr;
+                    return CheckValEscape(coalescingOp.LeftOperand.Syntax, coalescingOp.LeftOperand, escapeFrom, escapeTo, checkingReceiver, diagnostics) &&
+                            CheckValEscape(coalescingOp.RightOperand.Syntax, coalescingOp.RightOperand, escapeFrom, escapeTo, checkingReceiver, diagnostics);
 
                 case BoundKind.FieldAccess:
                     var fieldAccess = (BoundFieldAccess)expr;
@@ -2674,7 +2696,6 @@ moreArguments:
                 case BoundKind.AsOperator:
                 case BoundKind.AwaitExpression:
                 case BoundKind.ConditionalAccess:
-                case BoundKind.NullCoalescingOperator:
                 case BoundKind.ArrayAccess:
                     // only possible in error cases (if possible at all)
                     return false;

@@ -234,15 +234,15 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
                     }
                 }
 
-                if (valueUsageInfo.ContainsReadOrReadableRef())
+                if (valueUsageInfo.IsReadFrom())
                 {
                     OnReadReferenceFound(symbol, operation);
                 }
 
-                if (valueUsageInfo.ContainsWriteOrWritableRef())
+                if (valueUsageInfo.IsWrittenTo())
                 {
                     // maybeWritten == 'ref' argument.
-                    OnWriteReferenceFound(symbol, operation, maybeWritten: valueUsageInfo == ValueUsageInfo.ReadableWritableRef);
+                    OnWriteReferenceFound(symbol, operation, maybeWritten: valueUsageInfo == ValueUsageInfo.ReadableWritableReference);
                 }
             }
 
