@@ -117,6 +117,16 @@
         <target state="new">Use block body for lambda expressions</target>
         <note />
       </trans-unit>
+      <trans-unit id="Use_discard_underscore">
+        <source>Use discard '_'</source>
+        <target state="new">Use discard '_'</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Use_discarded_local">
+        <source>Use discarded local</source>
+        <target state="new">Use discarded local</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Use_expression_body_for_lambda_expressions">
         <source>Use expression body for lambda expressions</source>
         <target state="new">Use expression body for lambda expressions</target>
@@ -135,6 +145,11 @@
       <trans-unit id="Value_assigned_to_symbol_is_never_used">
         <source>Value assigned to symbol is never used</source>
         <target state="new">Value assigned to symbol is never used</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Warning_colon_Conflict_with_discard_variable_declaration_below_in_this_method">
+        <source>Warning: Conflict with discard variable declaration below in this method</source>
+        <target state="new">Warning: Conflict with discard variable declaration below in this method</target>
         <note />
       </trans-unit>
       <trans-unit id="generic_overload">

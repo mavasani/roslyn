@@ -4043,6 +4043,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Warning: Conflict with discard variable declaration below in this method.
+        /// </summary>
+        internal static string Warning_colon_Conflict_with_discard_variable_declaration_below_in_this_method {
+            get {
+                return ResourceManager.GetString("Warning_colon_Conflict_with_discard_variable_declaration_below_in_this_method", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Warning: Declaration changes scope and may change meaning..
         /// </summary>
         internal static string Warning_colon_Declaration_changes_scope_and_may_change_meaning {

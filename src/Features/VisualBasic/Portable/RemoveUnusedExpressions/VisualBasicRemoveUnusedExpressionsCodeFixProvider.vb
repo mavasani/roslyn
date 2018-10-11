@@ -8,28 +8,10 @@ Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 Namespace Microsoft.CodeAnalysis.VisualBasic.RemoveUnusedExpressions
     <ExportCodeFixProvider(LanguageNames.VisualBasic, Name:=PredefinedCodeFixProviderNames.RemoveUnusedExpressions), [Shared]>
     Friend Class VisualBasicRemoveUnusedExpressionsCodeFixProvider
-        Inherits AbstractRemoveUnusedExpressionsCodeFixProvider(Of FieldDeclarationSyntax)
+        Inherits AbstractRemoveUnusedExpressionsCodeFixProvider(Of ExpressionStatementSyntax, ExpressionSyntax)
 
-        ''' <summary>
-        ''' This method adjusts the <paramref name="declarators"/> to remove based on whether or not all variable declarators
-        ''' within a field declaration should be removed,
-        ''' i.e. if all the fields declared within a field declaration are unused,
-        ''' we can remove the entire field declaration instead of individual variable declarators.
-        ''' </summary>
-        Protected Overrides Sub AdjustAndAddAppropriateDeclaratorsToRemove(fieldDeclarators As HashSet(Of FieldDeclarationSyntax), declarators As HashSet(Of SyntaxNode))
-            For Each variableDeclarator In fieldDeclarators.SelectMany(Function(f) f.Declarators)
-                AdjustAndAddAppropriateDeclaratorsToRemove(
-                    parentDeclaration:=variableDeclarator,
-                    childDeclarators:=variableDeclarator.Names,
-                    declarators:=declarators)
-            Next
-
-            For Each fieldDeclarator In fieldDeclarators
-                AdjustAndAddAppropriateDeclaratorsToRemove(
-                    parentDeclaration:=fieldDeclarator,
-                    childDeclarators:=fieldDeclarator.Declarators,
-                    declarators:=declarators)
-            Next
-        End Sub
+        Protected Overrides Function GetExpression(expressionStatement As ExpressionStatementSyntax) As ExpressionSyntax
+            Return expressionStatement.Expression
+        End Function
     End Class
 End Namespace
