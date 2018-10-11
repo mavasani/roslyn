@@ -85,7 +85,8 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             var value = ((IExpressionStatementOperation)context.Operation).Operation;
             if (value.Type == null ||
                 value.Type.SpecialType == SpecialType.System_Void ||
-                value is IAssignmentOperation)
+                value is IAssignmentOperation ||
+                value is IIncrementOrDecrementOperation)
             {
                 return;
             }
