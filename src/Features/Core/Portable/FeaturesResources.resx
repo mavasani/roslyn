@@ -1448,4 +1448,10 @@ This version used in: {2}</value>
   <data name="Value_assigned_to_symbol_is_never_used" xml:space="preserve">
     <value>Value assigned to symbol is never used</value>
   </data>
+  <data name="Use_discarded_local" xml:space="preserve">
+    <value>Use discarded local</value>
+  </data>
+  <data name="Use_discard_underscore" xml:space="preserve">
+    <value>Use discard '_'</value>
+  </data>
 </root>

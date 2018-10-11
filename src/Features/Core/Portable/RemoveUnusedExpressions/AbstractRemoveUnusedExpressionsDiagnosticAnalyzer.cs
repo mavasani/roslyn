@@ -2,17 +2,25 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis.CodeStyle;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions;
 using Microsoft.CodeAnalysis.Operations;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
 {
     internal abstract class AbstractRemoveUnusedExpressionsDiagnosticAnalyzer : AbstractCodeStyleDiagnosticAnalyzer
     {
+        private const string UnusedExpressionPreferenceKey = nameof(UnusedExpressionPreferenceKey);
+        private static readonly ImmutableDictionary<string, string> PreferDiscardPropertyBag =
+            ImmutableDictionary<string, string>.Empty.Add(UnusedExpressionPreferenceKey, nameof(UnusedExpressionAssignmentPreference.DiscardVariable));
+        private static readonly ImmutableDictionary<string, string> PreferUnusedLocalPropertyBag =
+            ImmutableDictionary<string, string>.Empty.Add(UnusedExpressionPreferenceKey, nameof(UnusedExpressionAssignmentPreference.UnusedLocalVariable));
+
         // IDE0055: "Expression value is never used"
         private static readonly DiagnosticDescriptor s_expressionValueIsUnusedRule = CreateDescriptorWithId(
             IDEDiagnosticIds.ExpressionValueIsUnusedDiagnosticId,
@@ -82,7 +90,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                 return;
             }
 
-            var (preference, severity) = GetOption(value.Syntax.SyntaxTree, value.Language, context.Options, context.CancellationToken);
+            var (preference, severity, properties) = GetOption(value.Syntax.SyntaxTree, value.Language, context.Options, context.CancellationToken);
             if (preference == UnusedExpressionAssignmentPreference.None ||
                 severity == ReportDiagnostic.Suppress)
             {
@@ -94,7 +102,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                                                      value.Syntax.GetLocation(),
                                                      severity,
                                                      additionalLocations: null,
-                                                     properties: null);
+                                                     properties);
             context.ReportDiagnostic(diagnostic);
         }
 
@@ -105,7 +113,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                 return;
             }
 
-            var (preference, severity) = GetOption(context.OperationBlocks[0].Syntax.SyntaxTree, context.OperationBlocks[0].Language, context.Options, context.CancellationToken);
+            var (preference, severity, properties) = GetOption(context.OperationBlocks[0].Syntax.SyntaxTree, context.OperationBlocks[0].Language, context.Options, context.CancellationToken);
             if (preference == UnusedExpressionAssignmentPreference.None ||
                 severity == ReportDiagnostic.Suppress)
             {
@@ -149,7 +157,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             }
         }
 
-        private (UnusedExpressionAssignmentPreference preference, ReportDiagnostic severity) GetOption(
+        private (UnusedExpressionAssignmentPreference preference, ReportDiagnostic severity, ImmutableDictionary<string, string> properties) GetOption(
             SyntaxTree syntaxTree,
             string language,
             AnalyzerOptions analyzerOptions,
@@ -158,7 +166,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             var optionSet = analyzerOptions.GetDocumentOptionSetAsync(syntaxTree, cancellationToken).GetAwaiter().GetResult();
             if (optionSet == null)
             {
-                return (UnusedExpressionAssignmentPreference.None, ReportDiagnostic.Suppress);
+                return (UnusedExpressionAssignmentPreference.None, ReportDiagnostic.Suppress, null);
             }
 
             var option = optionSet.GetOption(CodeStyleOptions.UnusedExpressionAssignment, language);
@@ -168,7 +176,25 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                 preference = UnusedExpressionAssignmentPreference.UnusedLocalVariable; 
             }
 
-            return (preference, option.Notification.Severity);
+            var properties = preference == UnusedExpressionAssignmentPreference.DiscardVariable
+                ? PreferDiscardPropertyBag
+                : PreferUnusedLocalPropertyBag;
+            return (preference, option.Notification.Severity, properties);
+        }
+
+        public static UnusedExpressionAssignmentPreference GetUnusedExpressionAssignmentPreference(Diagnostic diagnostic)
+        {
+            switch (diagnostic.Properties.Single().Value)
+            {
+                case nameof(UnusedExpressionAssignmentPreference.DiscardVariable):
+                    return UnusedExpressionAssignmentPreference.DiscardVariable;
+
+                case nameof(UnusedExpressionAssignmentPreference.UnusedLocalVariable):
+                    return UnusedExpressionAssignmentPreference.UnusedLocalVariable;
+
+                default:
+                    throw ExceptionUtilities.Unreachable;
+            }
         }
     }
 }

@@ -3772,6 +3772,24 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Use discard &apos;_&apos;.
+        /// </summary>
+        internal static string Use_discard_underscore {
+            get {
+                return ResourceManager.GetString("Use_discard_underscore", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use discarded local.
+        /// </summary>
+        internal static string Use_discarded_local {
+            get {
+                return ResourceManager.GetString("Use_discarded_local", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Use explicitly provided tuple name.
         /// </summary>
         internal static string Use_explicitly_provided_tuple_name {
