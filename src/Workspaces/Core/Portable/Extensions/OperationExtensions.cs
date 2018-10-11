@@ -62,7 +62,6 @@ namespace Microsoft.CodeAnalysis
                 return parenthesizedOperation.GetValueUsageInfo() &
                     ~(ValueUsageInfo.Write | ValueUsageInfo.Reference);
             }
-
             else if (operation.Parent is INameOfOperation ||
                      operation.Parent is ITypeOfOperation ||
                      operation.Parent is ISizeOfOperation)
