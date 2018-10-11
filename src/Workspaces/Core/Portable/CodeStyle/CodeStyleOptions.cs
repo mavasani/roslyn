@@ -201,9 +201,9 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                 new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.PreferConditionalExpressionOverReturn")});
 
         private static readonly CodeStyleOption<UnusedExpressionAssignmentPreference> s_preferExplicitAssignmentForUnusedExpressionValuesNone =
-            new CodeStyleOption<UnusedExpressionAssignmentPreference>(CodeStyle.UnusedExpressionAssignmentPreference.None, NotificationOption.Silent);
+            new CodeStyleOption<UnusedExpressionAssignmentPreference>(UnusedExpressionAssignmentPreference.None, NotificationOption.Silent);
         private static readonly CodeStyleOption<UnusedExpressionAssignmentPreference> s_preferExplicitAssignmentForUnusedExpressionValuesDiscard =
-            new CodeStyleOption<UnusedExpressionAssignmentPreference>(CodeStyle.UnusedExpressionAssignmentPreference.DiscardVariable, NotificationOption.Silent);
+            new CodeStyleOption<UnusedExpressionAssignmentPreference>(UnusedExpressionAssignmentPreference.DiscardVariable, NotificationOption.Suggestion);
 
         internal static readonly PerLanguageOption<CodeStyleOption<UnusedExpressionAssignmentPreference>> UnusedExpressionAssignment = CreateOption(
             CodeStyleOptionGroups.ExpressionLevelPreferences, nameof(UnusedExpressionAssignment),
@@ -372,7 +372,7 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                 out var value, out var notificationOpt))
             {
                 return new CodeStyleOption<UnusedExpressionAssignmentPreference>(
-                    s_unusedExpressionAssignmentPreferenceMap.GetValueOrDefault(value), notificationOpt ?? NotificationOption.Silent);
+                    s_unusedExpressionAssignmentPreferenceMap.GetValueOrDefault(value), notificationOpt ?? NotificationOption.Suggestion);
             }
 
             return s_preferExplicitAssignmentForUnusedExpressionValuesNone;
