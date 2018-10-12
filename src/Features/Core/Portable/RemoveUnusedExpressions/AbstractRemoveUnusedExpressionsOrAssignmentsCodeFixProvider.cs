@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.CodeStyle;
 
 namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
 {
-    internal abstract class AbstractRemoveUnusedExpressionsOrValuesCodeFixProvider : SyntaxEditorBasedCodeFixProvider
+    internal abstract class AbstractRemoveUnusedExpressionsOrAssignmentsCodeFixProvider : SyntaxEditorBasedCodeFixProvider
     {
         protected abstract string FixableDiagnosticId { get; }
         public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(FixableDiagnosticId);
