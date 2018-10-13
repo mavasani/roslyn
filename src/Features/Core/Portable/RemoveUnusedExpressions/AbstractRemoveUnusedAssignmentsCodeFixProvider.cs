@@ -1,114 +1,110 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeStyle;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.PooledObjects;
-using Microsoft.CodeAnalysis.Shared.Utilities;
-using Microsoft.CodeAnalysis.Simplification;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
 {
-    internal abstract class AbstractRemoveUnusedAssignmentsCodeFixProvider<TExpressionStatementSyntax, TExpressionSyntax> : AbstractRemoveUnusedExpressionsOrAssignmentsCodeFixProvider
-        where TExpressionStatementSyntax : SyntaxNode
-        where TExpressionSyntax : SyntaxNode
+    internal abstract class AbstractRemoveUnusedAssignmentsCodeFixProvider<TStatementSyntax, TBlockSyntax> : AbstractRemoveUnusedExpressionsOrAssignmentsCodeFixProvider
+        where TStatementSyntax : SyntaxNode
+        where TBlockSyntax : TStatementSyntax
     {
         protected sealed override string FixableDiagnosticId => IDEDiagnosticIds.ValueAssignedIsUnusedDiagnosticId;
 
-        protected abstract TExpressionSyntax GetExpression(TExpressionStatementSyntax expressionStatement);
+        protected abstract SyntaxNode UpdateNameForFlaggedNode(SyntaxNode node, SyntaxToken newName);
+        protected abstract TBlockSyntax GenerateBlock(IEnumerable<TStatementSyntax> statements);
 
-        protected sealed override async Task FixAllAsync(
-            Document document, ImmutableArray<Diagnostic> diagnostics,
-            SyntaxEditor editor, CancellationToken cancellationToken)
+        protected sealed override Task FixAllAsync(
+            IOrderedEnumerable<Diagnostic> diagnostics,
+            SemanticModel semanticModel,
+            SyntaxNode root,
+            UnusedExpressionAssignmentPreference preference,
+            Func<SyntaxNode, string> generateUniqueNameAtSpanStart,
+            SyntaxEditor editor,
+            CancellationToken cancellationToken)
         {
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-            var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-            var usedNames = PooledHashSet<string>.GetInstance();
+            IEnumerable<(SyntaxNode node, bool isUnusedSymbolReference)> nodesToFix = diagnostics.Select(
+                d => (root.FindNode(d.Location.SourceSpan), AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.IsUnusedLocalDiagnostic(d)));
+
+            var declarationStatementsBuilder = ArrayBuilder<TStatementSyntax>.GetInstance();
+            var nameReplacementsMap = PooledDictionary<SyntaxNode, SyntaxNode>.GetInstance();
 
             try
             {
-                foreach (var diagnostic in diagnostics.OrderBy(d => d.Location.SourceSpan.Start))
+                // Note this fixer only operates on code blocks which have no syntax errors (see "HasSyntaxErrors" usage in AbstractRemoveUnusedExpressionsDiagnosticAnalyzer).
+                // Hence, we can assume that each node to fix is parented by a StatementSyntax node.
+                foreach (var nodesByStatement in nodesToFix.GroupBy(n => n.node.FirstAncestorOrSelf<TStatementSyntax>()))
                 {
-                    var expressionStatement = root.FindNode(diagnostic.Location.SourceSpan).FirstAncestorOrSelf<TExpressionStatementSyntax>();
-                    if (expressionStatement == null)
+                    var statement = nodesByStatement.Key;
+                    declarationStatementsBuilder.Clear();
+                    nameReplacementsMap.Clear();
+
+                    foreach (var (node, isUnusedSymbolReference) in nodesByStatement)
                     {
-                        continue;
+                        var newName = preference == UnusedExpressionAssignmentPreference.DiscardVariable ? "_" : generateUniqueNameAtSpanStart(node);
+                        var newNameToken = editor.Generator.Identifier(newName);
+                        nameReplacementsMap.Add(node, UpdateNameForFlaggedNode(node, newNameToken));
+
+                        var declaredLocal = semanticModel.GetDeclaredSymbol(node, cancellationToken) as ILocalSymbol;
+                        if (declaredLocal != null)
+                        {
+                            // We have a dead initialization for a local declaration.
+                            if (!isUnusedSymbolReference)
+                            {
+                                declarationStatementsBuilder.Add((TStatementSyntax)editor.Generator.LocalDeclarationStatement(declaredLocal.Type, declaredLocal.Name));
+                            }
+                            else
+                            {
+                                Debug.Assert(preference == UnusedExpressionAssignmentPreference.DiscardVariable);
+                            }
+                        }
+                        else
+                        {
+                            // We have a dead assignment to a local/parameter.
+                            if (preference == UnusedExpressionAssignmentPreference.UnusedLocalVariable)
+                            {
+                                var type = semanticModel.GetTypeInfo(node, cancellationToken).Type;
+                                Contract.ThrowIfNull(type);
+                                declarationStatementsBuilder.Add((TStatementSyntax)editor.Generator.LocalDeclarationStatement(type, generateUniqueNameAtSpanStart(node)));
+                            }
+                        }
                     }
 
-                    var expression = GetExpression(expressionStatement);
-                    var preference = AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.GetUnusedExpressionAssignmentPreference(diagnostic);
-                    switch (preference)
+                    var newStatement = statement.ReplaceNodes(nameReplacementsMap.Keys, computeReplacementNode: (n, _) => nameReplacementsMap[n]);
+                    if (declarationStatementsBuilder.Count > 0)
                     {
-                        case UnusedExpressionAssignmentPreference.DiscardVariable:
-                            Debug.Assert(semanticModel.Language != LanguageNames.VisualBasic);
-                            var discardAssignmentExpression = GenerateDiscardAssignmentExpression(expression);
-                            editor.ReplaceNode(expression, discardAssignmentExpression);
-                            break;
-
-                        case UnusedExpressionAssignmentPreference.UnusedLocalVariable:
-                            var localDecl = GenerateNewLocalDeclarationStatement(expressionStatement, expression);
-                            editor.ReplaceNode(expressionStatement, localDecl);
-                            break;
+                        // If parent is a block, just insert new declarations before the current statement.
+                        if (statement.Parent is TBlockSyntax)
+                        {
+                            editor.InsertBefore(statement, declarationStatementsBuilder.ToImmutable());
+                        }
+                        else
+                        {
+                            // Otherwise, wrap the declaration statements and the current statement with a new block.
+                            declarationStatementsBuilder.Add(newStatement);
+                            newStatement = GenerateBlock(declarationStatementsBuilder);
+                        }
                     }
+
+                    editor.ReplaceNode(statement, newStatement);
                 }
             }
             finally
             {
-                usedNames.Free();
+                declarationStatementsBuilder.Free();
+                nameReplacementsMap.Free();
             }
 
-            return;
-
-            // Local functions.
-            TExpressionSyntax GenerateDiscardAssignmentExpression(TExpressionSyntax expression)
-            {
-                var discardAssignemnt = (TExpressionSyntax)editor.Generator.AssignmentStatement(
-                    left: editor.Generator.IdentifierName("_"),
-                    right: expression)
-                    .WithTriviaFrom(expression)
-                    .WithAdditionalAnnotations(Simplifier.Annotation);
-
-                // Check if we have an actual discard declaration, i.e. "var _ = ...",
-                // below this expression which collides with the discard assignment "_ = ...",
-                // and will cause a compiler error.
-                // If so, display a warning annotation to the user.
-                var discardSymbol = semanticModel.LookupSymbols(expression.SpanStart, name: "_").FirstOrDefault();
-                if (discardSymbol != null && discardSymbol.Locations[0].SourceSpan.Start > discardAssignemnt.SpanStart)
-                {
-                    discardAssignemnt = discardAssignemnt.WithAdditionalAnnotations(
-                        WarningAnnotation.Create(FeaturesResources.Warning_colon_Conflict_with_discard_variable_declaration_below_in_this_method));
-                }
-
-                return discardAssignemnt;
-            }
-
-            SyntaxNode GenerateNewLocalDeclarationStatement(TExpressionStatementSyntax expressionStatement, TExpressionSyntax expression)
-            {
-                var localName = GenerateUniqueName(expressionStatement);
-
-                // Mark with simplifier annotation so that 'var'/explicit type is correctly
-                // added based on user options.
-                return editor.Generator.LocalDeclarationStatement(
-                    name: localName,
-                    initializer: expression)
-                    .WithTriviaFrom(expressionStatement)
-                    .WithAdditionalAnnotations(Simplifier.Annotation);
-            }
-
-            string GenerateUniqueName(SyntaxNode node)
-            {
-                var name = NameGenerator.GenerateUniqueName("unused",
-                    n => !usedNames.Contains(n) && semanticModel.LookupSymbols(node.SpanStart, name: n).IsEmpty);
-                usedNames.Add(name);
-                return name;
-            }
+            return Task.CompletedTask;
         }
     }
 }

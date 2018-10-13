@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -16,10 +17,8 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
     internal abstract class AbstractRemoveUnusedExpressionsDiagnosticAnalyzer : AbstractCodeStyleDiagnosticAnalyzer
     {
         private const string UnusedExpressionPreferenceKey = nameof(UnusedExpressionPreferenceKey);
-        private static readonly ImmutableDictionary<string, string> PreferDiscardPropertyBag =
-            ImmutableDictionary<string, string>.Empty.Add(UnusedExpressionPreferenceKey, nameof(UnusedExpressionAssignmentPreference.DiscardVariable));
-        private static readonly ImmutableDictionary<string, string> PreferUnusedLocalPropertyBag =
-            ImmutableDictionary<string, string>.Empty.Add(UnusedExpressionPreferenceKey, nameof(UnusedExpressionAssignmentPreference.UnusedLocalVariable));
+        private const string OwningSymbolKey = nameof(OwningSymbolKey);
+        private const string IsUnusedLocalKey = nameof(IsUnusedLocalKey);
 
         // IDE0055: "Expression value is never used"
         private static readonly DiagnosticDescriptor s_expressionValueIsUnusedRule = CreateDescriptorWithId(
@@ -35,14 +34,14 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             new LocalizableResourceString(nameof(FeaturesResources.Value_assigned_to_0_is_never_used), FeaturesResources.ResourceManager, typeof(FeaturesResources)),
             isUnneccessary: true);
 
-        private readonly bool _supportsDisard;
+        private readonly bool _supportsDiscard;
 
         protected AbstractRemoveUnusedExpressionsDiagnosticAnalyzer(bool supportsDiscard)
             : base(ImmutableArray.Create(s_expressionValueIsUnusedRule, s_valueAssignedIsUnusedRule))
         {
-            _supportsDisard = supportsDiscard;
+            _supportsDiscard = supportsDiscard;
         }
-
+        
         protected abstract Location GetDefinitionLocationToFade(IOperation unusedDefinition);
 
         public override bool OpenFileOnly(Workspace workspace) => false;
@@ -52,150 +51,199 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
         public override DiagnosticAnalyzerCategory GetAnalyzerCategory() => DiagnosticAnalyzerCategory.SemanticSpanAnalysis;
 
         protected sealed override void InitializeWorker(AnalysisContext context)
-            => context.RegisterOperationBlockStartAction(AnalyzeOperationBlockStart);
+            => context.RegisterOperationBlockStartAction(
+                operationBlockStartContext => BlockAnalyzer.Analyze(operationBlockStartContext, GetDefinitionLocationToFade, _supportsDiscard));
 
-        private void AnalyzeOperationBlockStart(OperationBlockStartAnalysisContext context)
+        private sealed class BlockAnalyzer
         {
-            if (HasSyntaxErrors())
+            private readonly Func<IOperation, Location> _getDefinitionLocationToFade;
+            private readonly UnusedExpressionAssignmentPreference _preference;
+            private readonly ReportDiagnostic _severity;
+            private readonly ImmutableDictionary<string, string> _properties;
+
+            private BlockAnalyzer(
+                Func<IOperation, Location> getDefinitionLocationToFade,
+                UnusedExpressionAssignmentPreference preference,
+                ReportDiagnostic severity,
+                ImmutableDictionary<string, string> properties)
             {
-                return;
+                _getDefinitionLocationToFade = getDefinitionLocationToFade;
+                _preference = preference;
+                _severity = severity;
+                _properties = properties;
             }
 
-            context.RegisterOperationAction(AnalyzeExpressionStatement, OperationKind.ExpressionStatement);
-            context.RegisterOperationBlockEndAction(AnalyzeOperationBlockEnd);
-            return;
+            public static void Analyze(OperationBlockStartAnalysisContext context, Func<IOperation, Location> getDefinitionLocationToFade, bool supportsDiscard)
+            {
+                if (HasSyntaxErrors())
+                {
+                    return;
+                }
 
-            // Local Functions.
-            bool HasSyntaxErrors()
+                // All operation blocks for a symbol should belong to the same tree.
+                var firstBlock = context.OperationBlocks[0];
+                var (preference, severity, properties) = GetOption(firstBlock.Syntax.SyntaxTree,
+                    firstBlock.Language, context.Options, context.OwningSymbol, supportsDiscard, context.CancellationToken);
+                if (preference == UnusedExpressionAssignmentPreference.None)
+                {
+                    return;
+                }
+
+                Debug.Assert(severity != ReportDiagnostic.Suppress);
+
+                var blockAnalyzer = new BlockAnalyzer(getDefinitionLocationToFade, preference, severity, properties);
+                context.RegisterOperationAction(blockAnalyzer.AnalyzeExpressionStatement, OperationKind.ExpressionStatement);
+                context.RegisterOperationBlockEndAction(blockAnalyzer.AnalyzeOperationBlockEnd);
+
+                return;
+
+                // Local Functions.
+                bool HasSyntaxErrors()
+                {
+                    foreach (var operationBlock in context.OperationBlocks)
+                    {
+                        if (operationBlock.SemanticModel.GetSyntaxDiagnostics(operationBlock.Syntax.Span, context.CancellationToken).HasAnyErrors())
+                        {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+            }
+
+            private void AnalyzeExpressionStatement(OperationAnalysisContext context)
+            {
+                var value = ((IExpressionStatementOperation)context.Operation).Operation;
+                if (value.Type == null ||
+                    value.Type.SpecialType == SpecialType.System_Void ||
+                    value is IAssignmentOperation ||
+                    value is IIncrementOrDecrementOperation)
+                {
+                    return;
+                }
+
+                // IDE0055: "Expression value is never used"
+                var diagnostic = DiagnosticHelper.Create(s_expressionValueIsUnusedRule,
+                                                         value.Syntax.GetLocation(),
+                                                         _severity,
+                                                         additionalLocations: null,
+                                                         _properties);
+                context.ReportDiagnostic(diagnostic);
+            }
+
+            private void AnalyzeOperationBlockEnd(OperationBlockAnalysisContext context)
             {
                 foreach (var operationBlock in context.OperationBlocks)
                 {
-                    if (operationBlock.SemanticModel.GetSyntaxDiagnostics(operationBlock.Syntax.Span, context.CancellationToken).HasAnyErrors())
+                    // First perform the fast, aggressive, imprecise operation-tree based reaching definitions analysis.
+                    // This analysis might flag some "used" definitions as "unused", but will not miss reporting any truly unused definitions.
+                    // This initial pass helps us reduce the number of methods for which we perform the slower second pass.
+                    var resultFromOperationBlockAnalysis = ReachingAndUnusedDefinitionsAnalyzer.AnalyzeAndGetUnusedDefinitions(operationBlock);
+                    if (!resultFromOperationBlockAnalysis.UnusedDefinitions.IsEmpty)
                     {
-                        return true;
-                    }
-                }
+                        // Now perform the slower, precise, CFG based reaching definitions dataflow analysis to identify the actual unused definitions.
+                        var cfg = context.GetControlFlowGraph(operationBlock);
+                        var resultFromFlowAnalysis = ReachingAndUnusedDefinitionsAnalyzer.AnalyzeAndGetUnusedDefinitions(cfg);
 
-                return false;
-            }
-        }
+                        Debug.Assert(resultFromFlowAnalysis.UnusedDefinitions.Select(d => d.Symbol).ToImmutableHashSet()
+                            .IsSubsetOf(resultFromOperationBlockAnalysis.UnusedDefinitions.Select(d => d.Symbol)));
 
-        private void AnalyzeExpressionStatement(OperationAnalysisContext context)
-        {
-            var value = ((IExpressionStatementOperation)context.Operation).Operation;
-            if (value.Type == null ||
-                value.Type.SpecialType == SpecialType.System_Void ||
-                value is IAssignmentOperation ||
-                value is IIncrementOrDecrementOperation)
-            {
-                return;
-            }
-
-            var (preference, severity, properties) = GetOption(value.Syntax.SyntaxTree, value.Language, context.Options, context.CancellationToken);
-            if (preference == UnusedExpressionAssignmentPreference.None ||
-                severity == ReportDiagnostic.Suppress)
-            {
-                return;
-            }
-
-            // IDE0055: "Expression value is never used"
-            var diagnostic = DiagnosticHelper.Create(s_expressionValueIsUnusedRule,
-                                                     value.Syntax.GetLocation(),
-                                                     severity,
-                                                     additionalLocations: null,
-                                                     properties);
-            context.ReportDiagnostic(diagnostic);
-        }
-
-        private void AnalyzeOperationBlockEnd(OperationBlockAnalysisContext context)
-        {
-            if (context.OperationBlocks.IsEmpty)
-            {
-                return;
-            }
-
-            var (preference, severity, properties) = GetOption(context.OperationBlocks[0].Syntax.SyntaxTree, context.OperationBlocks[0].Language, context.Options, context.CancellationToken);
-            if (preference == UnusedExpressionAssignmentPreference.None ||
-                severity == ReportDiagnostic.Suppress)
-            {
-                return;
-            }
-
-            foreach (var operationBlock in context.OperationBlocks)
-            {
-                // First perform the fast, aggressive, imprecise operation-tree based reaching definitions analysis.
-                // This analysis might flag some "used" definitions as "unused", but will not miss reporting any truly unused definitions.
-                // This initial pass helps us reduce the number of methods for which we perform the slower second pass.
-                var resultFromOperationBlockAnalysis = ReachingAndUnusedDefinitionsAnalyzer.AnalyzeAndGetUnusedDefinitions(operationBlock);
-                if (!resultFromOperationBlockAnalysis.UnusedDefinitions.IsEmpty)
-                {
-                    // Now perform the slower, precise, CFG based reaching definitions dataflow analysis to identify the actual unused definitions.
-                    var cfg = context.GetControlFlowGraph(operationBlock);
-                    var resultFromFlowAnalysis = ReachingAndUnusedDefinitionsAnalyzer.AnalyzeAndGetUnusedDefinitions(cfg);
-
-                    Debug.Assert(resultFromFlowAnalysis.UnusedDefinitions.Select(d => d.Symbol).ToImmutableHashSet()
-                        .IsSubsetOf(resultFromOperationBlockAnalysis.UnusedDefinitions.Select(d => d.Symbol)));
-
-                    foreach (var (unusedSymbol, unusedDefinition) in resultFromFlowAnalysis.UnusedDefinitions)
-                    {
-                        if (preference == UnusedExpressionAssignmentPreference.UnusedLocalVariable &&
-                            unusedSymbol is ILocalSymbol localSymbol &&
-                            !resultFromFlowAnalysis.ReferencedLocals.Contains(localSymbol))
+                        ImmutableDictionary<string, string> unusedLocalPropertiesOpt = null;
+                        foreach (var (unusedSymbol, unusedDefinition) in resultFromFlowAnalysis.UnusedDefinitions)
                         {
-                            continue;
-                        }
+                            var properties = _properties;
 
-                        // IDE0056: "Value assigned to '{0}' is never used"
-                        var diagnostic = DiagnosticHelper.Create(s_valueAssignedIsUnusedRule,
-                                                                 GetDefinitionLocationToFade(unusedDefinition),
-                                                                 severity,
-                                                                 additionalLocations: null,
-                                                                 properties: null,
-                                                                 unusedSymbol.Name);
-                        context.ReportDiagnostic(diagnostic);
+                            if (unusedSymbol is ILocalSymbol localSymbol &&
+                                !resultFromFlowAnalysis.ReferencedLocals.Contains(localSymbol))
+                            {
+                                if (_preference == UnusedExpressionAssignmentPreference.UnusedLocalVariable)
+                                {
+                                    continue;
+                                }
+                                else
+                                {
+                                    unusedLocalPropertiesOpt = unusedLocalPropertiesOpt ?? _properties.Add(IsUnusedLocalKey, "true");
+                                    properties = unusedLocalPropertiesOpt;
+                                }
+                            }
+
+                            // IDE0056: "Value assigned to '{0}' is never used"
+                            var diagnostic = DiagnosticHelper.Create(s_valueAssignedIsUnusedRule,
+                                                                     _getDefinitionLocationToFade(unusedDefinition),
+                                                                     _severity,
+                                                                     additionalLocations: null,
+                                                                     properties,
+                                                                     unusedSymbol.Name);
+                            context.ReportDiagnostic(diagnostic);
+                        }
                     }
                 }
             }
-        }
 
-        private (UnusedExpressionAssignmentPreference preference, ReportDiagnostic severity, ImmutableDictionary<string, string> properties) GetOption(
-            SyntaxTree syntaxTree,
-            string language,
-            AnalyzerOptions analyzerOptions,
-            CancellationToken cancellationToken)
-        {
-            var optionSet = analyzerOptions.GetDocumentOptionSetAsync(syntaxTree, cancellationToken).GetAwaiter().GetResult();
-            if (optionSet == null)
+            private static (UnusedExpressionAssignmentPreference preference, ReportDiagnostic severity, ImmutableDictionary<string, string> properties) GetOption(
+                SyntaxTree syntaxTree,
+                string language,
+                AnalyzerOptions analyzerOptions,
+                ISymbol owningSymbol,
+                bool supportsDiscard,
+                CancellationToken cancellationToken)
             {
-                return (UnusedExpressionAssignmentPreference.None, ReportDiagnostic.Suppress, null);
-            }
+                var optionSet = analyzerOptions.GetDocumentOptionSetAsync(syntaxTree, cancellationToken).GetAwaiter().GetResult();
+                var option = optionSet?.GetOption(CodeStyleOptions.UnusedExpressionAssignment, language);
+                var preference = option?.Value ?? UnusedExpressionAssignmentPreference.None;
+                if (preference == UnusedExpressionAssignmentPreference.None ||
+                    option.Notification.Severity == ReportDiagnostic.Suppress)
+                {
+                    return (UnusedExpressionAssignmentPreference.None, ReportDiagnostic.Suppress, null);
+                }
 
-            var option = optionSet.GetOption(CodeStyleOptions.UnusedExpressionAssignment, language);
-            var preference = option.Value;
-            if (!_supportsDisard && preference == UnusedExpressionAssignmentPreference.DiscardVariable)
-            {
-                preference = UnusedExpressionAssignmentPreference.UnusedLocalVariable; 
-            }
+                if (!supportsDiscard && preference == UnusedExpressionAssignmentPreference.DiscardVariable)
+                {
+                    preference = UnusedExpressionAssignmentPreference.UnusedLocalVariable;
+                }
 
-            var properties = preference == UnusedExpressionAssignmentPreference.DiscardVariable
-                ? PreferDiscardPropertyBag
-                : PreferUnusedLocalPropertyBag;
-            return (preference, option.Notification.Severity, properties);
+                var preferenceStr = preference == UnusedExpressionAssignmentPreference.DiscardVariable
+                    ? nameof(UnusedExpressionAssignmentPreference.DiscardVariable)
+                    : nameof(UnusedExpressionAssignmentPreference.UnusedLocalVariable);
+
+                var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>();
+                propertiesBuilder.Add(UnusedExpressionPreferenceKey, preferenceStr);
+                propertiesBuilder.Add(OwningSymbolKey, owningSymbol.ToDisplayString());
+
+                return (preference, option.Notification.Severity, propertiesBuilder.ToImmutable());
+            }
         }
-
+        
         public static UnusedExpressionAssignmentPreference GetUnusedExpressionAssignmentPreference(Diagnostic diagnostic)
         {
-            switch (diagnostic.Properties.Single().Value)
+            if (diagnostic.Properties != null &&
+                diagnostic.Properties.TryGetValue(UnusedExpressionPreferenceKey, out var preference) &&
+                diagnostic.Properties.ContainsKey(OwningSymbolKey))
             {
-                case nameof(UnusedExpressionAssignmentPreference.DiscardVariable):
-                    return UnusedExpressionAssignmentPreference.DiscardVariable;
+                switch (preference)
+                {
+                    case nameof(UnusedExpressionAssignmentPreference.DiscardVariable):
+                        return UnusedExpressionAssignmentPreference.DiscardVariable;
 
-                case nameof(UnusedExpressionAssignmentPreference.UnusedLocalVariable):
-                    return UnusedExpressionAssignmentPreference.UnusedLocalVariable;
-
-                default:
-                    throw ExceptionUtilities.Unreachable;
+                    case nameof(UnusedExpressionAssignmentPreference.UnusedLocalVariable):
+                        return UnusedExpressionAssignmentPreference.UnusedLocalVariable;
+                }
             }
+
+            return UnusedExpressionAssignmentPreference.None;
+        }
+
+        public static string GetOwningMemberSymbolName(Diagnostic diagnostic)
+        {
+            Debug.Assert(GetUnusedExpressionAssignmentPreference(diagnostic) != UnusedExpressionAssignmentPreference.None);
+            return diagnostic.Properties[OwningSymbolKey];
+        }
+
+        public static bool IsUnusedLocalDiagnostic(Diagnostic diagnostic)
+        {
+            Debug.Assert(GetUnusedExpressionAssignmentPreference(diagnostic) != UnusedExpressionAssignmentPreference.None);
+            return diagnostic.Properties.ContainsKey(IsUnusedLocalKey);
         }
     }
 }
