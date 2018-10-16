@@ -20,6 +20,8 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
 {
     internal abstract class AbstractRemoveUnusedExpressionsOrAssignmentsCodeFixProvider : SyntaxEditorBasedCodeFixProvider
     {
+        private static readonly SyntaxAnnotation s_memberAnnotation = new SyntaxAnnotation();
+
         protected abstract string FixableDiagnosticId { get; }
         public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(FixableDiagnosticId);
 
@@ -59,60 +61,69 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             SyntaxEditor editor,
             CancellationToken cancellationToken);
 
-        protected abstract void RemoveDiscardDeclarations(
+        protected virtual Task RemoveDiscardDeclarationsAsync(
             SyntaxNode memberDeclaration,
             SyntaxEditor editor,
-            CancellationToken cancellationToken);
+            Document document,
+            CancellationToken cancellationToken)
+            => throw new NotImplementedException();
+
+        protected abstract bool NeedsToMoveNewLocalDeclarationsNearReference { get; }
+        protected virtual Task MoveNewLocalDeclarationsNearReferenceAsync(
+            SyntaxNode memberDeclaration,
+            SyntaxEditor editor,
+            Document document,
+            CancellationToken cancellationToken)
+            => throw new NotImplementedException();
+
+        private (IEnumerable<IGrouping<string, Diagnostic>> diagnosticsGroupedByMember, UnusedExpressionAssignmentPreference preference) GetDiagnosticsGroupedByMember(
+            ImmutableArray<Diagnostic> diagnostics)
+        {
+            var preference = AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.GetUnusedExpressionAssignmentPreference(diagnostics[0]);
+            var diagnosticsGroupedByMember = diagnostics.Where(d => preference == AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.GetUnusedExpressionAssignmentPreference(d))
+                                                                    .GroupBy(d => AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.GetOwningMemberSymbolName(d));
+            return (diagnosticsGroupedByMember, preference);
+        }
+
+        protected override async Task<Document> FixAllAsync(Document document, ImmutableArray<Diagnostic> diagnostics, CancellationToken cancellationToken)
+        {
+            // Annotate all the member declaration nodes that have diagnostics with "s_memberAnnotation".
+            // We will post process all these annotated nodes after applying the fix (see "PostProcessDocumentAsync" below in this source file).
+
+            var syntaxFacts = document.GetLanguageService<ISyntaxFactsService>();
+            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var (diagnosticsGroupedByMember, _) = GetDiagnosticsGroupedByMember(diagnostics);
+            foreach (var diagnosticsToFix in diagnosticsGroupedByMember)
+            {
+                var memberDecl = syntaxFacts.GetContainingMemberDeclaration(root, diagnosticsToFix.First().Location.SourceSpan.Start);
+                Contract.ThrowIfNull(memberDecl);
+                root = root.ReplaceNode(memberDecl, memberDecl.WithAdditionalAnnotations(s_memberAnnotation));
+            }
+
+            return await base.FixAllAsync(document.WithSyntaxRoot(root), diagnostics, cancellationToken).ConfigureAwait(false);
+        }
 
         protected sealed override async Task FixAllAsync(Document document, ImmutableArray<Diagnostic> diagnostics, SyntaxEditor editor, CancellationToken cancellationToken)
         {
-            var preference = AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.GetUnusedExpressionAssignmentPreference(diagnostics[0]);
+            var (diagnosticsGroupedByMember, preference) = GetDiagnosticsGroupedByMember(diagnostics);
             if (preference == UnusedExpressionAssignmentPreference.None)
             {
                 return;
             }
 
-            var diagnosticsByMethod = diagnostics.Where(d => preference == AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.GetUnusedExpressionAssignmentPreference(d))
-                                                 .GroupBy(d => AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.GetOwningMemberSymbolName(d));
-
-            var syntaxFacts = document.GetLanguageService<ISyntaxFactsService>();
-            var memberAnnotation = new SyntaxAnnotation();
-
-            var originalRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-            var root = originalRoot;
-            foreach (var diagnosticsToFix in diagnosticsByMethod)
-            {
-                var memberDecl = syntaxFacts.GetContainingMemberDeclaration(root, diagnosticsToFix.First().Location.SourceSpan.Start);
-                Contract.ThrowIfNull(memberDecl);
-                root = root.ReplaceNode(memberDecl, memberDecl.WithAdditionalAnnotations(memberAnnotation));
-            }
-
-            editor.ReplaceNode(originalRoot, root);
-            document = document.WithSyntaxRoot(root);
-            root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-
+            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
             var usedNames = PooledHashSet<string>.GetInstance();
             try
             {
-                foreach (var diagnosticsToFix in diagnosticsByMethod)
+                foreach (var diagnosticsToFix in diagnosticsGroupedByMember)
                 {
                     var orderedDiagnostics = diagnosticsToFix.OrderBy(d => d.Location.SourceSpan.Start);
                     await FixAllAsync(orderedDiagnostics, semanticModel, root, preference, GenerateUniqueNameAtSpanStart, editor, cancellationToken).ConfigureAwait(false);
                     usedNames.Clear();
                 }
 
-                if (preference == UnusedExpressionAssignmentPreference.DiscardVariable)
-                {
-                    var newRoot = editor.GetChangedRoot();
-                    var newEditor = new SyntaxEditor(newRoot, editor.Generator);
-                    foreach (var memberDecl in newRoot.DescendantNodes().Where(n => n.HasAnnotation(memberAnnotation)))
-                    {
-                        RemoveDiscardDeclarations(memberDecl, newEditor, cancellationToken);
-                    }
-
-                    editor.ReplaceNode(root, newEditor.GetChangedRoot());
-                }
+                await PostProcessDocumentAsync().ConfigureAwait(false);
             }
             finally
             {
@@ -122,7 +133,6 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             return;
 
             // Local functions
-
             string GenerateUniqueNameAtSpanStart(SyntaxNode node)
             {
                 var name = NameGenerator.GenerateUniqueName("unused",
@@ -130,12 +140,57 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                 usedNames.Add(name);
                 return name;
             }
+
+            async Task PostProcessDocumentAsync()
+            {
+                var originalRoot = editor.GetChangedRoot();
+                var currentRoot = originalRoot;
+
+                try
+                {
+                    // If we added discard assignments, replace all discard variable declarations in
+                    // this method with discard assignments, i.e. "var _ = M();" is replaced with "_ = M();"
+                    // This is done to prevent compiler errors where the existing method has a discard
+                    // variable declaration at a line following the one we added a discard assignment in our fix.
+                    if (preference == UnusedExpressionAssignmentPreference.DiscardVariable)
+                    {
+                        currentRoot = await PostProcessDocumentCoreAsync(currentRoot, RemoveDiscardDeclarationsAsync).ConfigureAwait(false);
+                    }
+
+                    // If we added new variable declaration statements, move these as close as possible to their
+                    // first reference site.
+                    if (NeedsToMoveNewLocalDeclarationsNearReference)
+                    {
+                        currentRoot = await PostProcessDocumentCoreAsync(currentRoot, MoveNewLocalDeclarationsNearReferenceAsync).ConfigureAwait(false);
+                    }
+                }
+                finally
+                {
+                    if (currentRoot != originalRoot)
+                    {
+                        editor.ReplaceNode(root, currentRoot);
+                    }
+                }
+            }
+
+            async Task<SyntaxNode> PostProcessDocumentCoreAsync(SyntaxNode currentRoot, Func<SyntaxNode, SyntaxEditor, Document, CancellationToken, Task> processMemberDeclarationAsync)
+            {
+                var newDocument = document.WithSyntaxRoot(currentRoot);
+                var newRoot = await newDocument.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+                var newEditor = new SyntaxEditor(newRoot, editor.Generator);
+                foreach (var memberDecl in newRoot.DescendantNodes().Where(n => n.HasAnnotation(s_memberAnnotation)))
+                {
+                    await processMemberDeclarationAsync(memberDecl, newEditor, newDocument, cancellationToken).ConfigureAwait(false);
+                }
+
+                return newEditor.GetChangedRoot();
+            }
         }
 
         private sealed class MyCodeAction : CodeAction.DocumentChangeAction
         {
             public MyCodeAction(string title, Func<CancellationToken, Task<Document>> createChangedDocument) :
-                base(title, createChangedDocument)
+                base(title, createChangedDocument, equivalenceKey: title)
             {
             }
         }

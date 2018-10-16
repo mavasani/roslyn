@@ -89,7 +89,8 @@
       </trans-unit>
       <trans-unit id="Private_member_0_is_unused">
         <source>Private member '{0}' is unused.</source>
-        <target state="new">Private member '{0}' is unused.</target><note />
+        <target state="new">Private member '{0}' is unused.</target>
+        <note />
       </trans-unit>
       <trans-unit id="Invert_conditional">
         <source>Invert conditional</source>
@@ -164,11 +165,6 @@
       <trans-unit id="Value_assigned_to_symbol_is_never_used">
         <source>Value assigned to symbol is never used</source>
         <target state="new">Value assigned to symbol is never used</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Warning_colon_Conflict_with_discard_variable_declaration_below_in_this_method">
-        <source>Warning: Conflict with discard variable declaration below in this method</source>
-        <target state="new">Warning: Conflict with discard variable declaration below in this method</target>
         <note />
       </trans-unit>
       <trans-unit id="generic_overload">

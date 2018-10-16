@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
+using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 
@@ -86,8 +87,10 @@ namespace Microsoft.CodeAnalysis.CSharp.RemoveUnusedExpressions
                 {
                     if (currentNonDiscardVariables.Count > 0)
                     {
-                        var newVariableDeclaration = SyntaxFactory.VariableDeclaration(variableDeclaration.Type.WithoutTrivia(), currentNonDiscardVariables);
-                        statementsBuilder.Add(SyntaxFactory.LocalDeclarationStatement(newVariableDeclaration));
+                        var statement = SyntaxFactory.LocalDeclarationStatement(
+                            SyntaxFactory.VariableDeclaration(variableDeclaration.Type, currentNonDiscardVariables))
+                            .WithAdditionalAnnotations(Formatter.Annotation);
+                        statementsBuilder.Add(statement);
                         currentNonDiscardVariables = new SeparatedSyntaxList<VariableDeclaratorSyntax>();
                     }
                 }
@@ -101,7 +104,8 @@ namespace Microsoft.CodeAnalysis.CSharp.RemoveUnusedExpressions
                                 kind: SyntaxKind.SimpleAssignmentExpression,
                                 left: SyntaxFactory.IdentifierName(variable.Identifier),
                                 operatorToken: variable.Initializer.EqualsToken,
-                                right: variable.Initializer.Value)));
+                                right: variable.Initializer.Value))
+                                .WithAdditionalAnnotations(Formatter.Annotation));
                     }
                 }
             }

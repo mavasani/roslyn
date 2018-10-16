@@ -3,15 +3,13 @@
 Imports System.Composition
 Imports System.Threading
 Imports Microsoft.CodeAnalysis.CodeFixes
-Imports Microsoft.CodeAnalysis.Editing
 Imports Microsoft.CodeAnalysis.RemoveUnusedExpressions
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 
 Namespace Microsoft.CodeAnalysis.VisualBasic.RemoveUnusedExpressions
     <ExportCodeFixProvider(LanguageNames.VisualBasic, Name:=PredefinedCodeFixProviderNames.RemoveUnusedAssignments), [Shared]>
     Friend Class VisualBasicRemoveUnusedAssignmentsCodeFixProvider
-        Inherits AbstractRemoveUnusedAssignmentsCodeFixProvider(Of StatementSyntax, StatementSyntax)
-
+        Inherits AbstractRemoveUnusedAssignmentsCodeFixProvider(Of StatementSyntax, StatementSyntax, LocalDeclarationStatementSyntax)
         Protected Overrides Function UpdateNameForFlaggedNode(node As SyntaxNode, newName As SyntaxToken) As SyntaxNode
             Dim modifiedIdentifier = TryCast(node, ModifiedIdentifierSyntax)
             If modifiedIdentifier IsNot Nothing Then
@@ -26,12 +24,14 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.RemoveUnusedExpressions
             Return node
         End Function
 
+        Protected Overrides Function GetSingleDeclaredLocal(localDeclaration As LocalDeclarationStatementSyntax, semanticModel As SemanticModel, cancellationToken As CancellationToken) As ILocalSymbol
+            Contract.ThrowIfFalse(localDeclaration.Declarators.Count = 1)
+            Contract.ThrowIfFalse(localDeclaration.Declarators(0).Names.Count = 1)
+            Return DirectCast(semanticModel.GetDeclaredSymbol(localDeclaration.Declarators(0).Names(0), cancellationToken), ILocalSymbol)
+        End Function
+
         Protected Overrides Function GenerateBlock(statements As IEnumerable(Of StatementSyntax)) As StatementSyntax
             Throw ExceptionUtilities.Unreachable
         End Function
-
-        Protected Overrides Sub RemoveDiscardDeclarations(memberDeclaration As SyntaxNode, editor As SyntaxEditor, cancellationToken As CancellationToken)
-            Throw ExceptionUtilities.Unreachable
-        End Sub
     End Class
 End Namespace

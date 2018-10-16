@@ -167,11 +167,6 @@
         <target state="new">Value assigned to symbol is never used</target>
         <note />
       </trans-unit>
-      <trans-unit id="Warning_colon_Conflict_with_discard_variable_declaration_below_in_this_method">
-        <source>Warning: Conflict with discard variable declaration below in this method</source>
-        <target state="new">Warning: Conflict with discard variable declaration below in this method</target>
-        <note />
-      </trans-unit>
       <trans-unit id="generic_overload">
         <source>generic overload</source>
         <target state="translated">ジェネリック オーバーロード</target>
