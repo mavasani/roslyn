@@ -43,14 +43,13 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             SyntaxEditor editor,
             CancellationToken cancellationToken)
         {
-            IEnumerable<(SyntaxNode node, bool isUnusedSymbolReference)> nodesToFix = diagnostics.Select(
-                d => (root.FindNode(d.Location.SourceSpan), AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.IsUnusedLocalDiagnostic(d)));
-
             var declarationStatementsBuilder = ArrayBuilder<TLocalDeclarationStatementSyntax>.GetInstance();
             var nameReplacementsMap = PooledDictionary<SyntaxNode, SyntaxNode>.GetInstance();
 
             try
             {
+                var nodesToFix = GetNodesToFix();
+
                 // Note this fixer only operates on code blocks which have no syntax errors (see "HasSyntaxErrors" usage in AbstractRemoveUnusedExpressionsDiagnosticAnalyzer).
                 // Hence, we can assume that each node to fix is parented by a StatementSyntax node.
                 foreach (var nodesByStatement in nodesToFix.GroupBy(n => n.node.FirstAncestorOrSelf<TStatementSyntax>()))
@@ -59,7 +58,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                     declarationStatementsBuilder.Clear();
                     nameReplacementsMap.Clear();
 
-                    foreach (var (node, isUnusedSymbolReference) in nodesByStatement)
+                    foreach (var (node, isUnusedLocal, isConstantValueAssigned) in nodesByStatement)
                     {
                         var newName = preference == UnusedExpressionAssignmentPreference.DiscardVariable ? "_" : generateUniqueNameAtSpanStart(node);
                         var newNameToken = editor.Generator.Identifier(newName);
@@ -84,7 +83,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                             {
                                 var type = semanticModel.GetTypeInfo(node, cancellationToken).Type;
                                 Contract.ThrowIfNull(type);
-                                declarationStatementsBuilder.Add(CreateLocalDeclarationStatement(type, generateUniqueNameAtSpanStart(node)));
+                                declarationStatementsBuilder.Add(CreateLocalDeclarationStatement(type, newName));
                             }
                         }
                     }
@@ -114,6 +113,17 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             }
 
             return Task.CompletedTask;
+
+            // Local functions.
+            IEnumerable<(SyntaxNode node, bool isUnusedLocal, bool isConstantValueAssigned)> GetNodesToFix()
+            {
+                foreach (var diagnostic in diagnostics)
+                {
+                    var node = root.FindNode(diagnostic.Location.SourceSpan);
+                    var (isUnusedLocal, isConstantValueAssigned) = AbstractRemoveUnusedExpressionsDiagnosticAnalyzer.GetAdditionalPropertiesForDiagnostic(diagnostic);
+                    yield return (node, isUnusedLocal, isConstantValueAssigned);
+                }
+            }
 
             // Mark generated local declaration statement with:
             //  1. "s_newLocalDeclarationAnnotation" for post processing in "MoveNewLocalDeclarationsNearReference" below.

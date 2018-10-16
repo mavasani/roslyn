@@ -3,14 +3,12 @@
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis.CodeStyle;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions;
 using Microsoft.CodeAnalysis.Operations;
-using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
 {
@@ -19,6 +17,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
         private const string UnusedExpressionPreferenceKey = nameof(UnusedExpressionPreferenceKey);
         private const string OwningSymbolKey = nameof(OwningSymbolKey);
         private const string IsUnusedLocalKey = nameof(IsUnusedLocalKey);
+        private const string IsConstantValueAssignedKey = nameof(IsConstantValueAssignedKey);
 
         // IDE0055: "Expression value is never used"
         private static readonly DiagnosticDescriptor s_expressionValueIsUnusedRule = CreateDescriptorWithId(
@@ -149,35 +148,68 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                         Debug.Assert(resultFromFlowAnalysis.UnusedDefinitions.Select(d => d.Symbol).ToImmutableHashSet()
                             .IsSubsetOf(resultFromOperationBlockAnalysis.UnusedDefinitions.Select(d => d.Symbol)));
 
-                        ImmutableDictionary<string, string> unusedLocalPropertiesOpt = null;
                         foreach (var (unusedSymbol, unusedDefinition) in resultFromFlowAnalysis.UnusedDefinitions)
                         {
-                            var properties = _properties;
-
-                            if (unusedSymbol is ILocalSymbol localSymbol &&
-                                !resultFromFlowAnalysis.ReferencedLocals.Contains(localSymbol))
+                            if (ShouldReportDiagnostic(unusedSymbol, unusedDefinition, resultFromFlowAnalysis, out var properties))
                             {
-                                if (_preference == UnusedExpressionAssignmentPreference.UnusedLocalVariable)
-                                {
-                                    continue;
-                                }
-                                else
-                                {
-                                    unusedLocalPropertiesOpt = unusedLocalPropertiesOpt ?? _properties.Add(IsUnusedLocalKey, "true");
-                                    properties = unusedLocalPropertiesOpt;
-                                }
+                                // IDE0056: "Value assigned to '{0}' is never used"
+                                var diagnostic = DiagnosticHelper.Create(s_valueAssignedIsUnusedRule,
+                                                                         _getDefinitionLocationToFade(unusedDefinition),
+                                                                         _severity,
+                                                                         additionalLocations: null,
+                                                                         properties,
+                                                                         unusedSymbol.Name);
+                                context.ReportDiagnostic(diagnostic);
                             }
-
-                            // IDE0056: "Value assigned to '{0}' is never used"
-                            var diagnostic = DiagnosticHelper.Create(s_valueAssignedIsUnusedRule,
-                                                                     _getDefinitionLocationToFade(unusedDefinition),
-                                                                     _severity,
-                                                                     additionalLocations: null,
-                                                                     properties,
-                                                                     unusedSymbol.Name);
-                            context.ReportDiagnostic(diagnostic);
                         }
                     }
+                }
+
+                return;
+
+                // Local functions.
+                bool ShouldReportDiagnostic(
+                    ISymbol unusedSymbol,
+                    IOperation unusedDefinition,
+                    UnusedDefinitionsResult resultFromFlowAnalysis,
+                    out ImmutableDictionary<string, string> properties)
+                {
+                    properties = null;
+
+                    var isUnusedLocal = unusedSymbol is ILocalSymbol localSymbol
+                        && !resultFromFlowAnalysis.ReferencedLocals.Contains(localSymbol);
+                    var isConstantValueAssigned = unusedDefinition.Parent is IAssignmentOperation assignment
+                        && assignment.Value.ConstantValue.HasValue
+                        && assignment.Target == unusedDefinition;
+
+                    if (isUnusedLocal
+                        && !isConstantValueAssigned
+                        && _preference == UnusedExpressionAssignmentPreference.UnusedLocalVariable)
+                    {
+                        // Meets current user preference, skip reporting diagnostic.
+                        return false;
+                    }
+
+                    if (!isUnusedLocal && !isConstantValueAssigned)
+                    {
+                        properties = _properties;
+                        return true;
+                    }
+
+                    var builder = ImmutableDictionary.CreateBuilder<string, string>();
+                    builder.AddRange(_properties);
+                    if (isUnusedLocal)
+                    {
+                        builder.Add(IsUnusedLocalKey, string.Empty);
+                    }
+
+                    if (isConstantValueAssigned)
+                    {
+                        builder.Add(IsConstantValueAssignedKey, string.Empty);
+                    }
+
+                    properties = builder.ToImmutable();
+                    return true;
                 }
             }
 
@@ -240,10 +272,11 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             return diagnostic.Properties[OwningSymbolKey];
         }
 
-        public static bool IsUnusedLocalDiagnostic(Diagnostic diagnostic)
+        public static (bool isUnusedLocal, bool isConstantValueAssigned) GetAdditionalPropertiesForDiagnostic(Diagnostic diagnostic)
         {
             Debug.Assert(GetUnusedExpressionAssignmentPreference(diagnostic) != UnusedExpressionAssignmentPreference.None);
-            return diagnostic.Properties.ContainsKey(IsUnusedLocalKey);
+            return (isUnusedLocal: diagnostic.Properties.ContainsKey(IsUnusedLocalKey),
+                    isConstantValueAssigned: diagnostic.Properties.ContainsKey(IsConstantValueAssignedKey));
         }
     }
 }
