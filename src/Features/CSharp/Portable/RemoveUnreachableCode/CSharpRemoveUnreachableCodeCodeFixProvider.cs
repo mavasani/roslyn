@@ -36,7 +36,7 @@ namespace Microsoft.CodeAnalysis.CSharp.RemoveUnreachableCode
 
             context.RegisterCodeFix(new MyCodeAction(
                 FeaturesResources.Remove_unreachable_code,
-                c => FixAsync(context.Document, diagnostic, c),
+                c => FixFirstAsync(context, c),
                 priority), diagnostic);
 
             return Task.CompletedTask;

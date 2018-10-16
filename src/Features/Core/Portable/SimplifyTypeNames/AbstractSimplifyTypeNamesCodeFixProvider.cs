@@ -77,9 +77,9 @@ namespace Microsoft.CodeAnalysis.SimplifyTypeNames
             var title = GetTitle(diagnosticId, syntaxFacts.ConvertToSingleLine(node).ToString());
 
             context.RegisterCodeFix(new MyCodeAction(
-                title, 
-                c => this.FixAsync(context.Document, context.Diagnostics[0], c),
-                diagnosticId), context.Diagnostics);
+                title,
+                c => FixFirstAsync(context, c),
+                diagnosticId), context.Diagnostics[0]);
         }
 
         protected override async Task FixAllAsync(

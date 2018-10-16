@@ -45,8 +45,8 @@ namespace Microsoft.CodeAnalysis.AddAnonymousTypeMemberName
             }
 
             context.RegisterCodeFix(
-                new MyCodeAction(c => FixAsync(document, diagnostic, c)),
-                context.Diagnostics);
+                new MyCodeAction(c => FixFirstAsync(context, c)),
+                diagnostic);
         }
 
         private async Task<TAnonymousObjectMemberDeclaratorSyntax> GetMemberDeclaratorAsync(

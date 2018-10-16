@@ -1466,4 +1466,7 @@ This version used in: {2}</value>
   <data name="Use_discard_underscore" xml:space="preserve">
     <value>Use discard '_'</value>
   </data>
+  <data name="Remove_redundant_assignment" xml:space="preserve">
+    <value>Remove redundant assignment</value>
+  </data>
 </root>

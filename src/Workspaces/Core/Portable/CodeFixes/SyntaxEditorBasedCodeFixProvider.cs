@@ -21,14 +21,14 @@ namespace Microsoft.CodeAnalysis.CodeFixes
         public sealed override FixAllProvider GetFixAllProvider()
             => _supportsFixAll ? new SyntaxEditorBasedFixAllProvider(this) : null;
 
-        protected Task<Document> FixAsync(
-            Document document, Diagnostic diagnostic, string codeActionEquivalenceKey, CancellationToken cancellationToken)
+        protected Task<Document> FixFirstAsync(CodeFixContext context, CancellationToken cancellationToken)
         {
-            return FixAllAsync(document, ImmutableArray.Create(diagnostic), cancellationToken);
+            var diagnostics = context.Diagnostics.Length == 1 ? context.Diagnostics : ImmutableArray.Create(context.Diagnostics[0]);
+            return FixAllAsync(context.Document, diagnostics, fixIndex, cancellationToken);
         }
 
         protected virtual Task<Document> FixAllAsync(
-            Document document, ImmutableArray<Diagnostic> diagnostics, string codeActionEquivalenceKey, CancellationToken cancellationToken)
+            Document document, ImmutableArray<Diagnostic> diagnostics, int fixIndex, CancellationToken cancellationToken)
         {
             return FixAllWithEditorAsync(document,
                 editor => FixAllAsync(document, diagnostics, editor, cancellationToken),

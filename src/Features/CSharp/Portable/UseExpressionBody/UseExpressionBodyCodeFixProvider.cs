@@ -36,7 +36,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseExpressionBody
 
         public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var diagnostic = context.Diagnostics.First();
+            var diagnostic = context.Diagnostics[0];
             var documentOptionSet = await context.Document.GetOptionsAsync(context.CancellationToken).ConfigureAwait(false);
 
             var priority = diagnostic.Severity == DiagnosticSeverity.Hidden
@@ -44,7 +44,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseExpressionBody
                 : CodeActionPriority.Medium;
 
             context.RegisterCodeFix(
-                new MyCodeAction(diagnostic.GetMessage(), priority, c => FixAsync(context.Document, diagnostic, c)),
+                new MyCodeAction(diagnostic.GetMessage(), priority, c => FixFirstAsync(context, c)),
                 diagnostic);
         }
 

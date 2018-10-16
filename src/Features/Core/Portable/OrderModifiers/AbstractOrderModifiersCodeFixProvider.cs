@@ -46,8 +46,8 @@ namespace Microsoft.CodeAnalysis.OrderModifiers
             if (_syntaxFacts.GetModifiers(syntaxNode) != default)
             {
                 context.RegisterCodeFix(
-                    new MyCodeAction(c => FixAsync(context.Document, context.Diagnostics[0], c)),
-                    context.Diagnostics);
+                    new MyCodeAction(c => FixFirstAsync(context, c)),
+                    context.Diagnostics[0]);
             }
         }
 

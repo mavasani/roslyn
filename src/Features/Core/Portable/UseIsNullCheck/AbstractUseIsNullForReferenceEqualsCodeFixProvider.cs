@@ -33,15 +33,15 @@ namespace Microsoft.CodeAnalysis.UseIsNullCheck
 
         public override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var diagnostic = context.Diagnostics.First();
+            var diagnostic = context.Diagnostics[0];
             if (IsSupportedDiagnostic(diagnostic))
             {
                 var negated = diagnostic.Properties.ContainsKey(Negated);
                 var title = negated ? GetIsNotNullTitle() : GetIsNullTitle();
 
                 context.RegisterCodeFix(
-                    new MyCodeAction(title, c => this.FixAsync(context.Document, diagnostic, c)),
-                    context.Diagnostics);
+                    new MyCodeAction(title, c => FixFirstAsync(context, c)),
+                    diagnostic);
             }
 
             return Task.CompletedTask;

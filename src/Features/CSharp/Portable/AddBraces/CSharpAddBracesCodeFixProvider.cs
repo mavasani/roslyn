@@ -25,8 +25,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Diagnostics.AddBraces
         public sealed override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             context.RegisterCodeFix(
-                new MyCodeAction(c => FixAsync(context.Document, context.Diagnostics.First(), c)),
-                context.Diagnostics);
+                new MyCodeAction(c => FixFirstAsync(context, c)),
+                context.Diagnostics[0]);
 
             return Task.CompletedTask;
         }

@@ -32,13 +32,10 @@ namespace Microsoft.CodeAnalysis.SimplifyThisOrMe
 
         public sealed override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var document = context.Document;
-            var diagnostic = context.Diagnostics[0];
-
             context.RegisterCodeFix(new MyCodeAction(
-                GetTitle(), 
-                c => this.FixAsync(document, diagnostic, c),
-                IDEDiagnosticIds.RemoveQualificationDiagnosticId), context.Diagnostics);
+                GetTitle(),
+                c => FixFirstAsync(context, c),
+                IDEDiagnosticIds.RemoveQualificationDiagnosticId), context.Diagnostics[0]);
 
             return Task.CompletedTask;
         }

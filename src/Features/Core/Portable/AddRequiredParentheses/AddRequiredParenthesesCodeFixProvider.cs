@@ -30,9 +30,9 @@ namespace Microsoft.CodeAnalysis.AddRequiredParentheses
             var firstDiagnostic = context.Diagnostics[0];
             context.RegisterCodeFix(
                 new MyCodeAction(
-                    c => FixAsync(context.Document, firstDiagnostic, c),
+                    c => FixFirstAsync(context, c),
                     firstDiagnostic.Properties[AddRequiredParenthesesConstants.EquivalenceKey]),
-                context.Diagnostics);
+                firstDiagnostic);
             return Task.CompletedTask;
         }
 

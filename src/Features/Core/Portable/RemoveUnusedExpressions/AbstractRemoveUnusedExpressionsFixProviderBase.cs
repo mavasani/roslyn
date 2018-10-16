@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CodeStyle;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.LanguageServices;
 using Microsoft.CodeAnalysis.PooledObjects;
@@ -18,12 +19,12 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
 {
-    internal abstract class AbstractRemoveUnusedExpressionsOrAssignmentsCodeFixProvider : SyntaxEditorBasedCodeFixProvider
+    internal abstract class AbstractRemoveUnusedExpressionsFixProviderBase : SyntaxEditorBasedCodeFixProvider
     {
         private static readonly SyntaxAnnotation s_memberAnnotation = new SyntaxAnnotation();
 
-        protected abstract string FixableDiagnosticId { get; }
-        public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(FixableDiagnosticId);
+        public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(IDEDiagnosticIds.ExpressionValueIsUnusedDiagnosticId,
+                                                                                                    IDEDiagnosticIds.ValueAssignedIsUnusedDiagnosticId);
 
         public sealed override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
@@ -47,8 +48,20 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             context.RegisterCodeFix(
                 new MyCodeAction(
                     title,
-                    c => FixAsync(context.Document, diagnostic, context.CancellationToken)),
+                    c => FixFirstAsync(context, c, fixIndex: 0),
+                    diagnostic),
                 diagnostic);
+
+            if (diagnostic.Id == IDEDiagnosticIds.ValueAssignedIsUnusedDiagnosticId)
+            {
+                context.RegisterCodeFix(
+                new MyCodeAction(
+                    title: FeaturesResources.Remove_redundant_assignment,
+                    c => FixFirstAsync(context, c, fixIndex: 1),
+                    diagnostic),
+                diagnostic);
+            }
+
             return Task.CompletedTask;
         }
 
@@ -189,8 +202,8 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
 
         private sealed class MyCodeAction : CodeAction.DocumentChangeAction
         {
-            public MyCodeAction(string title, Func<CancellationToken, Task<Document>> createChangedDocument) :
-                base(title, createChangedDocument, equivalenceKey: title)
+            public MyCodeAction(string title, Func<CancellationToken, Task<Document>> createChangedDocument, Diagnostic diagnostic) :
+                base(title, createChangedDocument, equivalenceKey: diagnostic.Id + title)
             {
             }
         }

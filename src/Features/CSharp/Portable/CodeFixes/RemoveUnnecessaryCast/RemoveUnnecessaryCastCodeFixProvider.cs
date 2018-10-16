@@ -31,8 +31,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.RemoveUnnecessaryCast
         {
             context.RegisterCodeFix(new MyCodeAction(
                 FeaturesResources.Remove_Unnecessary_Cast,
-                c => FixAsync(context.Document, context.Diagnostics.First(), c)),
-                context.Diagnostics);
+                c => FixFirstAsync(context, c)),
+                context.Diagnostics[0]);
             return Task.CompletedTask;
         }
 

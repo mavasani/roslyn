@@ -41,12 +41,9 @@ namespace Microsoft.CodeAnalysis.UseCompoundAssignment
 
         public override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var document = context.Document;
-            var diagnostic = context.Diagnostics[0];
-            
             context.RegisterCodeFix(new MyCodeAction(
-                c => FixAsync(document, diagnostic, c)),
-                context.Diagnostics);
+                c => FixFirstAsync(context, c)),
+                context.Diagnostics[0]);
 
             return Task.CompletedTask;
         }

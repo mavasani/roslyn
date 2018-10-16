@@ -23,8 +23,8 @@ namespace Microsoft.CodeAnalysis.UseExplicitTupleName
         public override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             context.RegisterCodeFix(new MyCodeAction(
-                c => FixAsync(context.Document, context.Diagnostics[0], c)),
-                context.Diagnostics);
+                c => FixFirstAsync(context, c)),
+                context.Diagnostics[0]);
             return Task.CompletedTask;
         }
 

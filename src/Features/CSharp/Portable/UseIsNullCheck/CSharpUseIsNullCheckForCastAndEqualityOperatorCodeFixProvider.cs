@@ -33,8 +33,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UseIsNullCheck
             {
                 context.RegisterCodeFix(
                     new MyCodeAction(CSharpFeaturesResources.Use_is_null_check,
-                    c => this.FixAsync(context.Document, diagnostic, c)),
-                    context.Diagnostics);
+                    c => FixFirstAsync(context, c)),
+                    diagnostic);
             }
 
             return Task.CompletedTask;

@@ -23,13 +23,13 @@ namespace Microsoft.CodeAnalysis.AddAccessibilityModifiers
 
         public sealed override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var diagnostic = context.Diagnostics.First();
+            var diagnostic = context.Diagnostics[0];
             var priority = diagnostic.Severity == DiagnosticSeverity.Hidden
                 ? CodeActionPriority.Low
                 : CodeActionPriority.Medium;
             context.RegisterCodeFix(
-                new MyCodeAction(priority, c => FixAsync(context.Document, context.Diagnostics.First(), c)),
-                context.Diagnostics);
+                new MyCodeAction(priority, c => FixFirstAsync(context, c)),
+                diagnostic);
             return Task.CompletedTask;
         }
 

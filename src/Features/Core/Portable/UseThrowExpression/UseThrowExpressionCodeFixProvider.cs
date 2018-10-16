@@ -27,10 +27,9 @@ namespace Microsoft.CodeAnalysis.UseThrowExpression
 
         public override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var diagnostic = context.Diagnostics.First();
             context.RegisterCodeFix(
-                new MyCodeAction(c => FixAsync(context.Document, diagnostic, c)),
-                diagnostic);
+                new MyCodeAction(c => FixFirstAsync(context, c)),
+                context.Diagnostics[0]);
 
             return Task.CompletedTask;
         }

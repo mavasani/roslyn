@@ -38,8 +38,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.DeclareAsNullable
             }
 
             context.RegisterCodeFix(new MyCodeAction(
-                c => FixAsync(context.Document, diagnostic, c)),
-                context.Diagnostics);
+                c => FixFirstAsync(context, c)),
+                context.Diagnostics[0]);
         }
 
         protected override Task FixAllAsync(

@@ -30,14 +30,14 @@ namespace Microsoft.CodeAnalysis.CSharp.UseExpressionBodyForLambda
 
         public sealed override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var diagnostic = context.Diagnostics.First();
+            var diagnostic = context.Diagnostics[0];
 
             var priority = diagnostic.Severity == DiagnosticSeverity.Hidden
                 ? CodeActionPriority.Low
                 : CodeActionPriority.Medium;
 
             context.RegisterCodeFix(
-                new MyCodeAction(diagnostic.GetMessage(), priority, c => FixAsync(context.Document, diagnostic, c)),
+                new MyCodeAction(diagnostic.GetMessage(), priority, c => FixFirstAsync(context, c)),
                 diagnostic);
 
             return Task.CompletedTask;
