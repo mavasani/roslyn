@@ -107,6 +107,11 @@
         <target state="translated">As assinaturas de método relacionadas encontradas nos metadados não serão atualizadas.</target>
         <note />
       </trans-unit>
+      <trans-unit id="Remove_redundant_assignment">
+        <source>Remove redundant assignment</source>
+        <target state="new">Remove redundant assignment</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Remove_unread_private_members">
         <source>Remove unread private members</source>
         <target state="new">Remove unread private members</target>

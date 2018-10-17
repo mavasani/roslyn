@@ -113,16 +113,24 @@ namespace Microsoft.CodeAnalysis.MoveDeclarationNearReference
                 ? WarningAnnotation.Create(FeaturesResources.Warning_colon_Declaration_changes_scope_and_may_change_meaning)
                 : null;
 
-            editor.RemoveNode(state.DeclarationStatement);
-
             var canMergeDeclarationAndAssignment = await CanMergeDeclarationAndAssignmentAsync(document, state, cancellationToken).ConfigureAwait(false);
             if (canMergeDeclarationAndAssignment)
             {
+                editor.RemoveNode(state.DeclarationStatement);
                 MergeDeclarationAndAssignment(
                     document, state, editor, warningAnnotation);
             }
             else
             {
+                var statementIndex = state.OutermostBlockStatements.IndexOf(state.DeclarationStatement);
+                if (statementIndex + 1 < state.OutermostBlockStatements.Count &&
+                    state.OutermostBlockStatements[statementIndex + 1] == state.FirstStatementAffectedInInnermostBlock)
+                {
+                    // Already at the correct location.
+                    return;
+                }
+
+                editor.RemoveNode(state.DeclarationStatement);
                 await MoveDeclarationToFirstReferenceAsync(
                     document, state, editor, warningAnnotation, cancellationToken).ConfigureAwait(false);
             }

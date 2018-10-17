@@ -3,13 +3,21 @@
 Imports System.Composition
 Imports System.Threading
 Imports Microsoft.CodeAnalysis.CodeFixes
+Imports Microsoft.CodeAnalysis.Editing
 Imports Microsoft.CodeAnalysis.RemoveUnusedExpressions
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 
 Namespace Microsoft.CodeAnalysis.VisualBasic.RemoveUnusedExpressions
-    <ExportCodeFixProvider(LanguageNames.VisualBasic, Name:=PredefinedCodeFixProviderNames.RemoveUnusedAssignments), [Shared]>
-    Friend Class VisualBasicRemoveUnusedAssignmentsCodeFixProvider
-        Inherits AbstractRemoveUnusedAssignmentsCodeFixProvider(Of StatementSyntax, StatementSyntax, LocalDeclarationStatementSyntax)
+    <ExportCodeFixProvider(LanguageNames.VisualBasic, Name:=PredefinedCodeFixProviderNames.RemoveUnusedExpressions), [Shared]>
+    Friend Class VisualBasicRemoveUnusedExpressionsCodeFixProvider
+        Inherits AbstractRemoveUnusedExpressionsCodeFixProvider(Of ExpressionSyntax, StatementSyntax, StatementSyntax,
+                                                                   ExpressionStatementSyntax, LocalDeclarationStatementSyntax,
+                                                                   VariableDeclaratorSyntax, ForEachBlockSyntax)
+
+        Protected Overrides Function GenerateBlock(statements As IEnumerable(Of StatementSyntax)) As StatementSyntax
+            Throw ExceptionUtilities.Unreachable
+        End Function
+
         Protected Overrides Function UpdateNameForFlaggedNode(node As SyntaxNode, newName As SyntaxToken) As SyntaxNode
             Dim modifiedIdentifier = TryCast(node, ModifiedIdentifierSyntax)
             If modifiedIdentifier IsNot Nothing Then
@@ -30,7 +38,11 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.RemoveUnusedExpressions
             Return DirectCast(semanticModel.GetDeclaredSymbol(localDeclaration.Declarators(0).Names(0), cancellationToken), ILocalSymbol)
         End Function
 
-        Protected Overrides Function GenerateBlock(statements As IEnumerable(Of StatementSyntax)) As StatementSyntax
+        Protected Overrides Function RemoveDiscardDeclarationsAsync(memberDeclaration As SyntaxNode, editor As SyntaxEditor, document As Document, cancellationToken As CancellationToken) As Task
+            Throw ExceptionUtilities.Unreachable
+        End Function
+
+        Protected Overrides Function GetForEachStatementIdentifier(node As ForEachBlockSyntax) As SyntaxToken
             Throw ExceptionUtilities.Unreachable
         End Function
     End Class

@@ -20,6 +20,11 @@ namespace Microsoft.CodeAnalysis.CSharp.RemoveUnusedExpressions
             {
                 return variableDeclartor.Identifier.GetLocation();
             }
+            else if (unusedDefinition.Syntax?.Parent is ForEachStatementSyntax forEachStatement &&
+                     forEachStatement.Type == unusedDefinition.Syntax)
+            {
+                return forEachStatement.Identifier.GetLocation();
+            }
 
             return unusedDefinition.Syntax.GetLocation();
         }

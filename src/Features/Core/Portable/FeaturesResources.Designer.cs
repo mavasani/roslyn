@@ -2790,6 +2790,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Remove redundant assignment.
+        /// </summary>
+        internal static string Remove_redundant_assignment {
+            get {
+                return ResourceManager.GetString("Remove_redundant_assignment", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Remove reference to &apos;{0}&apos;..
         /// </summary>
         internal static string Remove_reference_to_0 {

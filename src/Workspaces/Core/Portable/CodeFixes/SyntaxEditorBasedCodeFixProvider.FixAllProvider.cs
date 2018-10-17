@@ -66,7 +66,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes
                 // that want to update a document.
                 var filteredDiagnostics = diagnostics.WhereAsArray(d => _codeFixProvider.IncludeDiagnosticDuringFixAll(fixAllState, d))
                                                      .Sort((d1, d2) => d1.Location.SourceSpan.Start - d2.Location.SourceSpan.Start);
-                return _codeFixProvider.FixAllAsync(document, filteredDiagnostics, fixAllState.CodeActionEquivalenceKey, cancellationToken);
+                return _codeFixProvider.FixAllAsync(document, filteredDiagnostics, cancellationToken);
             }
         }
     }

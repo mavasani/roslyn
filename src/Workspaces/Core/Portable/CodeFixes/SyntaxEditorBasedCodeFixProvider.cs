@@ -22,13 +22,13 @@ namespace Microsoft.CodeAnalysis.CodeFixes
             => _supportsFixAll ? new SyntaxEditorBasedFixAllProvider(this) : null;
 
         protected Task<Document> FixAsync(
-            Document document, Diagnostic diagnostic, string codeActionEquivalenceKey, CancellationToken cancellationToken)
+            Document document, Diagnostic diagnostic, CancellationToken cancellationToken)
         {
             return FixAllAsync(document, ImmutableArray.Create(diagnostic), cancellationToken);
         }
 
         protected virtual Task<Document> FixAllAsync(
-            Document document, ImmutableArray<Diagnostic> diagnostics, string codeActionEquivalenceKey, CancellationToken cancellationToken)
+            Document document, ImmutableArray<Diagnostic> diagnostics, CancellationToken cancellationToken)
         {
             return FixAllWithEditorAsync(document,
                 editor => FixAllAsync(document, diagnostics, editor, cancellationToken),
