@@ -26,7 +26,8 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
 {
     internal abstract class AbstractRemoveUnusedExpressionsCodeFixProvider<TExpressionSyntax, TStatementSyntax, TBlockSyntax,
                                                                            TExpressionStatementSyntax, TLocalDeclarationStatementSyntax,
-                                                                           TVariableDeclaratorSyntax, TForEachStatementSyntax>
+                                                                           TVariableDeclaratorSyntax, TForEachStatementSyntax,
+                                                                           TSwitchCaseBlockSyntax, TSwitchCaseLabelOrClauseSyntax>
         : SyntaxEditorBasedCodeFixProvider
         where TExpressionSyntax : SyntaxNode
         where TStatementSyntax : SyntaxNode
@@ -35,6 +36,8 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
         where TLocalDeclarationStatementSyntax : TStatementSyntax
         where TVariableDeclaratorSyntax : SyntaxNode
         where TForEachStatementSyntax: TStatementSyntax
+        where TSwitchCaseBlockSyntax: SyntaxNode
+        where TSwitchCaseLabelOrClauseSyntax: SyntaxNode
     {
         private static readonly SyntaxAnnotation s_memberAnnotation = new SyntaxAnnotation();
         private static readonly SyntaxAnnotation s_newLocalDeclarationStatementAnnotation = new SyntaxAnnotation();
@@ -115,7 +118,10 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
         protected abstract SyntaxToken GetForEachStatementIdentifier(TForEachStatementSyntax node);
         protected abstract TBlockSyntax GenerateBlock(IEnumerable<TStatementSyntax> statements);
         protected abstract ILocalSymbol GetSingleDeclaredLocal(TLocalDeclarationStatementSyntax localDeclaration, SemanticModel semanticModel, CancellationToken cancellationToken);
+        protected abstract void InsertAtStartOfSwitchCaseBlock(TSwitchCaseBlockSyntax switchCaseBlock, SyntaxEditor editor, TLocalDeclarationStatementSyntax declarationStatement);
+
         private bool NeedsToMoveNewLocalDeclarationsNearReference(string diagnosticId) => diagnosticId == IDEDiagnosticIds.ValueAssignedIsUnusedDiagnosticId;
+        
 
         protected override bool IncludeDiagnosticDuringFixAll(FixAllState fixAllState, Diagnostic diagnostic)
         {
@@ -295,10 +301,9 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             ISyntaxFactsService syntaxFacts,
             CancellationToken cancellationToken)
         {
-            var declarationStatementsBuilder = ArrayBuilder<TLocalDeclarationStatementSyntax>.GetInstance();
             var nodeReplacementMap = PooledDictionary<SyntaxNode, SyntaxNode>.GetInstance();
             var nodesToRemove = PooledHashSet<SyntaxNode>.GetInstance();
-            var declStatementCandidatesForRemoval = PooledHashSet<TLocalDeclarationStatementSyntax>.GetInstance();
+            var candidateNodesForRemoval = PooledHashSet<TLocalDeclarationStatementSyntax>.GetInstance();
 
             try
             {
@@ -308,8 +313,6 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                 // Hence, we can assume that each node to fix is parented by a StatementSyntax node.
                 foreach (var nodesByStatement in nodesToFix.GroupBy(n => n.node.FirstAncestorOrSelf<TStatementSyntax>()))
                 {
-                    declarationStatementsBuilder.Clear();
-                    
                     var statement = nodesByStatement.Key;
                     foreach (var (node, isUnusedLocalAssignment) in nodesByStatement)
                     {
@@ -328,7 +331,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                                 nodesToRemove.Add(variableDeclarator);
 
                                 // Local declaration statement containing the declarator might be a candidate for removal if all its variables get marked for removal.
-                                declStatementCandidatesForRemoval.Add(variableDeclarator.GetAncestor<TLocalDeclarationStatementSyntax>());
+                                candidateNodesForRemoval.Add(variableDeclarator.GetAncestor<TLocalDeclarationStatementSyntax>());
                             }
                             else
                             {
@@ -364,13 +367,13 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                         if (declaredLocal != null)
                         {
                             // We have a dead initialization for a local declaration.
-                            var localDeclaration = CreateLocalDeclarationStatement(declaredLocal.Type, declaredLocal.Name);
+                            var declarationStatement = CreateLocalDeclarationStatement(declaredLocal.Type, declaredLocal.Name);
                             if (isUnusedLocalAssignment)
                             {
-                                localDeclaration = localDeclaration.WithAdditionalAnnotations(s_unusedLocalDeclarationAnnotation);
+                                declarationStatement = declarationStatement.WithAdditionalAnnotations(s_unusedLocalDeclarationAnnotation);
                             }
 
-                            declarationStatementsBuilder.Add(localDeclaration);
+                            InsertLocalDeclarationStatement(declarationStatement, node);
                         }
                         else
                         {
@@ -382,18 +385,14 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                                 var type = semanticModel.GetTypeInfo(node, cancellationToken).Type;
                                 Debug.Assert(type != null);
                                 Debug.Assert(newLocalNameOpt != null);
-                                declarationStatementsBuilder.Add(CreateLocalDeclarationStatement(type, newLocalNameOpt));
+                                var declarationStatement = CreateLocalDeclarationStatement(type, newLocalNameOpt);
+                                InsertLocalDeclarationStatement(declarationStatement, node);
                             }
                         }
                     }
-
-                    if (declarationStatementsBuilder.Count > 0)
-                    {
-                        editor.InsertBefore(statement.FirstAncestorOrSelf<TStatementSyntax>(n => n.Parent is TBlockSyntax), declarationStatementsBuilder);
-                    }
                 }
 
-                foreach (var localDeclarationStatement in declStatementCandidatesForRemoval)
+                foreach (var localDeclarationStatement in candidateNodesForRemoval)
                 {
                     if (ShouldRemoveStatement(localDeclarationStatement, out var variables))
                     {
@@ -414,7 +413,6 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             }
             finally
             {
-                declarationStatementsBuilder.Free();
                 nodeReplacementMap.Free();
                 nodesToRemove.Free();
             }
@@ -437,8 +435,23 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             //  2. Simplifier annotation so that 'var'/explicit type is correctly added based on user options.
             TLocalDeclarationStatementSyntax CreateLocalDeclarationStatement(ITypeSymbol type, string name)
                 => (TLocalDeclarationStatementSyntax)editor.Generator.LocalDeclarationStatement(type, name)
-                   .WithLeadingTrivia(editor.Generator.EndOfLine(Environment.NewLine))
+                   .WithLeadingTrivia(editor.Generator.ElasticCarriageReturnLineFeed)
                    .WithAdditionalAnnotations(s_newLocalDeclarationStatementAnnotation, Simplifier.Annotation);
+
+            void InsertLocalDeclarationStatement(TLocalDeclarationStatementSyntax declarationStatement, SyntaxNode node)
+            {
+                var insertionNode = node.FirstAncestorOrSelf<SyntaxNode>(n => n.Parent is TSwitchCaseBlockSyntax ||
+                                                                              syntaxFacts.IsExecutableBlock(n.Parent));
+                if (insertionNode is TSwitchCaseLabelOrClauseSyntax)
+                {
+                    InsertAtStartOfSwitchCaseBlock(insertionNode.GetAncestor<TSwitchCaseBlockSyntax>(), editor, declarationStatement);
+                }
+                else
+                {
+                    Debug.Assert(insertionNode is TStatementSyntax);
+                    editor.InsertBefore(insertionNode, declarationStatement);
+                }
+            }
 
             bool ShouldRemoveStatement(TLocalDeclarationStatementSyntax localDeclarationStatement, out SeparatedSyntaxList<SyntaxNode> variables)
             {
@@ -536,6 +549,10 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             // Finally, we apply replace the memberDeclaration in the originalEditor as a single edit.
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
             var rootWithTrackedNodes = root.TrackNodes(originalDeclStatementsToMove);
+
+            // Run formatter prior to invoking IMoveDeclarationNearReferenceService.
+            rootWithTrackedNodes = Formatter.Format(rootWithTrackedNodes, memberDeclaration.Span, document.Project.Solution.Workspace, cancellationToken: cancellationToken);
+            
             await OnUpdatedRootAsync(rootWithTrackedNodes).ConfigureAwait(false);
 
             foreach (TLocalDeclarationStatementSyntax originalDeclStatement in originalDeclStatementsToMove)

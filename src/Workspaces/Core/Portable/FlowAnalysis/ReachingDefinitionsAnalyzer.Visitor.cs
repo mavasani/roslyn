@@ -63,6 +63,11 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
 
             private void OnReadReferenceFound(ISymbol symbol, IOperation operation)
             {
+                if (symbol.Kind == SymbolKind.Discard)
+                {
+                    return;
+                }
+
                 if (_unusedDefinitions.Count != 0)
                 {
                     var currentDefinitions = _currentAnalysisData.GetCurrentDefinitions(symbol);
@@ -83,6 +88,11 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
 
             private void OnWriteReferenceFound(ISymbol symbol, IOperation operation, bool maybeWritten)
             {
+                if (symbol.Kind == SymbolKind.Discard)
+                {
+                    return;
+                }
+
                 _currentAnalysisData.OnWriteReferenceFound(symbol, operation, maybeWritten);
 
                 if (IsUnusedDefinitionCandidate(symbol) && !maybeWritten)
@@ -94,12 +104,44 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
             private void OnReferenceFound(ISymbol symbol, IOperation operation)
             {
                 var valueUsageInfo = operation.GetValueUsageInfo();
-                if (valueUsageInfo.IsReadFrom())
+                var isReadFrom = valueUsageInfo.IsReadFrom();
+                var isWrittenTo = valueUsageInfo.IsWrittenTo();
+
+                if (isReadFrom && isWrittenTo)
+                {
+                    // Read/Write could either be:
+                    //  1. A read followed by a write. For example, increment "i++", compound assignment "i += 1", etc.
+                    //  2. A declaration/write followed by a read. For example, declaration pattern 'int i' inside
+                    //     an is pattern exprssion "if (x is int i)").
+                    // Handle scenario 2 (declaration pattern) specially and use an assert to catch unknown cases.
+                    if (operation.Kind == OperationKind.DeclarationPattern && operation.Parent?.Kind == OperationKind.IsPattern)
+                    {
+                        OnWriteReferenceFound(symbol, operation, maybeWritten: false);
+
+                        // Special handling for implicit IsPattern parent operation.
+                        // In ControlFlowGraph, we generate implicit IsPattern operation for pattern case clauses,
+                        // where is the read is not observable and we want to consider such case clause declaration patterns
+                        // as just a write.
+                        if (!operation.Parent.IsImplicit)
+                        {
+                            OnReadReferenceFound(symbol, operation);
+                        }
+
+                        return;
+                    }
+
+                    Debug.Assert(operation.Parent.Kind == OperationKind.CompoundAssignment ||
+                                 operation.Parent.Kind == OperationKind.Increment ||
+                                 operation.Parent is IArgumentOperation argument && argument.Parameter.RefKind == RefKind.Ref,
+                                 "Unhandled read-write ordering");
+                }
+
+                if (isReadFrom)
                 {
                     OnReadReferenceFound(symbol, operation);
                 }
 
-                if (valueUsageInfo.IsWrittenTo())
+                if (isWrittenTo)
                 {
                     // maybeWritten == 'ref' argument.
                     OnWriteReferenceFound(symbol, operation, maybeWritten: valueUsageInfo == ValueUsageInfo.ReadableWritableReference);
@@ -129,8 +171,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
 
             public override void VisitDeclarationPattern(IDeclarationPatternOperation operation)
             {
-                OnWriteReferenceFound(operation.DeclaredSymbol, operation, maybeWritten: false);
-                OnReadReferenceFound(operation.DeclaredSymbol, operation);
+                OnReferenceFound(operation.DeclaredSymbol, operation);
             }
 
             public override void VisitInvocation(IInvocationOperation operation)

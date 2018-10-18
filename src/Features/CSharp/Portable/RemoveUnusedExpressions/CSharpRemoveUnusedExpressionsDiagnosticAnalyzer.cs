@@ -16,17 +16,23 @@ namespace Microsoft.CodeAnalysis.CSharp.RemoveUnusedExpressions
 
         protected override Location GetDefinitionLocationToFade(IOperation unusedDefinition)
         {
-            if (unusedDefinition.Syntax is VariableDeclaratorSyntax variableDeclartor)
+            switch (unusedDefinition.Syntax)
             {
-                return variableDeclartor.Identifier.GetLocation();
-            }
-            else if (unusedDefinition.Syntax?.Parent is ForEachStatementSyntax forEachStatement &&
-                     forEachStatement.Type == unusedDefinition.Syntax)
-            {
-                return forEachStatement.Identifier.GetLocation();
-            }
+                case VariableDeclaratorSyntax variableDeclartor:
+                    return variableDeclartor.Identifier.GetLocation();
 
-            return unusedDefinition.Syntax.GetLocation();
+                case DeclarationPatternSyntax declarationPattern:
+                    return declarationPattern.Designation.GetLocation();
+
+                default:
+                    if (unusedDefinition.Syntax?.Parent is ForEachStatementSyntax forEachStatement &&
+                        forEachStatement.Type == unusedDefinition.Syntax)
+                    {
+                        return forEachStatement.Identifier.GetLocation();
+                    }
+
+                    return unusedDefinition.Syntax.GetLocation();
+            }
         }
     }
 }

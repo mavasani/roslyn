@@ -12,11 +12,16 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.RemoveUnusedExpressions
     Friend Class VisualBasicRemoveUnusedExpressionsCodeFixProvider
         Inherits AbstractRemoveUnusedExpressionsCodeFixProvider(Of ExpressionSyntax, StatementSyntax, StatementSyntax,
                                                                    ExpressionStatementSyntax, LocalDeclarationStatementSyntax,
-                                                                   VariableDeclaratorSyntax, ForEachBlockSyntax)
+                                                                   VariableDeclaratorSyntax, ForEachBlockSyntax,
+                                                                   CaseBlockSyntax, CaseClauseSyntax)
 
         Protected Overrides Function GenerateBlock(statements As IEnumerable(Of StatementSyntax)) As StatementSyntax
             Throw ExceptionUtilities.Unreachable
         End Function
+
+        Protected Overrides Sub InsertAtStartOfSwitchCaseBlock(switchCaseBlock As CaseBlockSyntax, editor As SyntaxEditor, declarationStatement As LocalDeclarationStatementSyntax)
+            Throw ExceptionUtilities.Unreachable
+        End Sub
 
         Protected Overrides Function UpdateNameForFlaggedNode(node As SyntaxNode, newName As SyntaxToken) As SyntaxNode
             Dim modifiedIdentifier = TryCast(node, ModifiedIdentifierSyntax)

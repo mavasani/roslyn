@@ -30,9 +30,9 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         private IDictionary<OptionKey, object> PreferUnusedLocal =>
             Option(CodeStyleOptions.UnusedExpressionAssignment,
                    new CodeStyleOption<UnusedExpressionAssignmentPreference>(UnusedExpressionAssignmentPreference.UnusedLocalVariable, NotificationOption.Suggestion));
-        private IDictionary<OptionKey, object> GetOptions(string option)
+        private IDictionary<OptionKey, object> GetOptions(string optionName)
         {
-            switch (option)
+            switch (optionName)
             {
                 case nameof(PreferDiscard):
                     return PreferDiscard;
@@ -46,7 +46,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_Suppressed()
+        public async Task Initialization_Suppressed()
         {
             await TestMissingInRegularAndScriptAsync(
 @"class C
@@ -61,7 +61,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantAssignment_Suppressed()
+        public async Task Assignment_Suppressed()
         {
             await TestMissingInRegularAndScriptAsync(
 @"class C
@@ -79,7 +79,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantInitialization_ConstantValue(string option)
+        public async Task Initialization_ConstantValue(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -98,13 +98,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         int x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantAssignment_ConstantValue(string option)
+        public async Task Assignment_ConstantValue(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -125,13 +125,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantInitialization_NonConstantValue_ParameterReference(string option)
+        public async Task Initialization_NonConstantValue_ParameterReference(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -150,13 +150,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         int x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantAssignment_NonConstantValue_ParameterReference(string option)
+        public async Task Assignment_NonConstantValue_ParameterReference(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -177,13 +177,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantInitialization_NonConstantValue_LocalReference(string option)
+        public async Task Initialization_NonConstantValue_LocalReference(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -204,13 +204,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         int x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantAssignment_NonConstantValue_LocalReference(string option)
+        public async Task Assignment_NonConstantValue_LocalReference(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -233,13 +233,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantInitialization_NonConstantValue_FieldReferenceWithThisReceiver(string option)
+        public async Task Initialization_NonConstantValue_FieldReferenceWithThisReceiver(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -260,13 +260,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         int x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantAssignment_NonConstantValue_FieldReferenceWithNullReceiver(string option)
+        public async Task Assignment_NonConstantValue_FieldReferenceWithNullReceiver(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -289,13 +289,13 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveUnusedExpressions
         x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard), "_")]
         [InlineData(nameof(PreferUnusedLocal), "int unused")]
-        public async Task RedundantAssignment_NonConstantValue_FieldReferenceWithReceiver(string option, string fix)
+        public async Task Assignment_NonConstantValue_FieldReferenceWithReceiver(string optionName, string fix)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -319,13 +319,13 @@ $@"class C
         x = 2;
         return x;
     }}
-}}", options: GetOptions(option));
+}}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard), "_")]
         [InlineData(nameof(PreferUnusedLocal), "int unused")]
-        public async Task RedundantInitialization_NonConstantValue_PropertyReference(string option, string fix)
+        public async Task Initialization_NonConstantValue_PropertyReference(string optionName, string fix)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -349,13 +349,13 @@ $@"class C
         x = 2;
         return x;
     }}
-}}", options: GetOptions(option));
+}}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard), "_")]
         [InlineData(nameof(PreferUnusedLocal), "int unused")]
-        public async Task RedundantInitialization_NonConstantValue_MethodInvocation(string option, string fix)
+        public async Task Initialization_NonConstantValue_MethodInvocation(string optionName, string fix)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -379,13 +379,13 @@ $@"class C
     }}
 
     int M2() => 0;
-}}", options: GetOptions(option));
+}}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard), "_")]
         [InlineData(nameof(PreferUnusedLocal), "int unused")]
-        public async Task RedundantAssignment_NonConstantValue_MethodInvocation(string option, string fix)
+        public async Task Assignment_NonConstantValue_MethodInvocation(string optionName, string fix)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -411,13 +411,13 @@ $@"class C
     }}
 
     int M2() => 0;
-}}", options: GetOptions(option));
+}}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard), "_")]
         [InlineData(nameof(PreferUnusedLocal), "int unused")]
-        public async Task RedundantAssignment_NonConstantValue_ImplicitConversion(string option, string fix)
+        public async Task Assignment_NonConstantValue_ImplicitConversion(string optionName, string fix)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -437,13 +437,13 @@ $@"class C
         x = 2;
         return x;
     }}
-}}", options: GetOptions(option));
+}}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantNestedAssignment_ConstantValue(string option)
+        public async Task NestedAssignment_ConstantValue(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -463,11 +463,11 @@ $@"class C
         x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantNestedAssignment_NonConstantValue_PreferDiscard()
+        public async Task NestedAssignment_NonConstantValue_PreferDiscard()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -495,7 +495,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantNestedAssignment_NonConstantValue_PreferUnusedLocal()
+        public async Task NestedAssignment_NonConstantValue_PreferUnusedLocal()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -513,7 +513,6 @@ $@"class C
 {
     int M(int x, int y)
     {
-
         int unused;
         y = unused = M2();
         x = 2;
@@ -525,7 +524,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_NoReferences_PreferDiscard()
+        public async Task Initialization_NonConstantValue_NoReferences_PreferDiscard()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -549,7 +548,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_NoReferences_PreferUnusedLocal()
+        public async Task Initialization_NonConstantValue_NoReferences_PreferUnusedLocal()
         {
             await TestMissingInRegularAndScriptAsync(
 @"class C
@@ -564,7 +563,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_NoReadReferences_PreferDiscard()
+        public async Task Initialization_NonConstantValue_NoReadReferences_PreferDiscard()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -590,7 +589,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_NoReadReferences_PreferUnusedLocal()
+        public async Task Initialization_NonConstantValue_NoReadReferences_PreferUnusedLocal()
         {
             await TestMissingInRegularAndScriptAsync(
 @"class C
@@ -608,7 +607,7 @@ $@"class C
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantInitialization_ConstantValue_FirstField(string option)
+        public async Task Initialization_ConstantValue_FirstField(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -628,13 +627,13 @@ $@"class C
         int x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantInitialization_ConstantValue_MiddleField(string option)
+        public async Task Initialization_ConstantValue_MiddleField(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -654,13 +653,13 @@ $@"class C
         int x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantInitialization_ConstantValue_LastField(string option)
+        public async Task Initialization_ConstantValue_LastField(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -680,11 +679,11 @@ $@"class C
         int x = 2;
         return x;
     }
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_FirstField_PreferDiscard()
+        public async Task Initialization_NonConstantValue_FirstField_PreferDiscard()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -713,7 +712,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_FirstField_PreferUnusedLocal()
+        public async Task Initialization_NonConstantValue_FirstField_PreferUnusedLocal()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -741,7 +740,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_MiddleField_PreferDiscard()
+        public async Task Initialization_NonConstantValue_MiddleField_PreferDiscard()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -771,7 +770,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_MiddleField_PreferUnusedLocal()
+        public async Task Initialization_NonConstantValue_MiddleField_PreferUnusedLocal()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -799,7 +798,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_LastField_PreferDiscard()
+        public async Task Initialization_NonConstantValue_LastField_PreferDiscard()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -828,7 +827,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantInitialization_NonConstantValue_LastField_PreferUnusedLocal()
+        public async Task Initialization_NonConstantValue_LastField_PreferUnusedLocal()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -858,7 +857,7 @@ $@"class C
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task RedundantAssignment_BeforeUseAsOutArgument(string option)
+        public async Task Assignment_BeforeUseAsOutArgument(string optionName)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -883,13 +882,13 @@ $@"class C
     }
 
     void M2(out int x) => x = 0;
-}", options: GetOptions(option));
+}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task NonRedundantAssignment_BeforeUseAsRefArgument(string option)
+        public async Task NonRedundantAssignment_BeforeUseAsRefArgument(string optionName)
         {
             await TestMissingInRegularAndScriptAsync(
 @"class C
@@ -903,13 +902,13 @@ $@"class C
     }
 
     void M2(ref int x) => x = 0;
-}", new TestParameters(options: GetOptions(option)));
+}", new TestParameters(options: GetOptions(optionName)));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task NonRedundantAssignment_BeforeUseAsInArgument(string option)
+        public async Task NonRedundantAssignment_BeforeUseAsInArgument(string optionName)
         {
             await TestMissingInRegularAndScriptAsync(
 @"class C
@@ -923,11 +922,11 @@ $@"class C
     }
 
     void M2(in int x) { }
-}", new TestParameters(options: GetOptions(option)));
+}", new TestParameters(options: GetOptions(optionName)));
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantOutArgument_PreferDiscard()
+        public async Task OutArgument_PreferDiscard()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -957,7 +956,7 @@ $@"class C
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
-        public async Task RedundantOutArgument_PreferUnusedLocal()
+        public async Task OutArgument_PreferUnusedLocal()
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -977,7 +976,6 @@ $@"class C
     int M()
     {
         int x;
-
         int unused;
         M2(out unused);
         x = 1;
@@ -991,7 +989,7 @@ $@"class C
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard), "_")]
         [InlineData(nameof(PreferUnusedLocal), "unused")]
-        public async Task RedundantOutDeclarationExpressionArgument(string option, string fix)
+        public async Task OutDeclarationExpressionArgument(string optionName, string fix)
         {
             await TestInRegularAndScriptAsync(
 @"class C
@@ -1015,13 +1013,13 @@ $@"class C
     }}
 
     void M2(out int x) => x = 0;
-}}", options: GetOptions(option));
+}}", options: GetOptions(optionName));
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
         [InlineData(nameof(PreferDiscard))]
         [InlineData(nameof(PreferUnusedLocal))]
-        public async Task NonRedundantRefArgument(string option)
+        public async Task NonRedundantRefArgument(string optionName)
         {
             await TestMissingInRegularAndScriptAsync(
 @"class C
@@ -1034,7 +1032,608 @@ $@"class C
     }
 
     void M2(ref int x) => x = 0;
-}", new TestParameters(options: GetOptions(option)));
+}", new TestParameters(options: GetOptions(optionName)));
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task NonRedundantInArgument(string optionName)
+        {
+            await TestMissingInRegularAndScriptAsync(
+@"class C
+{
+    int M(int x)
+    {
+        M2(in [|x|]);
+        x = 1;
+        return x;
+    }
+
+    void M2(in int x) { }
+}", new TestParameters(options: GetOptions(optionName)));
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData(nameof(PreferDiscard), "_")]
+        [InlineData(nameof(PreferUnusedLocal), "unused")]
+        public async Task DeconstructionDeclarationExpression(string optionName, string fix)
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    int M()
+    {
+        var ([|x|], y) = (1, 1);
+        x = 1;
+        return x;
+    }
+}",
+$@"class C
+{{
+    int M()
+    {{
+        var ({fix}, y) = (1, 1);
+        int x = 1;
+        return x;
+    }}
+}}", options: GetOptions(optionName));
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData(nameof(PreferDiscard), "_")]
+        [InlineData(nameof(PreferUnusedLocal), "unused")]
+        public async Task TupleExpressionWithDeclarationExpressions(string optionName, string fix)
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    int M()
+    {
+        (var [|x|], var y) = (1, 1);
+        x = 1;
+        return x;
+    }
+}",
+$@"class C
+{{
+    int M()
+    {{
+        (var {fix}, var y) = (1, 1);
+        int x = 1;
+        return x;
+    }}
+}}", options: GetOptions(optionName));
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        public async Task DeclarationPatternInSwitchCase_WithOnlyWriteReference_PreferDiscard()
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    void M(object p)
+    {
+        switch (p)
+        {
+            case int [|x|]:
+                x = 1;
+                break;
+        };
+    }
+}",
+@"class C
+{
+    void M(object p)
+    {
+        switch (p)
+        {
+            case int _:
+                int x;
+                x = 1;
+                break;
+        };
+    }
+}", options: PreferDiscard);
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        public async Task DeclarationPatternInSwitchCase_WithOnlyWriteReference_PreferUnusedLocal()
+        {
+            await TestMissingInRegularAndScriptAsync(
+@"class C
+{
+    void M(object p)
+    {
+        switch (p)
+        {
+            case int [|x|]:
+                x = 1;
+                break;
+        };
+    }
+}", new TestParameters(options: PreferUnusedLocal));
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData(nameof(PreferDiscard), "_")]
+        [InlineData(nameof(PreferUnusedLocal), "unused")]
+        public async Task DeclarationPatternInSwitchCase_WithReadAndWriteReferences(string optionName, string fix)
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    void M(object p)
+    {
+        switch (p)
+        {
+            case int [|x|]:
+                x = 1;
+                p = x;
+                break;
+        }
+    }
+}",
+$@"class C
+{{
+    void M(object p)
+    {{
+        switch (p)
+        {{
+            case int {fix}:
+                int x;
+                x = 1;
+                p = x;
+                break;
+        }}
+    }}
+}}", options: GetOptions(optionName));
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task IfElse_OverrwrittenInBothBranches_AssignedBefore(string optionName)
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    void M(bool flag)
+    {
+        int [|x|] = 1;
+        if (flag)
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+    }
+}",
+@"class C
+{
+    void M(bool flag)
+    {
+        int x;
+        if (flag)
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+    }
+}", options: GetOptions(optionName));
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        public async Task IfElse_OverrwrittenInBothBranches_AssignedInCondition_PreferDiscard()
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    void M(bool flag)
+    {
+        int x;
+        if (M2(out [|x|]))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+    }
+
+    bool M2(out int x) => x = 0;
+}",
+@"class C
+{
+    void M(bool flag)
+    {
+        int x;
+        if (M2(out _))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+    }
+
+    bool M2(out int x) => x = 0;
+}", options: PreferDiscard);
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        public async Task IfElse_OverrwrittenInBothBranches_DeclaredInCondition_PreferDiscard()
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    void M(bool flag)
+    {
+        if (M2(out var [|x|]))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+    }
+
+    bool M2(out int x) => x = 0;
+}",
+@"class C
+{
+    void M(bool flag)
+    {
+        int x;
+        if (M2(out var _))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+    }
+
+    bool M2(out int x) => x = 0;
+}", options: PreferDiscard);
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        public async Task IfElse_OverrwrittenInBothBranches_AssignedInCondition_ReadAfter_PreferUnusedLocal()
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    int M(bool flag)
+    {
+        int x;
+        if (M2(out [|x|]))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+
+        return x;
+    }
+
+    bool M2(out int x) => x = 0;
+}",
+@"class C
+{
+    int M(bool flag)
+    {
+        int x;
+        int unused;
+        if (M2(out unused))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+
+        return x;
+    }
+
+    bool M2(out int x) => x = 0;
+}", options: PreferUnusedLocal);
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        public async Task IfElse_OverrwrittenInBothBranches_AssignedInCondition_NoReads_PreferUnusedLocal()
+        {
+            await TestMissingInRegularAndScriptAsync(
+@"class C
+{
+    void M(bool flag)
+    {
+        int x;
+        if (M2(out [|x|]))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+    }
+
+    bool M2(out int x) => x = 0;
+}", new TestParameters(options: PreferUnusedLocal));
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        public async Task IfElse_OverrwrittenInBothBranches_DeclaredInCondition_ReadAfter_PreferUnusedLocal()
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    int M(bool flag)
+    {
+        if (M2(out var [|x|]))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+
+        return x;
+    }
+
+    bool M2(out int x) => x = 0;
+}",
+@"class C
+{
+    int M(bool flag)
+    {
+        int x;
+        if (M2(out var unused))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+
+        return x;
+    }
+
+    bool M2(out int x) => x = 0;
+}", options: PreferUnusedLocal);
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        public async Task IfElse_OverrwrittenInBothBranches_DeclaredInCondition_NoReads_PreferUnusedLocal()
+        {
+            await TestMissingInRegularAndScriptAsync(
+@"class C
+{
+    void M(bool flag)
+    {
+        if (M2(out var [|x|]))
+        {
+            x = 2;
+        }
+        else
+        {
+            x = 3;
+        }
+    }
+
+    bool M2(out int x) => x = 0;
+}", new TestParameters(options: PreferUnusedLocal));
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task IfElse_OverrwrittenInCondition(string optionName)
+        {
+            await TestInRegularAndScriptAsync(
+@"class C
+{
+    void M(bool flag)
+    {
+        int [|x|] = 1;
+        if (M2(out x))
+        {
+        }
+        else
+        {
+        }
+    }
+
+    bool M2(out int x) => x = 0;
+}",
+@"class C
+{
+    void M(bool flag)
+    {
+        int x;
+        if (M2(out x))
+        {
+        }
+        else
+        {
+        }
+    }
+
+    bool M2(out int x) => x = 0;
+}", options: GetOptions(optionName));
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task IfElse_OverrwrittenInIfBranch(string optionName)
+        {
+            await TestMissingInRegularAndScriptAsync(
+@"class C
+{
+    int M(bool flag)
+    {
+        int [|x|] = 1;
+        if (flag)
+        {
+            x = 2;
+        }
+        else
+        {
+        }
+
+        return x;
+    }
+}", new TestParameters(options: GetOptions(optionName)));
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData("flag && M2(out x)", "", "x = 2")]
+        [InlineData("flag || M2(out x)", "x = 2", "")]
+        public async Task IfElse_OverrwrittenInOneBranchCodeAndOtherBranchCondition(string condition, string ifBranchCode, string elseBranchCode)
+        {
+            foreach (var options in new[] { PreferDiscard, PreferUnusedLocal })
+            {
+                await TestInRegularAndScriptAsync(
+$@"class C
+{{
+    int M(bool flag)
+    {{
+        int [|x|] = 1;
+        if ({condition})
+        {{
+            {ifBranchCode}
+        }}
+        else
+        {{
+            {elseBranchCode}
+        }}
+
+        return x;
+    }}
+
+    bool M2(out int x) {{ x = 0; return true; }}
+    int M3() => 0;
+}}",
+$@"class C
+{{
+    int M(bool flag)
+    {{
+        int x;
+        if ({condition})
+        {{
+            {ifBranchCode}
+        }}
+        else
+        {{
+            {elseBranchCode}
+        }}
+
+        return x;
+    }}
+
+    bool M2(out int x) {{ x = 0; return true; }}
+    int M3() => 0;
+}}", options: options);
+            }
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData("flag || M2(out x)")]
+        [InlineData("flag && M2(out x)")]
+        [InlineData("flag || M2(out x) && (x = M3()) > 0")]
+        public async Task IfElse_MayBeOverrwrittenInCondition_LogicalOperators(string condition)
+        {
+            foreach (var options in new[] { PreferDiscard, PreferUnusedLocal })
+            {
+                await TestMissingInRegularAndScriptAsync(
+$@"class C
+{{
+    int M(bool flag)
+    {{
+        int [|x|] = 1;
+        if ({condition})
+        {{
+        }}
+        else
+        {{
+        }}
+
+        return x;
+    }}
+
+    bool M2(out int x) {{ x = 0; return true; }}
+    int M3() => 0;
+}}", new TestParameters(options: options));
+        }
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedExpressions)]
+        [InlineData("M2(out x) || flag")]
+        [InlineData("M2(out x) && flag")]
+        [InlineData("M2(out x) || M2(out x)")]
+        [InlineData("M2(out x) && M2(out x)")]
+        [InlineData("flag && M2(out x) || (x = M3()) > 0")]
+        [InlineData("(flag || M2(out x)) && (x = M3()) > 0")]
+        [InlineData("M2(out x) && flag || (x = M3()) > 0")]
+        [InlineData("flag && M2(out x) || (x = M3()) > 0 && flag")]
+        public async Task IfElse_OverrwrittenInCondition_LogicalOperators(string condition)
+        {
+            foreach (var options in new[] { PreferDiscard, PreferUnusedLocal })
+            {
+                await TestInRegularAndScriptAsync(
+$@"class C
+{{
+    int M(bool flag)
+    {{
+        int [|x|] = 1;
+        if ({condition})
+        {{
+        }}
+        else
+        {{
+        }}
+
+        return x;
+    }}
+
+    bool M2(out int x) {{ x = 0; return true; }}
+    int M3() => 0;
+}}",
+        $@"class C
+{{
+    int M(bool flag)
+    {{
+        int x;
+        if ({condition})
+        {{
+        }}
+        else
+        {{
+        }}
+
+        return x;
+    }}
+
+    bool M2(out int x) {{ x = 0; return true; }}
+    int M3() => 0;
+}}", options: options);
+            }
         }
     }
 }

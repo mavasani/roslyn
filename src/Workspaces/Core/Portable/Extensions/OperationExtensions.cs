@@ -42,6 +42,28 @@ namespace Microsoft.CodeAnalysis
             | typeof(x)       |      |       |             |             |       ✔️        | ️
 
             */
+            if (operation is ILocalReferenceOperation localReference &&
+                localReference.IsDeclaration)
+            {
+                // Declaration expression.
+                return ValueUsageInfo.Write;
+            }
+            else if (operation is IDeclarationPatternOperation)
+            {
+                switch (operation.Parent)
+                {
+                    case IPatternCaseClauseOperation _:
+                        return ValueUsageInfo.Write;
+
+                    case IIsPatternOperation _:
+                        return ValueUsageInfo.ReadWrite;
+
+                    default:
+                        Debug.Fail("Unhandled declaration pattern context");
+                        // Conservatively assume read/write.
+                        return ValueUsageInfo.ReadWrite;
+                }
+            }
 
             if (operation.Parent is IAssignmentOperation assignmentOperation &&
                 assignmentOperation.Target == operation)

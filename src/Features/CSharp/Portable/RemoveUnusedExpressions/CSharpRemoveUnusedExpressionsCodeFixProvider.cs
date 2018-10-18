@@ -19,7 +19,8 @@ namespace Microsoft.CodeAnalysis.CSharp.RemoveUnusedExpressions
     internal class CSharpRemoveUnusedExpressionsCodeFixProvider:
         AbstractRemoveUnusedExpressionsCodeFixProvider<ExpressionSyntax, StatementSyntax, BlockSyntax, 
                                                        ExpressionStatementSyntax, LocalDeclarationStatementSyntax,
-                                                       VariableDeclaratorSyntax, ForEachStatementSyntax>
+                                                       VariableDeclaratorSyntax, ForEachStatementSyntax,
+                                                       SwitchSectionSyntax, SwitchLabelSyntax>
     {
         protected override BlockSyntax GenerateBlock(IEnumerable<StatementSyntax> statements)
             => SyntaxFactory.Block(statements);
@@ -51,6 +52,21 @@ namespace Microsoft.CodeAnalysis.CSharp.RemoveUnusedExpressions
         {
             Contract.ThrowIfFalse(localDeclaration.Declaration.Variables.Count == 1);
             return (ILocalSymbol)semanticModel.GetDeclaredSymbol(localDeclaration.Declaration.Variables[0]);
+        }
+
+        protected override void InsertAtStartOfSwitchCaseBlock(SwitchSectionSyntax switchCaseBlock, SyntaxEditor editor, LocalDeclarationStatementSyntax declarationStatement)
+        {
+            var firstStatement = switchCaseBlock.Statements.FirstOrDefault();
+            if (firstStatement != null)
+            {
+                editor.InsertBefore(firstStatement, declarationStatement);
+            }
+            else
+            {
+                // Switch section without any statements is an error case.
+                // Insert before containing switch statement.
+                editor.InsertBefore(switchCaseBlock.Parent, declarationStatement);
+            }
         }
 
         protected override Task RemoveDiscardDeclarationsAsync(
