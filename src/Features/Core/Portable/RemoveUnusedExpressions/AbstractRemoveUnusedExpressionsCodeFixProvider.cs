@@ -212,10 +212,37 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             // Local functions
             string GenerateUniqueNameAtSpanStart(SyntaxNode node)
             {
-                var name = NameGenerator.GenerateUniqueName("unused",
-                    n => !usedNames.Contains(n) && semanticModel.LookupSymbols(node.SpanStart, name: n).IsEmpty);
-                usedNames.Add(name);
-                return name;
+                var localsInNestedScope = PooledHashSet<string>.GetInstance();
+                try
+                {
+                    // Add local names for all variable declarations in nested scopes for this node.
+                    // This helps prevent name clashes with locals declared in nested block scopes.
+                    AddLocalsInNestedScope(node, localsInNestedScope);
+
+                    var name = NameGenerator.GenerateUniqueName("unused",
+                        n => !usedNames.Contains(n) &&
+                             !localsInNestedScope.Contains(n) &&
+                             semanticModel.LookupSymbols(node.SpanStart, name: n).IsEmpty);
+                    usedNames.Add(name);
+                    return name;
+                }
+                finally
+                {
+                    localsInNestedScope.Free();
+                }
+            }
+
+            void AddLocalsInNestedScope(SyntaxNode node, PooledHashSet<string> localsInNestedScope)
+            {
+                var blockAncestor = node.FirstAncestorOrSelf<SyntaxNode>(n => syntaxFacts.IsExecutableBlock(n));
+                if (blockAncestor != null)
+                {
+                    foreach (var variableDeclarator in blockAncestor.DescendantNodes().OfType<TVariableDeclaratorSyntax>())
+                    {
+                        var name = syntaxFacts.GetIdentifierOfVariableDeclarator(variableDeclarator).ValueText;
+                        localsInNestedScope.Add(name);
+                    }
+                }
             }
         }
 
@@ -274,16 +301,16 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
                         var discardAssignmentExpression = (TExpressionSyntax)editor.Generator.AssignmentStatement(
                                 left: editor.Generator.IdentifierName("_"), right: expression.WithoutTrivia())
                             .WithTriviaFrom(expression)
-                            .WithAdditionalAnnotations(Simplifier.Annotation);
+                            .WithAdditionalAnnotations(Simplifier.Annotation, Formatter.Annotation);
                         editor.ReplaceNode(expression, discardAssignmentExpression);
                         break;
 
                     case UnusedExpressionAssignmentPreference.UnusedLocalVariable:
                         // Add Simplifier annotation so that 'var'/explicit type is correctly added based on user options.
                         var localDecl = editor.Generator.LocalDeclarationStatement(
-                                name: generateUniqueNameAtSpanStart(expressionStatement), initializer: expression)
+                                name: generateUniqueNameAtSpanStart(expressionStatement), initializer: expression.WithoutLeadingTrivia())
                             .WithTriviaFrom(expressionStatement)
-                            .WithAdditionalAnnotations(Simplifier.Annotation);
+                            .WithAdditionalAnnotations(Simplifier.Annotation, Formatter.Annotation);
                         editor.ReplaceNode(expressionStatement, localDecl);
                         break;
                 }
@@ -551,7 +578,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedExpressions
             var rootWithTrackedNodes = root.TrackNodes(originalDeclStatementsToMove);
 
             // Run formatter prior to invoking IMoveDeclarationNearReferenceService.
-            rootWithTrackedNodes = Formatter.Format(rootWithTrackedNodes, memberDeclaration.Span, document.Project.Solution.Workspace, cancellationToken: cancellationToken);
+            rootWithTrackedNodes = Formatter.Format(rootWithTrackedNodes, originalDeclStatementsToMove.Select(s => s.Span), document.Project.Solution.Workspace, cancellationToken: cancellationToken);
             
             await OnUpdatedRootAsync(rootWithTrackedNodes).ConfigureAwait(false);
 

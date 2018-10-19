@@ -836,6 +836,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to , its initial value is never used.
+        /// </summary>
+        internal static string comma_its_initial_value_is_never_used {
+            get {
+                return ResourceManager.GetString("comma_its_initial_value_is_never_used", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Compiler.
         /// </summary>
         internal static string Compiler1 {
@@ -1726,6 +1735,15 @@ namespace Microsoft.CodeAnalysis {
         internal static string Hosting_process_exited_with_exit_code_0 {
             get {
                 return ResourceManager.GetString("Hosting_process_exited_with_exit_code_0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to if it is not part of a shipped public API.
+        /// </summary>
+        internal static string if_it_is_not_part_of_a_shipped_public_API {
+            get {
+                return ResourceManager.GetString("if_it_is_not_part_of_a_shipped_public_API", resourceCulture);
             }
         }
         
@@ -2885,6 +2903,24 @@ namespace Microsoft.CodeAnalysis {
         internal static string Remove_unused_member {
             get {
                 return ResourceManager.GetString("Remove_unused_member", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remove unused parameter.
+        /// </summary>
+        internal static string Remove_unused_parameter {
+            get {
+                return ResourceManager.GetString("Remove_unused_parameter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remove unused parameter &apos;{0}&apos;{1}.
+        /// </summary>
+        internal static string Remove_unused_parameter_0_1 {
+            get {
+                return ResourceManager.GetString("Remove_unused_parameter_0_1", resourceCulture);
             }
         }
         

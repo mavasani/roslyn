@@ -13,9 +13,13 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
     {
         private sealed class Walker : OperationWalker
         {
+            /// <summary>
+            /// Map from each definition to a boolean indicating if the value assinged
+            /// at definition is used/read on some control flow path.
+            /// </summary>
+            private PooledDictionary<(ISymbol symbol, IOperation operation), bool> _definitionUsageMap;
+            private PooledHashSet<ISymbol> _referencedSymbols;
             private ReachingDefinitionsBlockAnalysisData _currentAnalysisData;
-            private PooledHashSet<(ISymbol, IOperation)> _unusedDefinitions;
-            private PooledHashSet<ILocalSymbol> _referencedLocals;
 
             private static readonly ObjectPool<Walker> s_visitorPool = new ObjectPool<Walker>(() => new Walker());
             private Walker() { }
@@ -23,13 +27,13 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
             public static void AnalyzeOperationsAndUpdateData(
                 IEnumerable<IOperation> operations,
                 ReachingDefinitionsBlockAnalysisData analysisData,
-                PooledHashSet<(ISymbol, IOperation)> unusedDefinitions,
-                PooledHashSet<ILocalSymbol> referencedLocals)
+                PooledDictionary<(ISymbol, IOperation), bool> definitionUsageMap,
+                PooledHashSet<ISymbol> referencedLocals)
             {
                 var visitor = s_visitorPool.Allocate();
                 try
                 {
-                    visitor.Visit(operations, analysisData, unusedDefinitions, referencedLocals);
+                    visitor.Visit(operations, analysisData, definitionUsageMap, referencedLocals);
                 }
                 finally
                 {
@@ -40,16 +44,16 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
             private void Visit(
                 IEnumerable<IOperation> operations,
                 ReachingDefinitionsBlockAnalysisData analysisData,
-                PooledHashSet<(ISymbol, IOperation)> unusedDefinitions,
-                PooledHashSet<ILocalSymbol> referencedLocals)
+                PooledDictionary<(ISymbol, IOperation), bool> definitionUsageMap,
+                PooledHashSet<ISymbol> referencedSymbols)
             {
                 Debug.Assert(_currentAnalysisData == null);
-                Debug.Assert(_unusedDefinitions == null);
-                Debug.Assert(_referencedLocals == null);
+                Debug.Assert(_definitionUsageMap == null);
+                Debug.Assert(_referencedSymbols == null);
 
                 _currentAnalysisData = analysisData;
-                _unusedDefinitions = unusedDefinitions;
-                _referencedLocals = referencedLocals;
+                _definitionUsageMap = definitionUsageMap;
+                _referencedSymbols = referencedSymbols;
 
                 foreach (var operation in operations)
                 {
@@ -57,8 +61,8 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
                 }
 
                 _currentAnalysisData = null;
-                _unusedDefinitions = null;
-                _referencedLocals = null;
+                _definitionUsageMap = null;
+                _referencedSymbols = null;
             }
 
             private void OnReadReferenceFound(ISymbol symbol, IOperation operation)
@@ -68,36 +72,34 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
                     return;
                 }
 
-                if (_unusedDefinitions.Count != 0)
+                if (_definitionUsageMap.Count != 0)
                 {
                     var currentDefinitions = _currentAnalysisData.GetCurrentDefinitions(symbol);
                     foreach (var definition in currentDefinitions)
                     {
-                        _unusedDefinitions.Remove((symbol, definition));
+                        _definitionUsageMap[(symbol, definition)] = true;
                     }
                 }
 
-                if (symbol is ILocalSymbol localSymbol)
-                {
-                    _referencedLocals.Add(localSymbol);
-                }
+                _referencedSymbols.Add(symbol);
             }
-
-            private static bool IsUnusedDefinitionCandidate(ISymbol symbol)
-                => !(symbol is IParameterSymbol parameter) || (parameter.RefKind != RefKind.Ref && parameter.RefKind != RefKind.Out);
 
             private void OnWriteReferenceFound(ISymbol symbol, IOperation operation, bool maybeWritten)
             {
+                var definition = (symbol, operation);
                 if (symbol.Kind == SymbolKind.Discard)
                 {
+                    // Skip discard symbols and also for already processed writes (back edge from loops).
                     return;
                 }
 
                 _currentAnalysisData.OnWriteReferenceFound(symbol, operation, maybeWritten);
 
-                if (IsUnusedDefinitionCandidate(symbol) && !maybeWritten)
+                // Only mark as unused definition if we are processing it for the first time (not from back edge for loops)
+                if (!_definitionUsageMap.ContainsKey(definition) &&
+                    !maybeWritten)
                 {
-                    _unusedDefinitions.Add((symbol, operation));
+                    _definitionUsageMap.Add((symbol, operation), false);
                 }
             }
 
@@ -130,8 +132,8 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
                         return;
                     }
 
-                    Debug.Assert(operation.Parent.Kind == OperationKind.CompoundAssignment ||
-                                 operation.Parent.Kind == OperationKind.Increment ||
+                    Debug.Assert(operation.Parent is ICompoundAssignmentOperation ||
+                                 operation.Parent is IIncrementOrDecrementOperation ||
                                  operation.Parent is IArgumentOperation argument && argument.Parameter.RefKind == RefKind.Ref,
                                  "Unhandled read-write ordering");
                 }
@@ -189,9 +191,16 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
                 }
             }
 
+            public override void VisitArgument(IArgumentOperation operation)
+            {
+                base.VisitArgument(operation);
+
+                
+            }
+
             private void ResetState(IOperation operation)
             {
-                foreach (var symbol in _unusedDefinitions.Select(d => d.Item1).ToArray())
+                foreach (var symbol in _definitionUsageMap.Keys.Select(d => d.symbol).ToArray())
                 {
                     OnReadReferenceFound(symbol, operation);
                 }

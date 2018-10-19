@@ -1,32 +1,54 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Linq;
-using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.PooledObjects;
+using Microsoft.CodeAnalysis.Shared.Extensions;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
 {
     internal sealed partial class ReachingDefinitionsAnalyzer : AbstractDataFlowAnalyzer<ReachingDefinitionsBlockAnalysisData>
     {
-        private readonly PooledHashSet<(ISymbol Symbol, IOperation Definition)> _unusedDefinitions;
-        private readonly PooledHashSet<ILocalSymbol> _referencedLocals;
+        /// <summary>
+        /// Map from each definition to a boolean indicating if the value assinged
+        /// at definition is used/read on some control flow path.
+        /// </summary>
+        private readonly PooledDictionary<(ISymbol Symbol, IOperation Definition), bool> _definitionUsageMap;
+
+        /// <summary>
+        /// Set of locals/parameters that have at least one use/read for one of its definitions.
+        /// </summary>
+        private readonly PooledHashSet<ISymbol> _referencedSymbols;
+
         private readonly ReachingDefinitionsBlockAnalysisData _currentBlockAnalysisData;
         private readonly Dictionary<BasicBlock, ReachingDefinitionsBlockAnalysisData> _reachingDefinitionsMap;
+        private readonly ImmutableArray<IParameterSymbol> _parameters;
 
-        private ReachingDefinitionsAnalyzer(ControlFlowGraph cfg)
+        private ReachingDefinitionsAnalyzer(ControlFlowGraph cfg, ISymbol owningSymbol)
         {
-            _unusedDefinitions = PooledHashSet<(ISymbol, IOperation)>.GetInstance();
-            _referencedLocals = PooledHashSet<ILocalSymbol>.GetInstance();
+            _referencedSymbols = PooledHashSet<ISymbol>.GetInstance();
             _currentBlockAnalysisData = ReachingDefinitionsBlockAnalysisData.GetInstance();
+            _parameters = owningSymbol.GetParameters();
+            _definitionUsageMap = CreateDefinitionsUsageMap(_parameters);
             _reachingDefinitionsMap = CreateReachingDefinitionsMap(cfg);
         }
 
-        private static Dictionary<BasicBlock, ReachingDefinitionsBlockAnalysisData> CreateReachingDefinitionsMap(ControlFlowGraph cfg)
+        private static PooledDictionary<(ISymbol Symbol, IOperation Definition), bool> CreateDefinitionsUsageMap(
+            ImmutableArray<IParameterSymbol> parameters)
+        {
+            var definitionUsageMap = PooledDictionary<(ISymbol Symbol, IOperation Definition), bool>.GetInstance();
+
+            foreach (var parameter in parameters)
+            {
+                definitionUsageMap[(parameter, null)] = false;
+            }
+
+            return definitionUsageMap;
+        }
+
+        private static Dictionary<BasicBlock, ReachingDefinitionsBlockAnalysisData> CreateReachingDefinitionsMap(
+            ControlFlowGraph cfg)
         {
             var builder = new Dictionary<BasicBlock, ReachingDefinitionsBlockAnalysisData>(cfg.Blocks.Length);
             foreach (var block in cfg.Blocks)
@@ -37,37 +59,37 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
             return builder;
         }
 
-        public static UnusedDefinitionsResult AnalyzeAndGetUnusedDefinitions(ControlFlowGraph cfg)
+        public static DefinitionUsageResult AnalyzeAndGetUnusedDefinitions(ControlFlowGraph cfg, ISymbol owningSymbol)
         {
-            using (var analyzer = new ReachingDefinitionsAnalyzer(cfg))
+            using (var analyzer = new ReachingDefinitionsAnalyzer(cfg, owningSymbol))
             {
                 _ = CustomDataFlowAnalysis<ReachingDefinitionsAnalyzer, ReachingDefinitionsBlockAnalysisData>.Run(cfg.Blocks, analyzer);
-                return new UnusedDefinitionsResult(analyzer._unusedDefinitions.ToImmutableHashSet(), analyzer._referencedLocals.ToImmutableHashSet());
+                return new DefinitionUsageResult(analyzer._definitionUsageMap.ToImmutableDictionary(), analyzer._referencedSymbols.ToImmutableHashSet());
             }
         }
 
-        public static UnusedDefinitionsResult AnalyzeAndGetUnusedDefinitions(IOperation rootOperation)
+        public static DefinitionUsageResult AnalyzeAndGetUnusedDefinitions(IOperation rootOperation, ISymbol owningSymbol)
         {
-            var unusedDefinitions = PooledHashSet<(ISymbol, IOperation)>.GetInstance();
-            var referencedLocals = PooledHashSet<ILocalSymbol>.GetInstance();
+            var definitionUsageMap = CreateDefinitionsUsageMap(owningSymbol.GetParameters());
+            var referencedSymbols = PooledHashSet<ISymbol>.GetInstance();
             var analysisData = ReachingDefinitionsBlockAnalysisData.GetInstance();
             try
             {
-                Walker.AnalyzeOperationsAndUpdateData(SpecializedCollections.SingletonEnumerable(rootOperation), analysisData, unusedDefinitions, referencedLocals);
-                return new UnusedDefinitionsResult(unusedDefinitions.ToImmutableHashSet(), referencedLocals.ToImmutableHashSet());
+                Walker.AnalyzeOperationsAndUpdateData(SpecializedCollections.SingletonEnumerable(rootOperation), analysisData, definitionUsageMap, referencedSymbols);
+                return new DefinitionUsageResult(definitionUsageMap.ToImmutableDictionary(), referencedSymbols.ToImmutableHashSet());
             }
             finally
             {
-                unusedDefinitions.Free();
-                referencedLocals.Free();
+                definitionUsageMap.Free();
+                referencedSymbols.Free();
                 analysisData.Free();
             }
         }
 
         protected override void Dispose(bool disposing)
         {
-            _unusedDefinitions.Free();
-            _referencedLocals.Free();
+            _definitionUsageMap.Free();
+            _referencedSymbols.Free();
             _currentBlockAnalysisData.Free();
         }
 
@@ -83,20 +105,57 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
 
         protected override ReachingDefinitionsBlockAnalysisData AnalyzeBlock(BasicBlock basicBlock)
         {
-            _currentBlockAnalysisData.SetAnalysisDataFrom(GetOrCreateBlockData(basicBlock));
-            Walker.AnalyzeOperationsAndUpdateData(basicBlock.Operations, _currentBlockAnalysisData, _unusedDefinitions, _referencedLocals);
+            BeforeBlockAnalysis();
+            Walker.AnalyzeOperationsAndUpdateData(basicBlock.Operations, _currentBlockAnalysisData, _definitionUsageMap, _referencedSymbols);
+            AfterBlockAnalysis();
             return _currentBlockAnalysisData;
+
+            // Local functions.
+            void BeforeBlockAnalysis()
+            {
+                _currentBlockAnalysisData.SetAnalysisDataFrom(GetOrCreateBlockData(basicBlock));
+                if (basicBlock.Kind == BasicBlockKind.Entry)
+                {
+                    foreach (var parameter in _parameters)
+                    {
+                        _definitionUsageMap[(parameter, null)] = false;
+                        _currentBlockAnalysisData.OnWriteReferenceFound(parameter, operation: null, maybeWritten: false);
+                    }
+                }
+            }
+
+            void AfterBlockAnalysis()
+            {
+                // Mark all reachable definitions for ref/out parameters at end of exit block as used.
+                if (basicBlock.Kind == BasicBlockKind.Exit && _definitionUsageMap.Count != 0)
+                {
+                    foreach (var parameter in _parameters)
+                    {
+                        if (parameter.RefKind == RefKind.Ref || parameter.RefKind == RefKind.Out)
+                        {
+                            var currentDefinitions = _currentBlockAnalysisData.GetCurrentDefinitions(parameter);
+                            foreach (var definition in currentDefinitions)
+                            {
+                                if (definition != null)
+                                {
+                                    _definitionUsageMap[(parameter, definition)] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         protected override ReachingDefinitionsBlockAnalysisData AnalyzeNonConditionalBranch(BasicBlock basicBlock, ReachingDefinitionsBlockAnalysisData currentAnalysisData)
         {
-            Walker.AnalyzeOperationsAndUpdateData(SpecializedCollections.SingletonEnumerable(basicBlock.BranchValue), currentAnalysisData, _unusedDefinitions, _referencedLocals);
+            Walker.AnalyzeOperationsAndUpdateData(SpecializedCollections.SingletonEnumerable(basicBlock.BranchValue), currentAnalysisData, _definitionUsageMap, _referencedSymbols);
             return currentAnalysisData;
         }
 
         protected override (ReachingDefinitionsBlockAnalysisData fallThroughSuccessorData, ReachingDefinitionsBlockAnalysisData conditionalSuccessorData) AnalyzeConditionalBranch(BasicBlock basicBlock, ReachingDefinitionsBlockAnalysisData currentAnalysisData)
         {
-            Walker.AnalyzeOperationsAndUpdateData(SpecializedCollections.SingletonEnumerable(basicBlock.BranchValue), currentAnalysisData, _unusedDefinitions, _referencedLocals);
+            Walker.AnalyzeOperationsAndUpdateData(SpecializedCollections.SingletonEnumerable(basicBlock.BranchValue), currentAnalysisData, _definitionUsageMap, _referencedSymbols);
             return (currentAnalysisData, currentAnalysisData);
         }
 
@@ -122,15 +181,26 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.ReachingDefinitions
             => ReachingDefinitionsBlockAnalysisData.Merge(analysisData1, analysisData2);
     }
 
-    internal sealed class UnusedDefinitionsResult
+    internal sealed class DefinitionUsageResult
     {
-        public UnusedDefinitionsResult(ImmutableHashSet<(ISymbol, IOperation)> unusedDefinitions, ImmutableHashSet<ILocalSymbol> referencedLocals)
+        public DefinitionUsageResult(ImmutableDictionary<(ISymbol Symbol, IOperation Definition), bool> definitionUsageMap, ImmutableHashSet<ISymbol> referencedSymbols)
         {
-            UnusedDefinitions = unusedDefinitions;
-            ReferencedLocals = referencedLocals;
+            DefinitionUsageMap = definitionUsageMap;
+            ReferencedSymbols = referencedSymbols;
         }
 
-        public ImmutableHashSet<(ISymbol Symbol, IOperation Definition)> UnusedDefinitions { get; }
-        public ImmutableHashSet<ILocalSymbol> ReferencedLocals { get; }
+        public ImmutableDictionary<(ISymbol Symbol, IOperation Definition), bool> DefinitionUsageMap { get; }
+        public ImmutableHashSet<ISymbol> ReferencedSymbols { get; }
+
+        public IEnumerable<(ISymbol Symbol, IOperation Definition)> GetUnusedDefinitions()
+        {
+            foreach (var kvp in DefinitionUsageMap)
+            {
+                if (!kvp.Value)
+                {
+                    yield return kvp.Key;
+                }
+            }
+        }
     }
 }

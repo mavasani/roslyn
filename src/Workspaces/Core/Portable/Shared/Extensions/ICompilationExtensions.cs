@@ -126,5 +126,25 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
 
         public static INamedTypeSymbol LazyOfTType(this Compilation compilation)
             => compilation.GetTypeByMetadataName(typeof(Lazy<>).FullName);
+
+        public static INamedTypeSymbol ConditionalAttribute(this Compilation compilation)
+            => compilation.GetTypeByMetadataName("System.Diagnostics.ConditionalAttribute");
+
+        public static INamedTypeSymbol OnDeserializingAttribute(this Compilation compilation)
+                    => compilation.GetTypeByMetadataName("System.Runtime.Serializations.OnDeserializingAttribute");
+
+        public static INamedTypeSymbol OnDeserializedAttribute(this Compilation compilation)
+                    => compilation.GetTypeByMetadataName("System.Runtime.Serializations.OnDeserializedAttribute");
+
+        public static INamedTypeSymbol OnSerializingAttribute(this Compilation compilation)
+                    => compilation.GetTypeByMetadataName("System.Runtime.Serializations.OnSerializingAttribute");
+
+        public static INamedTypeSymbol OnSerializedAttribute(this Compilation compilation)
+                    => compilation.GetTypeByMetadataName("System.Runtime.Serializations.OnSerializedAttribute");
+
+        public static INamedTypeSymbol ObsoleteAttribute(this Compilation compilation)
+                    => compilation.GetTypeByMetadataName("System.ObsoleteAttribute");
+
+
     }
 }
