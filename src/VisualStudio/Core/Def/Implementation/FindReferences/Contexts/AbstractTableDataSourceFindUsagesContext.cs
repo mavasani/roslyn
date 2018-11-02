@@ -121,7 +121,7 @@ namespace Microsoft.VisualStudio.LanguageServices.FindUsages
                 //  2. First reference result which has a non-default custom column value
                 //     (UpdateCustomColumnVisibility method below).
                 // Also note that the TableControl.SetColumnStates is not dependent on order of the input column states.
-                TableControl.SetColumnStates(_customColumnTitleToStatesMap.Values);
+                //TableControl.SetColumnStates(_customColumnTitleToStatesMap.Values);
             }
 
             /// <summary>
@@ -451,7 +451,7 @@ namespace Microsoft.VisualStudio.LanguageServices.FindUsages
 
             public sealed override Task OnReferenceFoundAsync(SourceReferenceItem reference)
             {
-                UpdateCustomColumnsVisibility(reference.ReferenceInfo);
+                //UpdateCustomColumnsVisibility(reference.ReferenceInfo);
                 return OnReferenceFoundWorkerAsync(reference);
             }
 
