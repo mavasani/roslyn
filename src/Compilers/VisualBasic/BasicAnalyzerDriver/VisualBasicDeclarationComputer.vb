@@ -193,7 +193,12 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         Private Shared Function GetMethodBaseCodeBlocks(methodBase As MethodBaseSyntax) As IEnumerable(Of SyntaxNode)
             Dim paramInitializers = GetParameterListInitializersAndAttributes(methodBase.ParameterList)
             Dim attributes = GetAttributes(methodBase.AttributeLists).Concat(GetReturnTypeAttributes(GetAsClause(methodBase)))
-            Return paramInitializers.Concat(attributes)
+            Dim codeBlocks = paramInitializers.Concat(attributes)
+            Dim handlesClauseOpt = TryCast(methodBase, MethodStatementSyntax)?.HandlesClause
+            If handlesClauseOpt IsNot Nothing Then
+                codeBlocks = codeBlocks.Concat(handlesClauseOpt)
+            End If
+            Return codeBlocks
         End Function
 
         Private Shared Function GetAsClause(methodBase As MethodBaseSyntax) As AsClauseSyntax

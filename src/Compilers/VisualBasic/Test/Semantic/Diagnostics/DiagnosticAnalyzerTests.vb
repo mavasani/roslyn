@@ -1410,6 +1410,39 @@ End Class
                 Diagnostic("ID", "FieldForIndexerReturnType").WithArguments("FieldForIndexerReturnType", "31").WithLocation(83, 101))
         End Sub
 
+        <Fact, WorkItem(30895, "https://github.com/dotnet/roslyn/issues/30895")>
+        Public Sub TestFieldReferenceAnalyzer_InHandlesClause()
+            Dim source = <compilation>
+                             <file name="c.vb">
+                                 <![CDATA[
+Public Interface I
+    Event M()
+End Interface
+
+Public Class C
+    Private WithEvents _field1 As I
+    Private WithEvents _field2 As I
+    Private WithEvents _field3 As I
+
+    Private Sub M() Handles _field1.M
+    End Sub
+
+    Private Sub M2() Handles _field2.M, _field3.M
+    End Sub
+End Class]]>
+                             </file>
+                         </compilation>
+
+            Dim comp = CreateCompilationWithMscorlib40AndVBRuntime(source)
+            comp.VerifyDiagnostics()
+
+            ' Test RegisterOperationBlockAction
+            comp.VerifyAnalyzerDiagnostics({New FieldReferenceOperationAnalyzer(doOperationBlockAnalysis:=True)}, Nothing, Nothing, False)
+
+            ' Test RegisterOperationAction
+            comp.VerifyAnalyzerDiagnostics({New FieldReferenceOperationAnalyzer(doOperationBlockAnalysis:=False)}, Nothing, Nothing, False)
+        End Sub
+
         <Fact, WorkItem(25167, "https://github.com/dotnet/roslyn/issues/25167")>
         Public Sub TestMethodBodyOperationAnalyzer()
             Dim source = <compilation>
