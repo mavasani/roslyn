@@ -110,6 +110,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             List<string> keyFileSearchPaths = new List<string>();
             List<string> usings = new List<string>();
             var generalDiagnosticOption = ReportDiagnostic.Default;
+            var prefixBasedDiagnosticOptions = ArrayBuilder<(string prefix, ReportDiagnostic option)>.GetInstance();
+            var prefixBasedNoWarnOptions = ArrayBuilder<(string prefix, ReportDiagnostic option)>.GetInstance();
             var diagnosticOptions = new Dictionary<string, ReportDiagnostic>();
             var noWarns = new Dictionary<string, ReportDiagnostic>();
             var warnAsErrors = new Dictionary<string, ReportDiagnostic>();
@@ -730,21 +732,14 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                         case "warnaserror":
                         case "warnaserror+":
-                            if (value == null)
+                            if (value == null || value == "*")
                             {
-                                generalDiagnosticOption = ReportDiagnostic.Error;
-
-                                // Reset specific warnaserror options (since last /warnaserror flag on the command line always wins),
-                                // and bump warnings to errors.
-                                warnAsErrors.Clear();
-                                foreach (var key in diagnosticOptions.Keys)
-                                {
-                                    if (diagnosticOptions[key] == ReportDiagnostic.Warn)
-                                    {
-                                        warnAsErrors[key] = ReportDiagnostic.Error;
-                                    }
-                                }
-
+                                onWarnAsErrorPlus(prefixOpt: null);
+                                continue;
+                            }
+                            else if (value.EndsWith("*"))
+                            {
+                                onWarnAsErrorPlus(prefixOpt: value.Substring(0, value.Length - 1));
                                 continue;
                             }
 
@@ -759,13 +754,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                             continue;
 
                         case "warnaserror-":
-                            if (value == null)
+                            if (value == null || value == "*")
                             {
-                                generalDiagnosticOption = ReportDiagnostic.Default;
-
-                                // Clear specific warnaserror options (since last /warnaserror flag on the command line always wins).
-                                warnAsErrors.Clear();
-
+                                onWarnAsErrorMinus(prefixOpt: null);
+                                continue;
+                            }
+                            else if (value.EndsWith("*"))
+                            {
+                                onWarnAsErrorMinus(prefixOpt: value.Substring(0, value.Length - 1));
                                 continue;
                             }
 
@@ -816,9 +812,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                             continue;
 
                         case "nowarn":
-                            if (value == null)
+                            if (value == null || value == "*")
                             {
                                 AddDiagnostic(diagnostics, ErrorCode.ERR_SwitchNeedsNumber, name);
+                                continue;
+                            }
+                            else if (value.EndsWith("*"))
+                            {
+                                var prefix = value.Substring(0, value.Length - 1);
+                                prefixBasedNoWarnOptions.Add((prefix, ReportDiagnostic.Suppress));
                                 continue;
                             }
 
@@ -1204,6 +1206,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 diagnosticOptions[o.Key] = o.Value;
             }
 
+            // Prefix based nowarn option always override specific warnaserror options.
+            applyPrefixBasedNoWarns();
+
+            // Reverse contents of prefix based option specifications so the last specification always wins.
+            prefixBasedDiagnosticOptions.ReverseContents();
+
             if (refOnly && outputRefFilePath != null)
             {
                 AddDiagnostic(diagnostics, diagnosticOptions, ErrorCode.ERR_NoRefOutWhenRefOnly);
@@ -1313,6 +1321,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 platform: platform,
                 generalDiagnosticOption: generalDiagnosticOption,
                 warningLevel: warningLevel,
+                prefixBasedDiagnosticOptions: prefixBasedDiagnosticOptions.ToImmutableAndFree(),
                 specificDiagnosticOptions: diagnosticOptions,
                 reportSuppressedDiagnostics: reportSuppressedDiagnostics,
                 publicSign: publicSign
@@ -1399,6 +1408,94 @@ namespace Microsoft.CodeAnalysis.CSharp
                 ReportAnalyzer = reportAnalyzer,
                 EmbeddedFiles = embeddedFiles.AsImmutable()
             };
+
+            void onWarnAsErrorPlus(string prefixOpt)
+            {
+                setGeneralOrPrefixBasedOption(ReportDiagnostic.Error, prefixOpt);
+                clearSpecificWarnAsErrors(prefixOpt);
+
+                // Bump warnings to errors.
+                foreach (var key in diagnosticOptions.Keys)
+                {
+                    if (prefixOpt == null && diagnosticOptions[key] == ReportDiagnostic.Warn ||
+                        prefixOpt != null && IsDiagnosticIdPrefixMatch(key, prefixOpt))
+                    {
+                        warnAsErrors[key] = ReportDiagnostic.Error;
+                    }
+                }
+            }
+
+            void onWarnAsErrorMinus(string prefixOpt)
+            {
+                setGeneralOrPrefixBasedOption(ReportDiagnostic.Default, prefixOpt);
+                clearSpecificWarnAsErrors(prefixOpt);
+            }
+
+            void setGeneralOrPrefixBasedOption(ReportDiagnostic option, string prefixOpt)
+            {
+                if (prefixOpt == null)
+                {
+                    generalDiagnosticOption = option;
+                }
+                else
+                {
+                    Debug.Assert(prefixOpt.Length > 0);
+                    prefixBasedDiagnosticOptions.Add((prefixOpt, option));
+                }
+            }
+
+            void clearSpecificWarnAsErrors(string prefixOpt)
+            {
+                // Reset matching specific warnaserror options (since last /warnaserror flag on the command line always wins)
+                if (prefixOpt == null)
+                {
+                    warnAsErrors.Clear();
+                    prefixBasedDiagnosticOptions.Clear();
+                }
+                else
+                {
+                    var prefixMatchKeys = warnAsErrors.Keys.Where(key => IsDiagnosticIdPrefixMatch(key, prefixOpt)).ToImmutableArrayOrEmpty();
+                    foreach (var key in prefixMatchKeys)
+                    {
+                        warnAsErrors.Remove(key);
+                    }
+                }
+            }
+
+            void applyPrefixBasedNoWarns()
+            {
+                var keyBuilder = PooledHashSet<string>.GetInstance();
+                foreach (var key in diagnosticOptions.Keys)
+                {
+                    foreach (var (prefix, _) in prefixBasedNoWarnOptions)
+                    {
+                        if (IsDiagnosticIdPrefixMatch(key, prefix))
+                        {
+                            keyBuilder.Add(key);
+                            break;
+                        }
+                    }
+                }
+
+                foreach (var key in keyBuilder)
+                {
+                    diagnosticOptions[key] = ReportDiagnostic.Suppress;
+                }
+
+                prefixBasedDiagnosticOptions.AddRange(prefixBasedNoWarnOptions);
+            }
+        }
+
+        internal static bool IsDiagnosticIdPrefixMatch(string diagnosticId, string prefix)
+        {
+            // Case-sensitive match.
+            if (!diagnosticId.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var suffix = diagnosticId.Substring(prefix.Length);
+            return suffix.Length == 0 || ushort.TryParse(suffix, NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
         }
 
         private static void ParseAndResolveReferencePaths(string switchName, string switchValue, string baseDirectory, List<string> builder, MessageID origin, List<Diagnostic> diagnostics)

@@ -194,6 +194,11 @@ namespace Microsoft.CodeAnalysis
         internal abstract Diagnostic FilterDiagnostic(Diagnostic diagnostic);
 
         /// <summary>
+        /// Prefix based warning report options.
+        /// </summary>
+        public ImmutableArray<(string prefix, ReportDiagnostic option)> PrefixBasedDiagnosticOptions { get; protected set; }
+
+        /// <summary>
         /// Warning report option for each warning.
         /// </summary>
         public ImmutableDictionary<string, ReportDiagnostic> SpecificDiagnosticOptions { get; protected set; }
@@ -268,6 +273,7 @@ namespace Microsoft.CodeAnalysis
             Platform platform,
             ReportDiagnostic generalDiagnosticOption,
             int warningLevel,
+            ImmutableArray<(string, ReportDiagnostic)> prefixBasedDiagnosticOptions,
             ImmutableDictionary<string, ReportDiagnostic> specificDiagnosticOptions,
             bool concurrentBuild,
             bool deterministic,
@@ -293,6 +299,7 @@ namespace Microsoft.CodeAnalysis
             this.Platform = platform;
             this.GeneralDiagnosticOption = generalDiagnosticOption;
             this.WarningLevel = warningLevel;
+            this.PrefixBasedDiagnosticOptions = prefixBasedDiagnosticOptions.NullToEmpty();
             this.SpecificDiagnosticOptions = specificDiagnosticOptions;
             this.ReportSuppressedDiagnostics = reportSuppressedDiagnostics;
             this.OptimizationLevel = optimizationLevel;
@@ -368,6 +375,14 @@ namespace Microsoft.CodeAnalysis
         public CompilationOptions WithGeneralDiagnosticOption(ReportDiagnostic value)
         {
             return CommonWithGeneralDiagnosticOption(value);
+        }
+
+        /// <summary>
+        /// Creates a new options instance with the specified prefix based diagnostic options.
+        /// </summary>
+        public CompilationOptions WithPrefixBasedDiagnosticOptions(ImmutableArray<(string, ReportDiagnostic)> value)
+        {
+            return CommonWithPrefixBasedDiagnosticOptions(value);
         }
 
         /// <summary>
@@ -518,6 +533,7 @@ namespace Microsoft.CodeAnalysis
         protected abstract CompilationOptions CommonWithAssemblyIdentityComparer(AssemblyIdentityComparer comparer);
         protected abstract CompilationOptions CommonWithStrongNameProvider(StrongNameProvider provider);
         protected abstract CompilationOptions CommonWithGeneralDiagnosticOption(ReportDiagnostic generalDiagnosticOption);
+        protected abstract CompilationOptions CommonWithPrefixBasedDiagnosticOptions(ImmutableArray<(string, ReportDiagnostic)> prefixBasedDiagnosticOptions);
         protected abstract CompilationOptions CommonWithSpecificDiagnosticOptions(ImmutableDictionary<string, ReportDiagnostic> specificDiagnosticOptions);
         protected abstract CompilationOptions CommonWithSpecificDiagnosticOptions(IEnumerable<KeyValuePair<string, ReportDiagnostic>> specificDiagnosticOptions);
         protected abstract CompilationOptions CommonWithReportSuppressedDiagnostics(bool reportSuppressedDiagnostics);
@@ -617,6 +633,7 @@ namespace Microsoft.CodeAnalysis
                    this.Platform == other.Platform &&
                    this.ReportSuppressedDiagnostics == other.ReportSuppressedDiagnostics &&
                    string.Equals(this.ScriptClassName, other.ScriptClassName, StringComparison.Ordinal) &&
+                   this.PrefixBasedDiagnosticOptions.SequenceEqual(other.PrefixBasedDiagnosticOptions) &&
                    this.SpecificDiagnosticOptions.SequenceEqual(other.SpecificDiagnosticOptions, (left, right) => (left.Key == right.Key) && (left.Value == right.Value)) &&
                    this.WarningLevel == other.WarningLevel &&
                    object.Equals(this.MetadataReferenceResolver, other.MetadataReferenceResolver) &&
@@ -651,6 +668,7 @@ namespace Microsoft.CodeAnalysis
                    Hash.Combine((int)this.Platform,
                    Hash.Combine(this.ReportSuppressedDiagnostics,
                    Hash.Combine(this.ScriptClassName != null ? StringComparer.Ordinal.GetHashCode(this.ScriptClassName) : 0,
+                   Hash.Combine(Hash.CombineValues(this.PrefixBasedDiagnosticOptions),
                    Hash.Combine(Hash.CombineValues(this.SpecificDiagnosticOptions),
                    Hash.Combine(this.WarningLevel,
                    Hash.Combine(this.MetadataReferenceResolver,
@@ -658,7 +676,7 @@ namespace Microsoft.CodeAnalysis
                    Hash.Combine(this.SourceReferenceResolver,
                    Hash.Combine(this.StrongNameProvider,
                    Hash.Combine(this.AssemblyIdentityComparer,
-                   Hash.Combine(this.PublicSign, 0))))))))))))))))))))))))));
+                   Hash.Combine(this.PublicSign, 0)))))))))))))))))))))))))));
         }
 
         public static bool operator ==(CompilationOptions left, CompilationOptions right)

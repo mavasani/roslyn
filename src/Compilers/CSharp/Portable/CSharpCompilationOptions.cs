@@ -69,7 +69,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             StrongNameProvider strongNameProvider = null,
             bool publicSign = false,
             MetadataImportOptions metadataImportOptions = MetadataImportOptions.Public,
-            bool? nullable = null)
+            bool? nullable = null,
+            ImmutableArray<(string, ReportDiagnostic)> prefixBasedDiagnosticOptions = default)
             : this(outputKind, reportSuppressedDiagnostics, moduleName, mainTypeName, scriptClassName,
                    usings, optimizationLevel, checkOverflow, allowUnsafe,
                    cryptoKeyContainer, cryptoKeyFile, cryptoPublicKey, delaySign, platform,
@@ -86,7 +87,58 @@ namespace Microsoft.CodeAnalysis.CSharp
                    referencesSupersedeLowerVersions: false,
                    publicSign: publicSign,
                    topLevelBinderFlags: BinderFlags.None,
-                   nullable: nullable)
+                   nullable: nullable,
+                   prefixBasedDiagnosticOptions: prefixBasedDiagnosticOptions)
+        {
+        }
+
+        // 16.0 BACKCOMPAT OVERLOAD -- DO NOT TOUCH
+        public CSharpCompilationOptions(
+            OutputKind outputKind,
+            bool reportSuppressedDiagnostics,
+            string moduleName,
+            string mainTypeName,
+            string scriptClassName,
+            IEnumerable<string> usings,
+            OptimizationLevel optimizationLevel,
+            bool checkOverflow,
+            bool allowUnsafe,
+            string cryptoKeyContainer,
+            string cryptoKeyFile,
+            ImmutableArray<byte> cryptoPublicKey,
+            bool? delaySign,
+            Platform platform,
+            ReportDiagnostic generalDiagnosticOption,
+            int warningLevel,
+            IEnumerable<KeyValuePair<string, ReportDiagnostic>> specificDiagnosticOptions,
+            bool concurrentBuild,
+            bool deterministic,
+            XmlReferenceResolver xmlReferenceResolver,
+            SourceReferenceResolver sourceReferenceResolver,
+            MetadataReferenceResolver metadataReferenceResolver,
+            AssemblyIdentityComparer assemblyIdentityComparer,
+            StrongNameProvider strongNameProvider,
+            bool publicSign,
+            MetadataImportOptions metadataImportOptions,
+            bool? nullable)
+            : this(outputKind, reportSuppressedDiagnostics, moduleName, mainTypeName, scriptClassName,
+                   usings, optimizationLevel, checkOverflow, allowUnsafe,
+                   cryptoKeyContainer, cryptoKeyFile, cryptoPublicKey, delaySign, platform,
+                   generalDiagnosticOption, warningLevel,
+                   specificDiagnosticOptions, concurrentBuild, deterministic,
+                   currentLocalTime: default(DateTime),
+                   debugPlusMode: false,
+                   xmlReferenceResolver: xmlReferenceResolver,
+                   sourceReferenceResolver: sourceReferenceResolver,
+                   metadataReferenceResolver: metadataReferenceResolver,
+                   assemblyIdentityComparer: assemblyIdentityComparer,
+                   strongNameProvider: strongNameProvider,
+                   metadataImportOptions: metadataImportOptions,
+                   referencesSupersedeLowerVersions: false,
+                   publicSign: publicSign,
+                   topLevelBinderFlags: BinderFlags.None,
+                   nullable: nullable,
+                   prefixBasedDiagnosticOptions: default)
         {
         }
 
@@ -209,10 +261,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             bool referencesSupersedeLowerVersions,
             bool publicSign,
             BinderFlags topLevelBinderFlags,
-            bool? nullable)
+            bool? nullable,
+            ImmutableArray<(string, ReportDiagnostic)> prefixBasedDiagnosticOptions)
             : base(outputKind, reportSuppressedDiagnostics, moduleName, mainTypeName, scriptClassName,
                    cryptoKeyContainer, cryptoKeyFile, cryptoPublicKey, delaySign, publicSign, optimizationLevel, checkOverflow,
-                   platform, generalDiagnosticOption, warningLevel, specificDiagnosticOptions.ToImmutableDictionaryOrEmpty(),
+                   platform, generalDiagnosticOption, warningLevel, prefixBasedDiagnosticOptions, specificDiagnosticOptions.ToImmutableDictionaryOrEmpty(),
                    concurrentBuild, deterministic, currentLocalTime, debugPlusMode, xmlReferenceResolver,
                    sourceReferenceResolver, metadataReferenceResolver, assemblyIdentityComparer,
                    strongNameProvider, metadataImportOptions, referencesSupersedeLowerVersions)
@@ -239,6 +292,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             platform: other.Platform,
             generalDiagnosticOption: other.GeneralDiagnosticOption,
             warningLevel: other.WarningLevel,
+            prefixBasedDiagnosticOptions: other.PrefixBasedDiagnosticOptions,
             specificDiagnosticOptions: other.SpecificDiagnosticOptions,
             concurrentBuild: other.ConcurrentBuild,
             deterministic: other.Deterministic,
@@ -434,6 +488,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         protected override CompilationOptions CommonWithGeneralDiagnosticOption(ReportDiagnostic value) => WithGeneralDiagnosticOption(value);
 
+        protected override CompilationOptions CommonWithPrefixBasedDiagnosticOptions(ImmutableArray<(string, ReportDiagnostic)> prefixBasedDiagnosticOptions) =>
+            WithPrefixBasedDiagnosticOptions(prefixBasedDiagnosticOptions);
+
         protected override CompilationOptions CommonWithSpecificDiagnosticOptions(ImmutableDictionary<string, ReportDiagnostic> specificDiagnosticOptions) =>
             WithSpecificDiagnosticOptions(specificDiagnosticOptions);
 
@@ -451,6 +508,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return new CSharpCompilationOptions(this) { GeneralDiagnosticOption = value };
+        }
+
+        public new CSharpCompilationOptions WithPrefixBasedDiagnosticOptions(ImmutableArray<(string, ReportDiagnostic)> values)
+        {
+            if (values == default)
+            {
+                values = ImmutableArray<(string, ReportDiagnostic)>.Empty;
+            }
+
+            if (this.PrefixBasedDiagnosticOptions.SequenceEqual(values))
+            {
+                return this;
+            }
+
+            return new CSharpCompilationOptions(this) { PrefixBasedDiagnosticOptions = values };
         }
 
         public new CSharpCompilationOptions WithSpecificDiagnosticOptions(ImmutableDictionary<string, ReportDiagnostic> values)
@@ -739,7 +811,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal override Diagnostic FilterDiagnostic(Diagnostic diagnostic)
         {
-            return CSharpDiagnosticFilter.Filter(diagnostic, WarningLevel, GeneralDiagnosticOption, SpecificDiagnosticOptions);
+            return CSharpDiagnosticFilter.Filter(diagnostic, WarningLevel, GeneralDiagnosticOption, PrefixBasedDiagnosticOptions, SpecificDiagnosticOptions);
         }
 
         protected override CompilationOptions CommonWithModuleName(string moduleName)
@@ -906,7 +978,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                    referencesSupersedeLowerVersions: false,
                    publicSign: false,
                    topLevelBinderFlags: BinderFlags.None,
-                   nullable: null)
+                   nullable: null,
+                   prefixBasedDiagnosticOptions: default)
         {
         }
     }

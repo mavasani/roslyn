@@ -1,4 +1,6 @@
 *REMOVED*Microsoft.CodeAnalysis.Operations.IEventAssignmentOperation.EventReference.get -> Microsoft.CodeAnalysis.Operations.IEventReferenceOperation
+Microsoft.CodeAnalysis.CompilationOptions.PrefixBasedDiagnosticOptions.get -> System.Collections.Immutable.ImmutableArray<(string prefix, Microsoft.CodeAnalysis.ReportDiagnostic option)>
+Microsoft.CodeAnalysis.CompilationOptions.WithPrefixBasedDiagnosticOptions(System.Collections.Immutable.ImmutableArray<(string, Microsoft.CodeAnalysis.ReportDiagnostic)> value) -> Microsoft.CodeAnalysis.CompilationOptions
 Microsoft.CodeAnalysis.IFieldSymbol.IsFixedSizeBuffer.get -> bool
 Microsoft.CodeAnalysis.OperationKind.FromEndIndex = 100 -> Microsoft.CodeAnalysis.OperationKind
 Microsoft.CodeAnalysis.OperationKind.Range = 99 -> Microsoft.CodeAnalysis.OperationKind

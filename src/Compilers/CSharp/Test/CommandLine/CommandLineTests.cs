@@ -2482,8 +2482,14 @@ class C
         }
 
         [WorkItem(912906, "http://vstfdevdiv:8080/DevDiv2/DevDiv/_workitems/edit/912906")]
-        [Fact]
-        public void Analyzers_CommandLineOverridesRuleset1()
+        [Theory]
+        [InlineData("/warnaserror")]
+        [InlineData("/warnaserror+")]
+        [InlineData("/warnaserror+:Warning*")]
+        [InlineData("/warnaserror:Warning*")]
+        [InlineData("/warnaserror+:Warning0*")]
+        [InlineData("/warnaserror:Warning0*")]
+        public void Analyzers_CommandLineOverridesRuleset1(string warnAsErrorCommandLineSwitch)
         {
             string source = @"
 class C
@@ -2508,7 +2514,7 @@ class C
                 new[] {
                     "/nologo", "/preferreduilang:en", "/t:library",
                     "/a:" + Assembly.GetExecutingAssembly().Location, "a.cs",
-                    "/ruleset:" + ruleSetFile.Path, "/warnaserror+", "/nowarn:8032" });
+                    "/ruleset:" + ruleSetFile.Path, warnAsErrorCommandLineSwitch, "/nowarn:8032" });
             int exitCode = csc.Run(outWriter);
             Assert.Equal(1, exitCode);
             // Diagnostic thrown as error: command line always overrides ruleset.
@@ -2519,7 +2525,7 @@ class C
                 new[] {
                     "/nologo", "/preferreduilang:en", "/t:library",
                     "/a:" + Assembly.GetExecutingAssembly().Location, "a.cs",
-                    "/warnaserror+", "/ruleset:" + ruleSetFile.Path, "/nowarn:8032" });
+                    warnAsErrorCommandLineSwitch, "/ruleset:" + ruleSetFile.Path, "/nowarn:8032" });
             exitCode = csc.Run(outWriter);
             Assert.Equal(1, exitCode);
             // Diagnostic thrown as error: command line always overrides ruleset.
@@ -2561,7 +2567,46 @@ class C
 
         [Fact]
         [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
-        public void RuleSet_GeneralWarnAsErrorPromotesWarningFromRuleSet()
+        public void RuleSet_GeneralCommandLineOptionOverridesPrefixBasedOptions()
+        {
+            var dir = Temp.CreateDirectory();
+
+            string ruleSetSource = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<RuleSet Name=""Ruleset1"" Description=""Test"" ToolsVersion=""12.0"">
+  <IncludeAll Action=""Warning"" />
+</RuleSet>
+";
+            var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
+
+            var arguments = DefaultParse(
+                new[]
+                {
+                    "/nologo",
+                    "/t:library",
+                    "/ruleset:Rules.ruleset",
+                    "/warnaserror+",
+                    "/warnaserror-:CA*",
+                    "a.cs"
+                },
+                dir.Path);
+
+            var errors = arguments.Errors;
+            Assert.Empty(errors);
+
+            Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Error);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length, expected: 1);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0], expected: ("CA", ReportDiagnostic.Default));
+        }
+
+        [Theory]
+        [InlineData("/warnaserror", /*prependWarnAsErrorMinus*/ false)]
+        [InlineData("/warnaserror+", /*prependWarnAsErrorMinus*/ true)]
+        [InlineData("/warnaserror:Test*", /*prependWarnAsErrorMinus*/ false)]
+        [InlineData("/warnaserror+:Test*", /*prependWarnAsErrorMinus*/ true)]
+        [InlineData("/warnaserror:Test0*", /*prependWarnAsErrorMinus*/ false)]
+        [InlineData("/warnaserror+:Test0*", /*prependWarnAsErrorMinus*/ true)]
+        [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
+        public void RuleSet_WarnAsErrorPromotesWarningFromRuleSet(string warnAsErrorSwitch, bool prependWarnAsErrorMinus)
         {
             var dir = Temp.CreateDirectory();
 
@@ -2574,22 +2619,83 @@ class C
 ";
             var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
 
-            var arguments = DefaultParse(
-                new[]
+            IEnumerable<string> args = new[]
                 {
                     "/nologo",
                     "/t:library",
                     "/ruleset:Rules.ruleset",
-                    "/warnaserror+",
+                    warnAsErrorSwitch,
                     "a.cs"
-                },
+                };
+
+            if (prependWarnAsErrorMinus)
+            {
+                args = args.Prepend("/warnaserror-");
+            }
+
+            var arguments = DefaultParse(
+                args,
                 dir.Path);
 
             var errors = arguments.Errors;
             Assert.Empty(errors);
 
-            Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Error);
+            if (warnAsErrorSwitch == "/warnaserror" || warnAsErrorSwitch == "/warnaserror+")
+            {
+                Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Error);
+                Assert.Empty(arguments.CompilationOptions.PrefixBasedDiagnosticOptions);
+            }
+            else
+            {
+                Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Default);
+                Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length, expected: 1);
+                Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0].option, expected: ReportDiagnostic.Error);
+            }
+
             Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"], expected: ReportDiagnostic.Error);
+        }
+
+        [Theory]
+        [InlineData("/warnaserror:T*")]
+        [InlineData("/warnaserror+:T*")]
+        [InlineData("/warnaserror:Tes*")]
+        [InlineData("/warnaserror+:Tes*")]
+        [InlineData("/warnaserror:Test0010*")]
+        [InlineData("/warnaserror+:Test0010*")]
+        [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
+        public void RuleSet_WarnAsErrorPrefixMismatchDoesNotPromoteWarningFromRuleSet(string warnAsErrorSwitch)
+        {
+            var dir = Temp.CreateDirectory();
+
+            string ruleSetSource = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<RuleSet Name=""Ruleset1"" Description=""Test"" ToolsVersion=""12.0"">
+  <Rules AnalyzerId=""Microsoft.Analyzers.ManagedCodeAnalysis"" RuleNamespace=""Microsoft.Rules.Managed"">
+    <Rule Id=""Test001"" Action=""Warning"" />
+  </Rules>
+</RuleSet>
+";
+            var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
+
+            IEnumerable<string> args = new[]
+                {
+                    "/nologo",
+                    "/t:library",
+                    "/ruleset:Rules.ruleset",
+                    warnAsErrorSwitch,
+                    "a.cs"
+                };
+
+            var arguments = DefaultParse(
+                args,
+                dir.Path);
+
+            var errors = arguments.Errors;
+            Assert.Empty(errors);
+
+            Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Default);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length, expected: 1);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0].option, expected: ReportDiagnostic.Error);
+            Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"], expected: ReportDiagnostic.Warn);
         }
 
         [Fact]
@@ -2625,6 +2731,45 @@ class C
             Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"], expected: ReportDiagnostic.Info);
         }
 
+        [Theory]
+        [InlineData("/warnaserror+:Test*")]
+        [InlineData("/warnaserror+:Test0*")]
+        [InlineData("/warnaserror+:Test00*")]
+        [InlineData("/warnaserror+:Test001*")]
+        [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
+        public void RuleSet_PrefixBasedWarnAsErrorPromotesInfoFromRuleSet(string warnAsErrorSwitch)
+        {
+            var dir = Temp.CreateDirectory();
+
+            string ruleSetSource = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<RuleSet Name=""Ruleset1"" Description=""Test"" ToolsVersion=""12.0"">
+  <Rules AnalyzerId=""Microsoft.Analyzers.ManagedCodeAnalysis"" RuleNamespace=""Microsoft.Rules.Managed"">
+    <Rule Id=""Test001"" Action=""Info"" />
+  </Rules>
+</RuleSet>
+";
+            var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
+
+            var arguments = DefaultParse(
+                new[]
+                {
+                    "/nologo",
+                    "/t:library",
+                    "/ruleset:Rules.ruleset",
+                    warnAsErrorSwitch,
+                    "a.cs"
+                },
+                dir.Path);
+
+            var errors = arguments.Errors;
+            Assert.Empty(errors);
+
+            Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Default);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length, expected: 1);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0].option, expected: ReportDiagnostic.Error);
+            Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"], expected: ReportDiagnostic.Error);
+        }
+
         [Fact]
         [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
         public void RuleSet_SpecificWarnAsErrorPromotesInfoFromRuleSet()
@@ -2655,12 +2800,19 @@ class C
             Assert.Empty(errors);
 
             Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Default);
+            Assert.Empty(arguments.CompilationOptions.PrefixBasedDiagnosticOptions);
             Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"], expected: ReportDiagnostic.Error);
         }
 
-        [Fact]
+        [Theory]
+        [InlineData("/warnaserror")]
+        [InlineData("/warnaserror+")]
+        [InlineData("/warnaserror+:Test*")]
+        [InlineData("/warnaserror+:Test0*")]
+        [InlineData("/warnaserror+:Test00*")]
+        [InlineData("/warnaserror+:Test001*")]
         [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
-        public void RuleSet_GeneralWarnAsErrorMinusResetsRules()
+        public void RuleSet_GeneralWarnAsErrorMinusResetsRules(string warnAsErrorSwitch)
         {
             var dir = Temp.CreateDirectory();
 
@@ -2679,7 +2831,7 @@ class C
                     "/nologo",
                     "/t:library",
                     "/ruleset:Rules.ruleset",
-                    "/warnaserror+",
+                    warnAsErrorSwitch,
                     "/warnaserror-",
                     "a.cs"
                 },
@@ -2689,6 +2841,55 @@ class C
             Assert.Empty(errors);
 
             Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Default);
+            Assert.Empty(arguments.CompilationOptions.PrefixBasedDiagnosticOptions);
+            Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"], expected: ReportDiagnostic.Warn);
+        }
+
+        [Theory]
+        [InlineData("/warnaserror", "/warnaserror-:Test*")]
+        [InlineData("/warnaserror+", "/warnaserror-:Test*")]
+        [InlineData("/warnaserror+:Test*", "/warnaserror-:Test*")]
+        [InlineData("/warnaserror+:Test0*", "/warnaserror-:Test*")]
+        [InlineData("/warnaserror+:Test00*", "/warnaserror-:Test*")]
+        [InlineData("/warnaserror+:Test001*", "/warnaserror-:Test*")]
+        [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
+        public void RuleSet_PrefixBasedWarnAsErrorMinusResetsRules(string warnAsErrorSwitch, string warnAsErrorMinusSwitch)
+        {
+            var dir = Temp.CreateDirectory();
+
+            string ruleSetSource = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<RuleSet Name=""Ruleset1"" Description=""Test"" ToolsVersion=""12.0"">
+  <Rules AnalyzerId=""Microsoft.Analyzers.ManagedCodeAnalysis"" RuleNamespace=""Microsoft.Rules.Managed"">
+    <Rule Id=""Test001"" Action=""Warning"" />
+  </Rules>
+</RuleSet>
+";
+            var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
+
+            var arguments = DefaultParse(
+                new[]
+                {
+                    "/nologo",
+                    "/t:library",
+                    "/ruleset:Rules.ruleset",
+                    warnAsErrorSwitch,
+                    warnAsErrorMinusSwitch,
+                    "a.cs"
+                },
+                dir.Path);
+
+            var errors = arguments.Errors;
+            Assert.Empty(errors);
+
+            var expectedGeneralDiagnosticOption = warnAsErrorSwitch == "/warnaserror" || warnAsErrorSwitch == "/warnaserror+" ?
+                ReportDiagnostic.Error :
+                ReportDiagnostic.Default;
+            Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: expectedGeneralDiagnosticOption);
+
+            var expectedWarnAsErrorPrefixSwitch = warnAsErrorMinusSwitch.Substring(0, warnAsErrorMinusSwitch.Length - 1);
+            Assert.True(arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length > 0);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0], expected: (prefix: "Test", option: ReportDiagnostic.Default));
+
             Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"], expected: ReportDiagnostic.Warn);
         }
 
@@ -2728,6 +2929,43 @@ class C
 
         [Fact]
         [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
+        public void RuleSet_PrefixBasedWarnAsErrorMinusDefaultsRuleNotInRuleSet()
+        {
+            var dir = Temp.CreateDirectory();
+
+            string ruleSetSource = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<RuleSet Name=""Ruleset1"" Description=""Test"" ToolsVersion=""12.0"">
+  <Rules AnalyzerId=""Microsoft.Analyzers.ManagedCodeAnalysis"" RuleNamespace=""Microsoft.Rules.Managed"">
+    <Rule Id=""Test0010"" Action=""Warning"" />
+  </Rules>
+</RuleSet>
+";
+            var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
+
+            var arguments = DefaultParse(
+                new[]
+                {
+                    "/nologo",
+                    "/t:library",
+                    "/ruleset:Rules.ruleset",
+                    "/warnaserror+:Test002*",
+                    "/warnaserror-:Test002*",
+                    "a.cs"
+                },
+                dir.Path);
+
+            var errors = arguments.Errors;
+            Assert.Empty(errors);
+
+            Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Default);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length, expected: 2);
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0], expected: (prefix: "Test002", option: ReportDiagnostic.Default));
+            Assert.Equal(actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[1], expected: (prefix: "Test002", option: ReportDiagnostic.Error));
+            Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test0010"], expected: ReportDiagnostic.Warn);
+        }
+
+        [Fact]
+        [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
         public void RuleSet_SpecificWarnAsErrorMinusDefaultsRuleNotInRuleSet()
         {
             var dir = Temp.CreateDirectory();
@@ -2757,6 +2995,7 @@ class C
             Assert.Empty(errors);
 
             Assert.Equal(actual: arguments.CompilationOptions.GeneralDiagnosticOption, expected: ReportDiagnostic.Default);
+            Assert.Empty(arguments.CompilationOptions.PrefixBasedDiagnosticOptions);
             Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"], expected: ReportDiagnostic.Warn);
             Assert.Equal(actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test002"], expected: ReportDiagnostic.Default);
         }
@@ -2795,6 +3034,85 @@ class C
             Assert.Equal(expected: ReportDiagnostic.Suppress, actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"]);
         }
 
+        [Theory]
+        [InlineData("/nowarn:Test*")]
+        [InlineData("/nowarn:Test0*")]
+        [InlineData("/nowarn:Test001*")]
+        [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
+        public void NoWarn_PrefixBasedNoWarnOverridesRuleSet(string noWarnSwitch)
+        {
+            var dir = Temp.CreateDirectory();
+
+            string ruleSetSource = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<RuleSet Name=""Ruleset1"" Description=""Test"" ToolsVersion=""12.0"">
+  <Rules AnalyzerId=""Microsoft.Analyzers.ManagedCodeAnalysis"" RuleNamespace=""Microsoft.Rules.Managed"">
+    <Rule Id=""Test001"" Action=""Warning"" />
+  </Rules>
+</RuleSet>
+";
+            var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
+
+            var arguments = DefaultParse(
+                new[]
+                {
+                    "/nologo",
+                    "/t:library",
+                    "/ruleset:Rules.ruleset",
+                    noWarnSwitch,
+                    "a.cs"
+                },
+                dir.Path);
+
+            var errors = arguments.Errors;
+            Assert.Empty(errors);
+
+            Assert.Equal(expected: ReportDiagnostic.Default, actual: arguments.CompilationOptions.GeneralDiagnosticOption);
+            Assert.Equal(expected: 1, actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length);
+            Assert.Equal(expected: ReportDiagnostic.Suppress, actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0].option);
+            Assert.Equal(expected: 1, actual: arguments.CompilationOptions.SpecificDiagnosticOptions.Count);
+            Assert.Equal(expected: ReportDiagnostic.Suppress, actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"]);
+        }
+
+        [Theory]
+        [InlineData("/nowarn:Test*")]
+        [InlineData("/nowarn:Test0*")]
+        [InlineData("/nowarn:Test001*")]
+        [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
+        public void NoWarn_PrefixBasedNoWarnOverridesSpecificWarnAsError(string noWarnSwitch)
+        {
+            var dir = Temp.CreateDirectory();
+
+            string ruleSetSource = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<RuleSet Name=""Ruleset1"" Description=""Test"" ToolsVersion=""12.0"">
+  <Rules AnalyzerId=""Microsoft.Analyzers.ManagedCodeAnalysis"" RuleNamespace=""Microsoft.Rules.Managed"">
+    <Rule Id=""Test001"" Action=""Warning"" />
+  </Rules>
+</RuleSet>
+";
+            var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
+
+            var arguments = DefaultParse(
+                new[]
+                {
+                    "/nologo",
+                    "/t:library",
+                    "/ruleset:Rules.ruleset",
+                    noWarnSwitch,
+                    "/warnaserror+:Test001",
+                    "a.cs"
+                },
+                dir.Path);
+
+            var errors = arguments.Errors;
+            Assert.Empty(errors);
+
+            Assert.Equal(expected: ReportDiagnostic.Default, actual: arguments.CompilationOptions.GeneralDiagnosticOption);
+            Assert.Equal(expected: 1, actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length);
+            Assert.Equal(expected: ReportDiagnostic.Suppress, actual: arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0].option);
+            Assert.Equal(expected: 1, actual: arguments.CompilationOptions.SpecificDiagnosticOptions.Count);
+            Assert.Equal(expected: ReportDiagnostic.Suppress, actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"]);
+        }
+
         [Fact]
         [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
         public void NoWarn_SpecificNoWarnOverridesGeneralWarnAsError()
@@ -2826,6 +3144,48 @@ class C
             Assert.Empty(errors);
 
             Assert.Equal(expected: ReportDiagnostic.Error, actual: arguments.CompilationOptions.GeneralDiagnosticOption);
+            Assert.Empty(arguments.CompilationOptions.PrefixBasedDiagnosticOptions);
+            Assert.Equal(expected: 1, actual: arguments.CompilationOptions.SpecificDiagnosticOptions.Count);
+            Assert.Equal(expected: ReportDiagnostic.Suppress, actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"]);
+        }
+
+        [Theory]
+        [InlineData("/warnaserror+:Test*")]
+        [InlineData("/warnaserror+:Test0*")]
+        [InlineData("/warnaserror+:Test00*")]
+        [InlineData("/warnaserror+:Test001*")]
+        [WorkItem(468, "https://github.com/dotnet/roslyn/issues/468")]
+        public void NoWarn_SpecificNoWarnOverridesPrefixBasedWarnAsError(string warnAsErrorSwitch)
+        {
+            var dir = Temp.CreateDirectory();
+
+            string ruleSetSource = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<RuleSet Name=""Ruleset1"" Description=""Test"" ToolsVersion=""12.0"">
+  <Rules AnalyzerId=""Microsoft.Analyzers.ManagedCodeAnalysis"" RuleNamespace=""Microsoft.Rules.Managed"">
+    <Rule Id=""Test001"" Action=""Warning"" />
+  </Rules>
+</RuleSet>
+";
+            var ruleSetFile = dir.CreateFile("Rules.ruleset").WriteAllText(ruleSetSource);
+
+            var arguments = DefaultParse(
+                new[]
+                {
+                    "/nologo",
+                    "/t:library",
+                    "/ruleset:Rules.ruleset",
+                    warnAsErrorSwitch,
+                    "/nowarn:Test001",
+                    "a.cs"
+                },
+                dir.Path);
+
+            var errors = arguments.Errors;
+            Assert.Empty(errors);
+
+            Assert.Equal(expected: ReportDiagnostic.Default, actual: arguments.CompilationOptions.GeneralDiagnosticOption);
+            Assert.Equal(expected: 1, arguments.CompilationOptions.PrefixBasedDiagnosticOptions.Length);
+            Assert.Equal(expected: ReportDiagnostic.Error, arguments.CompilationOptions.PrefixBasedDiagnosticOptions[0].option);
             Assert.Equal(expected: 1, actual: arguments.CompilationOptions.SpecificDiagnosticOptions.Count);
             Assert.Equal(expected: ReportDiagnostic.Suppress, actual: arguments.CompilationOptions.SpecificDiagnosticOptions["Test001"]);
         }
@@ -4221,6 +4581,14 @@ C:\*.cs(100,7): error CS0103: The name 'Goo' does not exist in the current conte
             parsedArgs = DefaultParse(new string[] { "/nowarn:abc", "a.cs" }, WorkingDirectory);
             parsedArgs.Errors.Verify();
 
+            parsedArgs = DefaultParse(new string[] { "/nowarn:*", "a.cs" }, WorkingDirectory);
+            parsedArgs.Errors.Verify(
+                // error CS2035: Command-line syntax error: Missing ':<number>' for 'nowarn' option
+                Diagnostic(ErrorCode.ERR_SwitchNeedsNumber).WithArguments("nowarn"));
+
+            parsedArgs = DefaultParse(new string[] { "/nowarn:abc*", "a.cs" }, WorkingDirectory);
+            parsedArgs.Errors.Verify();
+
             parsedArgs = DefaultParse(new string[] { "/warnaserror:", "a.cs" }, WorkingDirectory);
             parsedArgs.Errors.Verify(
                 // error CS2035: Command-line syntax error: Missing ':<number>' for 'warnaserror' option
@@ -4233,6 +4601,12 @@ C:\*.cs(100,7): error CS0103: The name 'Goo' does not exist in the current conte
             parsedArgs.Errors.Verify();
 
             parsedArgs = DefaultParse(new string[] { "/warnaserror:abc", "a.cs" }, WorkingDirectory);
+            parsedArgs.Errors.Verify();
+
+            parsedArgs = DefaultParse(new string[] { "/warnaserror:*", "a.cs" }, WorkingDirectory);
+            parsedArgs.Errors.Verify();
+
+            parsedArgs = DefaultParse(new string[] { "/warnaserror:abc*", "a.cs" }, WorkingDirectory);
             parsedArgs.Errors.Verify();
 
             parsedArgs = DefaultParse(new string[] { "/warnaserror+:", "a.cs" }, WorkingDirectory);
@@ -5831,12 +6205,28 @@ public class C
             exitCode = GetExitCode(source, "c.cs", new[] { "/warnaserror:168" });
             Assert.NotEqual(0, exitCode);
 
+            // The case with /warnaserror:CS* (expect failure)
+            exitCode = GetExitCode(source, "b.cs", new[] { "/warnaserror:CS*" });
+            Assert.NotEqual(0, exitCode);
+
             // The case with /warnaserror:219 (expect success)
             exitCode = GetExitCode(source, "c.cs", new[] { "/warnaserror:219" });
             Assert.Equal(0, exitCode);
 
             // The case with /warnaserror and /nowarn:168 (expect success)
             exitCode = GetExitCode(source, "d.cs", new[] { "/warnaserror", "/nowarn:168" });
+            Assert.Equal(0, exitCode);
+
+            // The case with /warnaserror and /nowarn:CS* (expect success)
+            exitCode = GetExitCode(source, "d.cs", new[] { "/warnaserror", "/nowarn:CS*" });
+            Assert.Equal(0, exitCode);
+
+            // The case with /warnaserror:CS* and /nowarn:CS168 (expect success)
+            exitCode = GetExitCode(source, "d.cs", new[] { "/warnaserror:CS*", "/nowarn:168" });
+            Assert.Equal(0, exitCode);
+
+            // The case with /warnaserror:CS* and /nowarn:CS* (expect success)
+            exitCode = GetExitCode(source, "d.cs", new[] { "/warnaserror:CS*", "/nowarn:CS*" });
             Assert.Equal(0, exitCode);
         }
 
@@ -8681,12 +9071,25 @@ using System.Diagnostics; // Unused.
             output = GetOutput(name, source, additionalFlags: new[] { "/nowarn:Info01" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that custom info diagnostic Info01 can be individually suppressed via /nowarn:Info*.
+            output = GetOutput(name, source, additionalFlags: new[] { "/nowarn:Info*" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that custom info diagnostic Info01 can never be promoted to an error via /warnaserror+.
             output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror+", "/nowarn:8032" }, expectedInfoCount: 1);
             Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
 
+            // TEST: Verify that custom info diagnostic Info01 can be promoted to an error via /warnaserror+:Info*.
+            output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror+:Info*", "/nowarn:8032" }, expectedErrorCount: 1);
+            Assert.Contains("a.cs(2,1): error Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
+
             // TEST: Verify that custom info diagnostic Info01 is still reported as an info when /warnaserror- is used.
             output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror-" }, expectedWarningCount: 1, expectedInfoCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
+
+            // TEST: Verify that custom info diagnostic Info01 is still reported as an info when /warnaserror-:Info* is used.
+            output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror-:Info" }, expectedWarningCount: 1, expectedInfoCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
 
@@ -8704,16 +9107,32 @@ using System.Diagnostics; // Unused.
             output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror:Info01", "/nowarn:Info01" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
-            // TEST: Verify /nowarn overrides /warnaserror.
+            // TEST: Verify /nowarn:Info* overrides /warnaserror:Info01.
+            output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror:Info01", "/nowarn:Info*" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify /nowarn overrides /warnaserror (nowarn specified first).
             output = GetOutput(name, source, additionalFlags: new[] { "/nowarn:Info01", "/warnaserror:Info01" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify /nowarn:Info* overrides /warnaserror:Info01 (nowarn specified first).
+            output = GetOutput(name, source, additionalFlags: new[] { "/nowarn:Info*", "/warnaserror:Info01" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify /nowarn overrides /warnaserror-.
             output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror-:Info01", "/nowarn:Info01" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
-            // TEST: Verify /nowarn overrides /warnaserror-.
+            // TEST: Verify /nowarn overrides /warnaserror- (nowarn specified first).
             output = GetOutput(name, source, additionalFlags: new[] { "/nowarn:Info01", "/warnaserror-:Info01" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify /nowarn:Info* overrides /warnaserror-:Info01.
+            output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror-:Info01", "/nowarn:Info*" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify /nowarn:Info* overrides /warnaserror-:Info01 (nowarn specified first).
+            output = GetOutput(name, source, additionalFlags: new[] { "/nowarn:Info*", "/warnaserror-:Info01" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify that /warn:0 has no impact on custom info diagnostic Info01.
@@ -8727,8 +9146,18 @@ using System.Diagnostics; // Unused.
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
 
+            // TEST: Verify that last /warnaserror[+/-]: flag on command line wins (with prefix based option).
+            output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror+:Info01", "/warnaserror-:Info*" }, expectedWarningCount: 1, expectedInfoCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
+
             // TEST: Verify that last /warnaserror[+/-]: flag on command line wins.
             output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror-:Info01", "/warnaserror+:Info01" }, expectedWarningCount: 1, expectedErrorCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(2,1): error Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
+
+            // TEST: Verify that last /warnaserror[+/-]: flag on command line wins (with prefix based option).
+            output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror-:Info*", "/warnaserror+:Info01" }, expectedWarningCount: 1, expectedErrorCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(2,1): error Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
 
@@ -8754,8 +9183,17 @@ using System.Diagnostics; // Unused.
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
 
+            // TEST: Verify that last one wins between /warnaserror[+/-]: and /warnaserror[+/-] (prefix based option).
+            output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror+:Info*", "/warnaserror-" }, expectedWarningCount: 1, expectedInfoCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
+
             // TEST: Verify that last one wins between /warnaserror[+/-] and /warnaserror[+/-]:.
             output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror+", "/warnaserror-:Info01", "/nowarn:8032" }, expectedInfoCount: 1);
+            Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
+
+            // TEST: Verify that last one wins between /warnaserror[+/-] and /warnaserror[+/-]: (prefix based option).
+            output = GetOutput(name, source, additionalFlags: new[] { "/warnaserror+", "/warnaserror-:Info*", "/nowarn:8032" }, expectedInfoCount: 1);
             Assert.Contains("a.cs(2,1): info Info01: Throwing a diagnostic for #pragma restore", output, StringComparison.Ordinal);
 
             // TEST: Verify that last one wins between /warnaserror[+/-]: and /warnaserror[+/-].
@@ -8824,8 +9262,18 @@ class C
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:0168,Warning01,58000" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that compiler warning CS0168 as well as custom warning diagnostic Warning01 can be individually suppressed via /nowarn:Prefix*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:CS0*", "/nowarn:Warning*", "/nowarn:58000" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that diagnostic ids are processed in case-sensitive fashion inside /nowarn:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:cs0168,warning01,700000" }, expectedWarningCount: 3);
+            Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that diagnostic ids are processed in case-sensitive fashion inside /nowarn:Prefix*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:cs*", "/nowarn:warning*" }, expectedWarningCount: 3);
             Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
@@ -8840,14 +9288,31 @@ class C
             Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(6,13): error CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
 
+            // TEST: Verify that only compiler warning CS0168 but not custom warning diagnostic Warning01 can be promoted to errors via /warnaserror+:CS*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror+:CS*", "/nowarn:8032" }, expectedErrorCount: 1, expectedWarningCount: 1);
+            Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): error CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+
             // TEST: Verify that /warnaserror- keeps compiler warning CS0168 as well as custom warning diagnostic Warning01 as warnings.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-" }, expectedWarningCount: 3);
             Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that /warnaserror-:Warning* does not affect compiler diagnostics but reports custom warning diagnostic Warning01 as warning.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror+:Warning01", "/warnaserror-:Warning*" }, expectedWarningCount: 3);
+            Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that custom warning diagnostic Warning01 can be individually promoted to an error via /warnaserror:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Something,Warning01" }, expectedWarningCount: 2, expectedErrorCount: 1);
+            Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that custom warning diagnostic Warning01 can be individually promoted to an error via /warnaserror:Warning*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Warning*" }, expectedWarningCount: 2, expectedErrorCount: 1);
             Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
@@ -8865,6 +9330,12 @@ class C
             Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that diagnostic ids are processed in case-sensitive fashion inside /warnaserror:Prefix*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:cs*", "/warnaserror:warning*" }, expectedWarningCount: 3);
+            Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that custom warning diagnostic Warning01 as well as compiler warning CS0168 can be promoted to errors via /warnaserror:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:CS0168,Warning01" }, expectedWarningCount: 1, expectedErrorCount: 2);
             Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
@@ -8873,6 +9344,9 @@ class C
 
             // TEST: Verify that /warn:0 overrides /warnaserror+.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warn:0", "/warnaserror+" });
+
+            // TEST: Verify that /warn:0 overrides /warnaserror+:Prefix*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warn:0", "/warnaserror+:CS*" });
 
             // TEST: Verify that /warn:0 overrides /warnaserror.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror", "/warn:0" });
@@ -8883,20 +9357,39 @@ class C
             // TEST: Verify that /warn:0 overrides /warnaserror-.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warn:0", "/warnaserror-" });
 
+            // TEST: Verify that /warn:0 overrides /warnaserror-:Prefix*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warn:0", "/warnaserror-:CS*" });
+
             // TEST: Verify that /nowarn: overrides /warnaserror:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Something,CS0168,Warning01", "/nowarn:0168,Warning01,58000" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
-            // TEST: Verify that /nowarn: overrides /warnaserror:.
+            // TEST: Verify that /nowarn: overrides /warnaserror: (nowarn specified first).
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:0168,Warning01,58000", "/warnaserror:Something,CS0168,Warning01" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that /nowarn: overrides /warnaserror:Prefix*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:CS0*", "/warnaserror:Warning01*", "/nowarn:CS0*", "/nowarn:Warning*" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that /nowarn: overrides /warnaserror::Prefix* (mixed nowarn/warnaserror order).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Warning*", "/warnaserror:CS0*", "/nowarn:CS0*", "/warnaserror:Warning01*"  }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify that /nowarn: overrides /warnaserror-:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Something,CS0168,Warning01", "/nowarn:0168,Warning01,58000" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
-            // TEST: Verify that /nowarn: overrides /warnaserror-:.
+            // TEST: Verify that /nowarn: overrides /warnaserror-: (nowarn specified first).
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:0168,Warning01,58000", "/warnaserror-:Something,CS0168,Warning01" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that /nowarn: overrides /warnaserror-:Prefix*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:CS0*", "/warnaserror-:Warning01*", "/nowarn:CS0*", "/nowarn:Warning*" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that /nowarn: overrides /warnaserror-::Prefix* (mixed nowarn/warnaserror- order).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Warning*", "/warnaserror-:CS0*", "/nowarn:CS0*", "/warnaserror-:Warning01*" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify that /nowarn: overrides /warnaserror+.
@@ -8921,14 +9414,37 @@ class C
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-", "/warnaserror+" }, expectedErrorCount: 1);
             Assert.Contains("error CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that last /warnaserror[+/-] flag on command line wins (prefix based options).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:CS0*", "/warnaserror+:CS0*" }, expectedErrorCount: 1, expectedWarningCount: 2);
+            Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): error CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that last /warnaserror[+/-] flag on command line wins.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror", "/warnaserror-" }, expectedWarningCount: 3);
             Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that last /warnaserror[+/-] flag on command line wins (prefix based option).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror", "/warnaserror-:CS*" }, expectedWarningCount: 2, expectedErrorCount: 1);
+            Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that last /warnaserror[+/-]: flag on command line wins.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Warning01", "/warnaserror+:Warning01" }, expectedWarningCount: 2, expectedErrorCount: 1);
+            Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that last /warnaserror[+/-]: flag on command line wins (prefix based option).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Warning01", "/warnaserror+:Warning*" }, expectedWarningCount: 2, expectedErrorCount: 1);
+            Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Warning*", "/warnaserror+:Warning01" }, expectedWarningCount: 2, expectedErrorCount: 1);
             Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
@@ -8943,6 +9459,10 @@ class C
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Warning01,CS0168,58000,8032", "/warnaserror+" }, expectedErrorCount: 1);
             Assert.Contains("error CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that last one wins between /warnaserror[+/-]: and /warnaserror[+/-] (prefix based option).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Warning*", "/warnaserror-:CS*", "/warnaserror+" }, expectedErrorCount: 1);
+            Assert.Contains("error CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that last one wins between /warnaserror[+/-] and /warnaserror[+/-]:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror", "/warnaserror-:Warning01,CS0168,58000,8032" }, expectedWarningCount: 3);
             Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
@@ -8955,8 +9475,20 @@ class C
             Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that last one wins between /warnaserror[+/-]: and /warnaserror[+/-] (prefix based option).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Warning*", "/warnaserror:CS*", "/warnaserror-" }, expectedWarningCount: 3);
+            Assert.Contains("a.cs(2,7): warning Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that last one wins between /warnaserror[+/-] and /warnaserror[+/-]:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-", "/warnaserror+:Warning01" }, expectedWarningCount: 2, expectedErrorCount: 1);
+            Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that last one wins between /warnaserror[+/-] and /warnaserror[+/-]: (prefix based option).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-", "/warnaserror+:Warning*" }, expectedWarningCount: 2, expectedErrorCount: 1);
             Assert.Contains("a.cs(2,7): error Warning01: Throwing a diagnostic for types declared", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(6,13): warning CS0168: The variable 'i' is declared but never used", output, StringComparison.Ordinal);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
@@ -8965,8 +9497,12 @@ class C
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Warning01,CS0168,58000", "/warnaserror+" }, expectedErrorCount: 1);
             Assert.Contains("error CS8032", output, StringComparison.Ordinal);
 
-            // TEST: Verify that last one wins between /warnaserror[+/-] and /warnaserror[+/-]:.
-            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror", "/warnaserror+:Warning01,CS0168,58000" }, expectedErrorCount: 1);
+            // TEST: Verify that last one wins between /warnaserror[+/-]: and /warnaserror[+/-].
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Warning01,CS0168,58000", "/warnaserror+" }, expectedErrorCount: 1);
+            Assert.Contains("error CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that last one wins between /warnaserror[+/-] and /warnaserror[+/-]: (prefix based option).
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror", "/warnaserror+:Warning*", "/warnaserror+:CS0168" }, expectedErrorCount: 1);
             Assert.Contains("error CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify that last one wins between /warnaserror[+/-]: and /warnaserror[+/-].
@@ -9009,32 +9545,60 @@ class C
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Error01" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that custom error diagnostic Error01 can be suppressed via /nowarn::Error*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Error*" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that /nowarn: overrides /warnaserror+.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror+", "/nowarn:Error01" }, expectedErrorCount: 1);
+            Assert.Contains("error CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that /nowarn:Error* overrides /warnaserror+.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror+", "/nowarn:Error*" }, expectedErrorCount: 1);
             Assert.Contains("error CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify that /nowarn: overrides /warnaserror.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Error01", "/warnaserror" }, expectedErrorCount: 1);
             Assert.Contains("error CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that /nowarn:Error* overrides /warnaserror.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Error*", "/warnaserror" }, expectedErrorCount: 1);
+            Assert.Contains("error CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that /nowarn: overrides /warnaserror+:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Error01", "/warnaserror+:Error01" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that /nowarn:Error* overrides /warnaserror+:Error*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Error*", "/warnaserror+:Error*" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify that /nowarn: overrides /warnaserror:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Error01", "/nowarn:Error01" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
+            // TEST: Verify that /nowarn:Error* overrides /warnaserror:Error*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Error*", "/nowarn:Error*" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
             // TEST: Verify that /nowarn: overrides /warnaserror-.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-", "/nowarn:Error01" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that /nowarn:Error* overrides /warnaserror-.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-", "/nowarn:Error*" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify that /nowarn: overrides /warnaserror-.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/nowarn:Error01", "/warnaserror-" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
-            // TEST: Verify that /nowarn: overrides /warnaserror-.
+            // TEST: Verify that /nowarn: overrides /warnaserror-:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Error01", "/nowarn:Error01" }, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+
+            // TEST: Verify that /nowarn:Error* overrides /warnaserror-:Error*.
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Error*", "/nowarn:Error*" }, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
 
             // TEST: Verify that /nowarn: overrides /warnaserror-.
@@ -9052,8 +9616,16 @@ class C
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(2,1): error Error01: Throwing a diagnostic for #pragma disable", output, StringComparison.Ordinal);
 
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror", "/warnaserror-:CS*", "/warnaserror-:Error*" }, expectedErrorCount: 1, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(2,1): error Error01: Throwing a diagnostic for #pragma disable", output, StringComparison.Ordinal);
+
             // TEST: Verify that nothing bad happens if someone passes custom error diagnostic Error01 to /warnaserror[+/-]:.
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Error01" }, expectedErrorCount: 1, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(2,1): error Error01: Throwing a diagnostic for #pragma disable", output, StringComparison.Ordinal);
+
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror:Error*" }, expectedErrorCount: 1, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(2,1): error Error01: Throwing a diagnostic for #pragma disable", output, StringComparison.Ordinal);
 
@@ -9061,7 +9633,15 @@ class C
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(2,1): error Error01: Throwing a diagnostic for #pragma disable", output, StringComparison.Ordinal);
 
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror+:Error*" }, expectedErrorCount: 1, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(2,1): error Error01: Throwing a diagnostic for #pragma disable", output, StringComparison.Ordinal);
+
             output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Error01" }, expectedErrorCount: 1, expectedWarningCount: 1);
+            Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
+            Assert.Contains("a.cs(2,1): error Error01: Throwing a diagnostic for #pragma disable", output, StringComparison.Ordinal);
+
+            output = VerifyOutput(dir, file, additionalFlags: new[] { "/warnaserror-:Error*" }, expectedErrorCount: 1, expectedWarningCount: 1);
             Assert.Contains("warning CS8032", output, StringComparison.Ordinal);
             Assert.Contains("a.cs(2,1): error Error01: Throwing a diagnostic for #pragma disable", output, StringComparison.Ordinal);
 

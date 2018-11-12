@@ -124,6 +124,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                                               diagnosticInfo.Category,
                                                               options.WarningLevel,
                                                               options.GeneralDiagnosticOption,
+                                                              options.PrefixBasedDiagnosticOptions,
                                                               options.SpecificDiagnosticOptions,
                                                               out hasPragmaSuppression);
         }

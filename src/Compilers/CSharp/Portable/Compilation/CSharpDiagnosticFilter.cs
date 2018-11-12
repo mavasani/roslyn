@@ -24,9 +24,15 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="d">The input diagnostic</param>
         /// <param name="warningLevelOption">The maximum warning level to allow. Diagnostics with a higher warning level will be filtered out.</param>
         /// <param name="generalDiagnosticOption">How warning diagnostics should be reported</param>
+        /// <param name="prefixBasedDiagnosticOptions">How prefix based diagnostics should be reported</param>
         /// <param name="specificDiagnosticOptions">How specific diagnostics should be reported</param>
         /// <returns>A diagnostic updated to reflect the options, or null if it has been filtered out</returns>
-        public static Diagnostic Filter(Diagnostic d, int warningLevelOption, ReportDiagnostic generalDiagnosticOption, IDictionary<string, ReportDiagnostic> specificDiagnosticOptions)
+        public static Diagnostic Filter(
+            Diagnostic d,
+            int warningLevelOption,
+            ReportDiagnostic generalDiagnosticOption,
+            ImmutableArray<(string, ReportDiagnostic)> prefixBasedDiagnosticOptions,
+            IDictionary<string, ReportDiagnostic> specificDiagnosticOptions)
         {
             if (d == null)
             {
@@ -71,13 +77,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                     d.Category,
                     warningLevelOption,
                     generalDiagnosticOption,
+                    prefixBasedDiagnosticOptions,
                     specificDiagnosticOptions,
                     out hasPragmaSuppression);
             }
             else
             {
                 reportAction = GetDiagnosticReport(d.Severity, d.IsEnabledByDefault, d.Id, d.WarningLevel, d.Location as Location,
-                    d.Category, warningLevelOption, generalDiagnosticOption, specificDiagnosticOptions, out hasPragmaSuppression);
+                    d.Category, warningLevelOption, generalDiagnosticOption, prefixBasedDiagnosticOptions, specificDiagnosticOptions, out hasPragmaSuppression);
             }
 
             if (hasPragmaSuppression)
@@ -99,6 +106,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             string category,
             int warningLevelOption,
             ReportDiagnostic generalDiagnosticOption,
+            ImmutableArray<(string, ReportDiagnostic)> prefixBasedDiagnosticOptions,
             IDictionary<string, ReportDiagnostic> specificDiagnosticOptions,
             out bool hasPragmaSuppression)
         {
@@ -107,9 +115,22 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Read options (e.g., /nowarn or /warnaserror)
             ReportDiagnostic report = ReportDiagnostic.Default;
             var isSpecified = specificDiagnosticOptions.TryGetValue(id, out report);
+            var hasPrefixSpecification = tryGetPrefixBasedMatch(out ReportDiagnostic prefixBasedReport);
             if (!isSpecified)
             {
-                report = isEnabledByDefault ? ReportDiagnostic.Default : ReportDiagnostic.Suppress;
+                // Search for a matching prefix based option specification.
+                if (hasPrefixSpecification)
+                {
+                    report = prefixBasedReport;
+                }
+                else
+                {
+                    report = isEnabledByDefault ? ReportDiagnostic.Default : ReportDiagnostic.Suppress;
+                }
+            }
+            else if (hasPrefixSpecification && prefixBasedReport == ReportDiagnostic.Suppress)
+            {
+                report = ReportDiagnostic.Suppress;
             }
 
             // Compute if the reporting should be suppressed.
@@ -139,7 +160,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             // In the case where /warnaserror+ is followed by /warnaserror-:<n> on the command line,
                             // do not promote the warning specified in <n> to an error.
-                            if (!isSpecified && (report == ReportDiagnostic.Default))
+                            if (!isSpecified && !hasPrefixSpecification && report == ReportDiagnostic.Default)
                             {
                                 return ReportDiagnostic.Error;
                             }
@@ -160,6 +181,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return report;
+
+            bool tryGetPrefixBasedMatch(out ReportDiagnostic prefixBasedOption)
+            {
+                prefixBasedOption = ReportDiagnostic.Default;
+                foreach (var (prefix, option) in prefixBasedDiagnosticOptions)
+                {
+                    if (CSharpCommandLineParser.IsDiagnosticIdPrefixMatch(id, prefix))
+                    {
+                        prefixBasedOption = option;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
         }
     }
 }

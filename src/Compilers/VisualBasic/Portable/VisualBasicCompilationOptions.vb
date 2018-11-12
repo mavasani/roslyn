@@ -93,7 +93,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Optional strongNameProvider As StrongNameProvider = Nothing,
             Optional publicSign As Boolean = False,
             Optional reportSuppressedDiagnostics As Boolean = False,
-            Optional metadataImportOptions As MetadataImportOptions = MetadataImportOptions.Public)
+            Optional metadataImportOptions As MetadataImportOptions = MetadataImportOptions.Public,
+            Optional prefixBasedDiagnosticOptions As ImmutableArray(Of (String, ReportDiagnostic)) = Nothing)
 
             MyClass.New(
                 outputKind,
@@ -131,10 +132,86 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 strongNameProvider:=strongNameProvider,
                 metadataImportOptions:=metadataImportOptions,
                 referencesSupersedeLowerVersions:=False,
-                ignoreCorLibraryDuplicatedTypes:=False)
+                ignoreCorLibraryDuplicatedTypes:=False,
+                prefixBasedDiagnosticOptions:=prefixBasedDiagnosticOptions)
 
         End Sub
 #Enable Warning RS0026 ' Do not add multiple overloads with optional parameters
+
+        '' 15.9 BACKCOMPAT OVERLOAD - DO NOT TOUCH
+        Public Sub New(
+            outputKind As OutputKind,
+            moduleName As String,
+            mainTypeName As String,
+            scriptClassName As String,
+            globalImports As IEnumerable(Of GlobalImport),
+            rootNamespace As String,
+            optionStrict As OptionStrict,
+            optionInfer As Boolean,
+            optionExplicit As Boolean,
+            optionCompareText As Boolean,
+            parseOptions As VisualBasicParseOptions,
+            embedVbCoreRuntime As Boolean,
+            optimizationLevel As OptimizationLevel,
+            checkOverflow As Boolean,
+            cryptoKeyContainer As String,
+            cryptoKeyFile As String,
+            cryptoPublicKey As ImmutableArray(Of Byte),
+            delaySign As Boolean?,
+            platform As Platform,
+            generalDiagnosticOption As ReportDiagnostic,
+            specificDiagnosticOptions As IEnumerable(Of KeyValuePair(Of String, ReportDiagnostic)),
+            concurrentBuild As Boolean,
+            deterministic As Boolean,
+            xmlReferenceResolver As XmlReferenceResolver,
+            sourceReferenceResolver As SourceReferenceResolver,
+            metadataReferenceResolver As MetadataReferenceResolver,
+            assemblyIdentityComparer As AssemblyIdentityComparer,
+            strongNameProvider As StrongNameProvider,
+            publicSign As Boolean,
+            reportSuppressedDiagnostics As Boolean,
+            metadataImportOptions As MetadataImportOptions)
+
+            MyClass.New(
+                outputKind,
+                reportSuppressedDiagnostics,
+                moduleName,
+                mainTypeName,
+                scriptClassName,
+                globalImports,
+                rootNamespace,
+                optionStrict,
+                optionInfer,
+                optionExplicit,
+                optionCompareText,
+                parseOptions,
+                embedVbCoreRuntime,
+                optimizationLevel,
+                checkOverflow,
+                cryptoKeyContainer,
+                cryptoKeyFile,
+                cryptoPublicKey,
+                delaySign,
+                publicSign,
+                platform,
+                generalDiagnosticOption,
+                specificDiagnosticOptions,
+                concurrentBuild,
+                deterministic:=deterministic,
+                currentLocalTime:=Nothing,
+                suppressEmbeddedDeclarations:=False,
+                debugPlusMode:=False,
+                xmlReferenceResolver:=xmlReferenceResolver,
+                sourceReferenceResolver:=sourceReferenceResolver,
+                metadataReferenceResolver:=metadataReferenceResolver,
+                assemblyIdentityComparer:=assemblyIdentityComparer,
+                strongNameProvider:=strongNameProvider,
+                metadataImportOptions:=metadataImportOptions,
+                referencesSupersedeLowerVersions:=False,
+                ignoreCorLibraryDuplicatedTypes:=False,
+                prefixBasedDiagnosticOptions:=Nothing)
+
+        End Sub
 
         '' 15.6 BACKCOMPAT OVERLOAD -- DO NOT TOUCH
         <EditorBrowsable(EditorBrowsableState.Never)>
@@ -241,7 +318,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             strongNameProvider As StrongNameProvider,
             metadataImportOptions As MetadataImportOptions,
             referencesSupersedeLowerVersions As Boolean,
-            ignoreCorLibraryDuplicatedTypes As Boolean)
+            ignoreCorLibraryDuplicatedTypes As Boolean,
+            prefixBasedDiagnosticOptions As ImmutableArray(Of (String, ReportDiagnostic)))
 
             MyBase.New(
                 outputKind:=outputKind,
@@ -270,7 +348,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 assemblyIdentityComparer:=assemblyIdentityComparer,
                 strongNameProvider:=strongNameProvider,
                 metadataImportOptions:=metadataImportOptions,
-                referencesSupersedeLowerVersions:=referencesSupersedeLowerVersions)
+                referencesSupersedeLowerVersions:=referencesSupersedeLowerVersions,
+                prefixBasedDiagnosticOptions:=prefixBasedDiagnosticOptions)
 
             _globalImports = globalImports.AsImmutableOrEmpty()
             _rootNamespace = If(rootNamespace, String.Empty)
@@ -324,7 +403,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 metadataImportOptions:=other.MetadataImportOptions,
                 referencesSupersedeLowerVersions:=other.ReferencesSupersedeLowerVersions,
                 publicSign:=other.PublicSign,
-                ignoreCorLibraryDuplicatedTypes:=other.IgnoreCorLibraryDuplicatedTypes)
+                ignoreCorLibraryDuplicatedTypes:=other.IgnoreCorLibraryDuplicatedTypes,
+                prefixBasedDiagnosticOptions:=other.PrefixBasedDiagnosticOptions)
         End Sub
 
         Public Overrides ReadOnly Property Language As String
@@ -801,6 +881,10 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Return Me.WithGeneralDiagnosticOption(value)
         End Function
 
+        Protected Overrides Function CommonWithPrefixBasedDiagnosticOptions(prefixBasedDiagnosticOptions As ImmutableArray(Of (String, ReportDiagnostic))) As CompilationOptions
+            Return Me.WithPrefixBasedDiagnosticOptions(prefixBasedDiagnosticOptions)
+        End Function
+
         Protected Overrides Function CommonWithSpecificDiagnosticOptions(specificDiagnosticOptions As ImmutableDictionary(Of String, ReportDiagnostic)) As CompilationOptions
             Return Me.WithSpecificDiagnosticOptions(specificDiagnosticOptions)
         End Function
@@ -833,6 +917,23 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End If
 
             Return New VisualBasicCompilationOptions(Me) With {.GeneralDiagnosticOption = value}
+        End Function
+
+        ''' <summary>
+        ''' Creates a new <see cref="VisualBasicCompilationOptions"/> instance with different specific warnings specified.
+        ''' </summary>
+        ''' <param name="value">Specific report warnings. <see cref="Microsoft.CodeAnalysis.ReportDiagnostic"/></param>        
+        ''' <returns>A new instance of VisualBasicCompilationOptions, if the dictionary of report warning is different; otherwise current instance.</returns>        
+        Public Shadows Function WithPrefixBasedDiagnosticOptions(value As ImmutableArray(Of (String, ReportDiagnostic))) As VisualBasicCompilationOptions
+            If value.IsDefault Then
+                value = ImmutableArray(Of (String, ReportDiagnostic)).Empty
+            End If
+
+            If Me.PrefixBasedDiagnosticOptions.SequenceEqual(value) Then
+                Return Me
+            End If
+
+            Return New VisualBasicCompilationOptions(Me) With {.PrefixBasedDiagnosticOptions = value}
         End Function
 
         ''' <summary>
@@ -1311,7 +1412,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 strongNameProvider:=strongNameProvider,
                 metadataImportOptions:=MetadataImportOptions.Public,
                 referencesSupersedeLowerVersions:=False,
-                ignoreCorLibraryDuplicatedTypes:=False)
+                ignoreCorLibraryDuplicatedTypes:=False,
+                prefixBasedDiagnosticOptions:=Nothing)
 
         End Sub
 #Enable Warning RS0027 ' Public API with optional parameter(s) should have the most parameters amongst its public overloads
