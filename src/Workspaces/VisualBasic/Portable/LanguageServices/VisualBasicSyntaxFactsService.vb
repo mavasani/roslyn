@@ -58,6 +58,12 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End Get
         End Property
 
+        Public ReadOnly Property ElasticSpace As SyntaxTrivia Implements ISyntaxFactsService.ElasticSpace
+            Get
+                Return SyntaxFactory.ElasticSpace
+            End Get
+        End Property
+
         Protected Overrides ReadOnly Property DocumentationCommentService As IDocumentationCommentService
             Get
                 Return VisualBasicDocumentationCommentService.Instance

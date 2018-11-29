@@ -10,7 +10,7 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Shared.Extensions
 {
-    internal static class SyntaxNodeExtensions
+    internal static partial class SyntaxNodeExtensions
     {
         public static IEnumerable<SyntaxNodeOrToken> DepthFirstTraversal(this SyntaxNode node)
         {

@@ -38,6 +38,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         public SyntaxTrivia ElasticCarriageReturnLineFeed
             => SyntaxFactory.ElasticCarriageReturnLineFeed;
 
+        public SyntaxTrivia ElasticSpace
+            => SyntaxFactory.ElasticSpace;
+
         protected override IDocumentationCommentService DocumentationCommentService
             => CSharpDocumentationCommentService.Instance;
 

@@ -477,7 +477,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedParametersAndValues
                     {
                         // We have a dead initialization for a local declaration.
                         // Introduce a new local declaration statement without an initializer for this local.
-                        var declarationStatement = CreateLocalDeclarationStatement(declaredLocal.Type, declaredLocal.Name);
+                        var declarationStatement = CreateLocalDeclarationStatement(declaredLocal.Type, declaredLocal.Name, node);
                         if (isUnusedLocalAssignment)
                         {
                             declarationStatement = declarationStatement.WithAdditionalAnnotations(s_unusedLocalDeclarationAnnotation);
@@ -496,7 +496,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedParametersAndValues
                             var type = semanticModel.GetTypeInfo(node, cancellationToken).Type;
                             Debug.Assert(type != null);
                             Debug.Assert(newLocalNameOpt != null);
-                            var declarationStatement = CreateLocalDeclarationStatement(type, newLocalNameOpt);
+                            var declarationStatement = CreateLocalDeclarationStatement(type, newLocalNameOpt, node);
                             InsertLocalDeclarationStatement(declarationStatement, node);
                         }
                     }
@@ -534,7 +534,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedParametersAndValues
 
                 foreach (var node in nodesToRemove)
                 {
-                    editor.RemoveNode(node, SyntaxGenerator.DefaultRemoveOptions | SyntaxRemoveOptions.KeepLeadingTrivia);
+                    editor.RemoveNodeRetainingComments(node, syntaxFacts);
                 }
 
                 foreach (var kvp in nodeReplacementMap)
@@ -564,10 +564,11 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedParametersAndValues
             // Mark generated local declaration statement with:
             //  1. "s_newLocalDeclarationAnnotation" for post processing in "MoveNewLocalDeclarationsNearReference" below.
             //  2. Simplifier annotation so that 'var'/explicit type is correctly added based on user options.
-            TLocalDeclarationStatementSyntax CreateLocalDeclarationStatement(ITypeSymbol type, string name)
+            TLocalDeclarationStatementSyntax CreateLocalDeclarationStatement(ITypeSymbol type, string name, SyntaxNode nodeForTrivia)
                 => (TLocalDeclarationStatementSyntax)editor.Generator.LocalDeclarationStatement(type, name)
-                   .WithLeadingTrivia(editor.Generator.ElasticCarriageReturnLineFeed)
-                   .WithAdditionalAnnotations(s_newLocalDeclarationStatementAnnotation, Simplifier.Annotation);
+                    .WithLeadingTrivia(editor.Generator.ElasticCarriageReturnLineFeed)
+                    .WithTrailingTrivia(editor.Generator.ElasticCarriageReturnLineFeed)
+                    .WithAdditionalAnnotations(s_newLocalDeclarationStatementAnnotation, Simplifier.Annotation, Formatter.Annotation);
 
             void InsertLocalDeclarationStatement(TLocalDeclarationStatementSyntax declarationStatement, SyntaxNode node)
             {
@@ -713,7 +714,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedParametersAndValues
             var rootWithTrackedNodes = root.TrackNodes(originalDeclStatementsToMoveOrRemove);
 
             // Run formatter prior to invoking IMoveDeclarationNearReferenceService.
-            rootWithTrackedNodes = Formatter.Format(rootWithTrackedNodes, originalDeclStatementsToMoveOrRemove.Select(s => s.Span), document.Project.Solution.Workspace, cancellationToken: cancellationToken);
+            //rootWithTrackedNodes = Formatter.Format(rootWithTrackedNodes, originalDeclStatementsToMoveOrRemove.Select(s => s.Span), document.Project.Solution.Workspace, cancellationToken: cancellationToken);
 
             document = document.WithSyntaxRoot(rootWithTrackedNodes);
             await OnDocumentUpdatedAsync().ConfigureAwait(false);
@@ -770,7 +771,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedParametersAndValues
                     if (await IsLocalDeclarationWithNoReferencesAsync(newDecl, document, cancellationToken).ConfigureAwait(false))
                     {
                         document = document.WithSyntaxRoot(
-                        root.RemoveNode(newDecl, SyntaxGenerator.DefaultRemoveOptions));
+                            root.RemoveNodeRetainingComments(newDecl, syntaxFacts));
                         return true;
                     }
                 }

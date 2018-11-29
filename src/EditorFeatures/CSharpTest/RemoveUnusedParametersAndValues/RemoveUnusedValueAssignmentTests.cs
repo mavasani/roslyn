@@ -1877,7 +1877,7 @@ $@"class C
 {
     void M(object p)
     {
-        if (p is C _)
+        if (p is C)
         {
         }
     }
@@ -1909,7 +1909,7 @@ $@"class C
     {
         if (p is C [|x|])
         {
-            C x = null;
+            x = null;
         }
     }
 }",
@@ -1917,7 +1917,7 @@ $@"class C
 {
     void M(object p)
     {
-        if (p is C _)
+        if (p is C)
         {
             C x = null;
         }
@@ -1942,8 +1942,8 @@ $@"class C
         }
 
         [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
-        [InlineData(nameof(PreferDiscard), "_")]
-        [InlineData(nameof(PreferUnusedLocal), "unused")]
+        [InlineData(nameof(PreferDiscard), "C")]
+        [InlineData(nameof(PreferUnusedLocal), "C unused")]
         public async Task DeclarationPatternInIsPattern_WithReadAndWriteReference(string optionName, string fix)
         {
             await TestInRegularAndScriptAsync(
@@ -1962,7 +1962,7 @@ $@"class C
 {{
     void M(object p)
     {{
-        if (p is C {fix})
+        if (p is {fix})
         {{
             C x = null;
             p = x;
@@ -5547,6 +5547,478 @@ $@"class C
 
     int M2() => 0;
 }", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task ConstantValue_Trivia_03(string optionName)
+        {
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);   // C0
+
+        // C1
+        [|int x = 0|];   // C2
+
+        // C3
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);   // C0
+
+        // C1
+        // C2
+
+        // C3
+        int x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task ConstantValue_Trivia_04(string optionName)
+        {
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);   // C0
+
+        /*C1*/
+        /*C2*/[|int/*C3*/ /*C4*/x/*C5*/ = /*C6*/0|]/*C7*/;   // C8
+        /*C9*/
+
+        // C10
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);   // C0
+
+        /*C1*/
+        /*C2*/   // C8
+                 /*C9*/
+
+        // C10
+        int x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task ConstantValue_Trivia_05(string optionName)
+        {
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);   // C0
+
+        // C1
+        [|x = 0|];   // C2
+
+        // C3
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);   // C0
+
+        // C1
+        // C2
+
+        // C3
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task ConstantValue_Trivia_06(string optionName)
+        {
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);   // C0
+
+        /*C1*/
+        /*C2*/[|/*C3*/x/*C4*/ = /*C5*/0|]/*C6*/;   // C7
+        /*C8*/
+
+        // C9
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);   // C0
+
+        /*C1*/
+        /*C2*//*C3*/   // C7
+                       /*C8*/
+
+        // C9
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Assignment_NewLineTrivia_01(string optionName)
+        {
+            // One new line before and one after.
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);
+        [|x|] = 0;
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Assignment_NewLineTrivia_02(string optionName)
+        {
+            // Two new lines before and after
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);
+
+        [|x|] = 0;
+
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Assignment_NewLineTrivia_03(string optionName)
+        {
+            // Two new lines before and one after
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);
+
+        [|x|] = 0;
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Assignment_NewLineTrivia_04(string optionName)
+        {
+            // One new line before and two after
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);
+        [|x|] = 0;
+
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Assignment_NewLineTrivia_05(string optionName)
+        {
+            // Three new lines before and two after
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M(int x)
+    {
+        Console.WriteLine(0);
+
+
+        [|x|] = 0;
+
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Declaration_NewLineTrivia_01(string optionName)
+        {
+            // One new line before and one after.
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);
+        int [|x|] = 0;
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);
+        int x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Declaration_NewLineTrivia_02(string optionName)
+        {
+            // Two new lines before and after
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);
+
+        int [|x|] = 0;
+
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);
+
+        int x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Declaration_NewLineTrivia_03(string optionName)
+        {
+            // Two new lines before and one after
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);
+
+        int [|x|] = 0;
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Declaration_NewLineTrivia_04(string optionName)
+        {
+            // One new line before and two after
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);
+        int [|x|] = 0;
+
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);
+
+        int x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}", optionName);
+        }
+
+        [Theory, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]
+        [InlineData(nameof(PreferDiscard))]
+        [InlineData(nameof(PreferUnusedLocal))]
+        public async Task Declaration_NewLineTrivia_05(string optionName)
+        {
+            // Three new lines before and two after
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class C
+{
+    int M()
+    {
+        Console.WriteLine(0);
+
+
+        int [|x|] = 0;
+
+        x = 1;
+        return x + y;
+    }
+
+    int M2() => 0;
+}",
+@"", optionName);
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedValues)]

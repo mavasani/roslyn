@@ -1,6 +1,9 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.CodeAnalysis.LanguageServices;
+using Microsoft.CodeAnalysis.Shared.Extensions;
 
 namespace Microsoft.CodeAnalysis.Editing
 {
@@ -102,6 +105,14 @@ namespace Microsoft.CodeAnalysis.Editing
         public static void AddBaseType(this SyntaxEditor editor, SyntaxNode declaration, SyntaxNode baseType)
         {
             editor.ReplaceNode(declaration, (d, g) => g.AddBaseType(d, baseType));
+        }
+
+        internal static void RemoveNodeRetainingComments(this SyntaxEditor editor, SyntaxNode node, ISyntaxFactsService syntaxFacts)
+        {
+            var removeOptions = node.GetSyntaxRemoveOptionsRetainingComments(syntaxFacts);
+            var newNode = node.WithElasticWhitespaceTrivia(syntaxFacts);
+            editor.ReplaceNode(node, newNode, trackNewNode: true);
+            editor.RemoveNode(newNode, removeOptions);
         }
     }
 }
