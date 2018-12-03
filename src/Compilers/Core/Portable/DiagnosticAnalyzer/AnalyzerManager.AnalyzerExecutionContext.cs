@@ -52,6 +52,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             /// </summary>
             private ImmutableArray<DiagnosticDescriptor> _lazyDescriptors = default(ImmutableArray<DiagnosticDescriptor>);
 
+            /// <summary>
+            /// Diagnostic IDs that are suppressible for diagnostic analyzer.
+            /// </summary>
+            private ImmutableArray<string> _lazySuppressibleDiagnostics = default(ImmutableArray<string>);
+
             public Task<HostSessionStartAnalysisScope> GetSessionAnalysisScopeTask(AnalyzerExecutor analyzerExecutor)
             {
                 lock (_gate)
@@ -292,6 +297,69 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 }
 
                 return supportedDiagnostics;
+            }
+
+            public ImmutableArray<string> GetOrComputeSuppressibleDiagnostics(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+            {
+                lock (_gate)
+                {
+                    if (!_lazySuppressibleDiagnostics.IsDefault)
+                    {
+                        return _lazySuppressibleDiagnostics;
+                    }
+                }
+
+                // Otherwise, compute the value.
+                // We do so outside the lock statement as we are calling into user code, which may be a long running operation.
+                var suppressibleDiagnostics = ComputeSuppressibleDiagnostics(analyzer, analyzerExecutor);
+
+                lock (_gate)
+                {
+                    // Check if another thread already stored the computed value.
+                    if (!_lazySuppressibleDiagnostics.IsDefault)
+                    {
+                        // If so, we return the stored value.
+                        suppressibleDiagnostics = _lazySuppressibleDiagnostics;
+                    }
+                    else
+                    {
+                        // Otherwise, store the value computed here.
+                        _lazySuppressibleDiagnostics = suppressibleDiagnostics;
+                    }
+                }
+
+                return suppressibleDiagnostics;
+            }
+
+            private static ImmutableArray<string> ComputeSuppressibleDiagnostics(
+                DiagnosticAnalyzer analyzer,
+                AnalyzerExecutor analyzerExecutor)
+            {
+                var suppressibleDiagnostics = ImmutableArray<string>.Empty;
+
+                // Catch Exception from analyzer.SuppressibleDiagnostics
+                analyzerExecutor.ExecuteAndCatchIfThrows(
+                    analyzer,
+                    _ =>
+                    {
+                        var suppressibleDiagnosticsLocal = analyzer.SuppressibleDiagnostics;
+                        if (!suppressibleDiagnosticsLocal.IsDefaultOrEmpty)
+                        {
+                            foreach (var diagnosticId in suppressibleDiagnosticsLocal)
+                            {
+                                if (!string.IsNullOrEmpty(diagnosticId))
+                                {
+                                    // Disallow null or empty IDs.
+                                    throw new ArgumentException(string.Format(CodeAnalysisResources.SuppressibleDiagnosticsHasInvalidId, analyzer.ToString()), nameof(DiagnosticAnalyzer.SuppressibleDiagnostics));
+                                }
+                            }
+
+                            suppressibleDiagnostics = suppressibleDiagnosticsLocal;
+                        }
+                    },
+                    argument: default(object));
+
+                return suppressibleDiagnostics;
             }
 
             public bool TryProcessCompletedMemberAndGetPendingSymbolEndActionsForContainer(

@@ -10,7 +10,6 @@
 
 namespace Microsoft.CodeAnalysis {
     using System;
-    using System.Reflection;
     
     
     /// <summary>
@@ -40,7 +39,7 @@ namespace Microsoft.CodeAnalysis {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Microsoft.CodeAnalysis.CodeAnalysisResources", typeof(CodeAnalysisResources).GetTypeInfo().Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Microsoft.CodeAnalysis.CodeAnalysisResources", typeof(CodeAnalysisResources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -1393,6 +1392,15 @@ namespace Microsoft.CodeAnalysis {
         internal static string SupportedDiagnosticsHasNullDescriptor {
             get {
                 return ResourceManager.GetString("SupportedDiagnosticsHasNullDescriptor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Analyzer &apos;{0}&apos; contains a null or empty diagnostic ID in its &apos;SuppressibleDiagnostics&apos;..
+        /// </summary>
+        internal static string SuppressibleDiagnosticsHasInvalidId {
+            get {
+                return ResourceManager.GetString("SuppressibleDiagnosticsHasInvalidId", resourceCulture);
             }
         }
         

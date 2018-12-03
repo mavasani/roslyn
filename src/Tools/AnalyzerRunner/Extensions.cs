@@ -11,6 +11,7 @@ namespace AnalyzerRunner
             analyzerTelemetryInfo.CodeBlockEndActionsCount += addendum.CodeBlockEndActionsCount;
             analyzerTelemetryInfo.CodeBlockStartActionsCount += addendum.CodeBlockStartActionsCount;
             analyzerTelemetryInfo.CompilationActionsCount += addendum.CompilationActionsCount;
+            analyzerTelemetryInfo.SuppressionActionsCount += addendum.SuppressionActionsCount;
             analyzerTelemetryInfo.CompilationEndActionsCount += addendum.CompilationEndActionsCount;
             analyzerTelemetryInfo.CompilationStartActionsCount += addendum.CompilationStartActionsCount;
             analyzerTelemetryInfo.ExecutionTime += addendum.ExecutionTime;

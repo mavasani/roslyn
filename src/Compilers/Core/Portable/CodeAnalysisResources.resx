@@ -449,6 +449,9 @@
   <data name="InvalidDiagnosticLocationReported" xml:space="preserve">
     <value>Reported diagnostic '{0}' has a source location in file '{1}', which is not part of the compilation being analyzed.</value>
   </data>
+  <data name="SuppressibleDiagnosticsHasInvalidId" xml:space="preserve">
+    <value>Analyzer '{0}' contains a null or empty diagnostic ID in its 'SuppressibleDiagnostics'.</value>
+  </data>
   <data name="SupportedDiagnosticsHasNullDescriptor" xml:space="preserve">
     <value>Analyzer '{0}' contains a null descriptor in its 'SupportedDiagnostics'.</value>
   </data>

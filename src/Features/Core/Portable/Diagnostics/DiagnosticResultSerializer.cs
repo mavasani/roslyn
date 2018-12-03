@@ -167,6 +167,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             writer.WriteInt32(telemetryInfo.CompilationStartActionsCount);
             writer.WriteInt32(telemetryInfo.CompilationEndActionsCount);
             writer.WriteInt32(telemetryInfo.CompilationActionsCount);
+            writer.WriteInt32(telemetryInfo.SuppressionActionsCount);
             writer.WriteInt32(telemetryInfo.SyntaxTreeActionsCount);
             writer.WriteInt32(telemetryInfo.SemanticModelActionsCount);
             writer.WriteInt32(telemetryInfo.SymbolActionsCount);
@@ -191,6 +192,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var compilationStartActionsCount = reader.ReadInt32();
             var compilationEndActionsCount = reader.ReadInt32();
             var compilationActionsCount = reader.ReadInt32();
+            var suppressionActionsCount = reader.ReadInt32();
             var syntaxTreeActionsCount = reader.ReadInt32();
             var semanticModelActionsCount = reader.ReadInt32();
             var symbolActionsCount = reader.ReadInt32();
@@ -212,6 +214,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 CompilationStartActionsCount = compilationStartActionsCount,
                 CompilationEndActionsCount = compilationEndActionsCount,
                 CompilationActionsCount = compilationActionsCount,
+                SuppressionActionsCount = suppressionActionsCount,
 
                 SyntaxTreeActionsCount = syntaxTreeActionsCount,
                 SemanticModelActionsCount = semanticModelActionsCount,

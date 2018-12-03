@@ -238,6 +238,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return analyzerExecutionContext.GetOrComputeDescriptors(analyzer, analyzerExecutor);
         }
 
+        /// <summary>
+        /// Return <see cref="DiagnosticAnalyzer.SuppressibleDiagnostics"/> of given <paramref name="analyzer"/>.
+        /// </summary>
+        public ImmutableArray<string> GetSuppressibleDiagnostics(
+            DiagnosticAnalyzer analyzer,
+            AnalyzerExecutor analyzerExecutor)
+        {
+            var analyzerExecutionContext = GetAnalyzerExecutionContext(analyzer);
+            return analyzerExecutionContext.GetOrComputeSuppressibleDiagnostics(analyzer, analyzerExecutor);
+        }
+
         internal bool IsSupportedDiagnostic(DiagnosticAnalyzer analyzer, Diagnostic diagnostic, Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer, AnalyzerExecutor analyzerExecutor)
         {
             // Avoid realizing all the descriptors for all compiler diagnostics by assuming that compiler analyzer doesn't report unsupported diagnostics.

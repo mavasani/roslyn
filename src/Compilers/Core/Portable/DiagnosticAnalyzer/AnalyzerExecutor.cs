@@ -36,6 +36,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly Action<Diagnostic> _addNonCategorizedDiagnosticOpt;
         private readonly Action<Diagnostic, DiagnosticAnalyzer, bool> _addCategorizedLocalDiagnosticOpt;
         private readonly Action<Diagnostic, DiagnosticAnalyzer> _addCategorizedNonLocalDiagnosticOpt;
+        private readonly Action<Diagnostic, DiagnosticAnalyzer> _suppressDiagnosticOpt;
         private readonly Action<Exception, DiagnosticAnalyzer, Diagnostic> _onAnalyzerException;
         private readonly Func<Exception, bool> _analyzerExceptionFilter;
         private readonly AnalyzerManager _analyzerManager;
@@ -51,6 +52,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly CompilationAnalysisValueProviderFactory _compilationAnalysisValueProviderFactory;
         private readonly CancellationToken _cancellationToken;
 
+        private ConcurrentDictionary<SyntaxTree, SemanticModel> _lazySemanticModelMap;
         private ConcurrentDictionary<IOperation, ControlFlowGraph> _lazyControlFlowGraphMap;
 
         /// <summary>
@@ -97,6 +99,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             bool logExecutionTime = false,
             Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt = null,
             Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt = null,
+            Action<Diagnostic, DiagnosticAnalyzer> suppressDiagnosticOpt = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             // We can either report categorized (local/non-local) diagnostics or non-categorized diagnostics.
@@ -107,7 +110,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             return new AnalyzerExecutor(compilation, analyzerOptions, addNonCategorizedDiagnosticOpt, onAnalyzerException, analyzerExceptionFilter,
                 isCompilerAnalyzer, analyzerManager, shouldSkipAnalysisOnGeneratedCode, shouldSuppressGeneratedCodeDiagnostic, isGeneratedCodeLocation,
-                getAnalyzerGate, analyzerExecutionTimeMapOpt, addCategorizedLocalDiagnosticOpt, addCategorizedNonLocalDiagnosticOpt, cancellationToken);
+                getAnalyzerGate, analyzerExecutionTimeMapOpt, addCategorizedLocalDiagnosticOpt, addCategorizedNonLocalDiagnosticOpt,
+                suppressDiagnosticOpt, cancellationToken);
         }
 
         /// <summary>
@@ -139,6 +143,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 analyzerExecutionTimeMapOpt: null,
                 addCategorizedLocalDiagnosticOpt: null,
                 addCategorizedNonLocalDiagnosticOpt: null,
+                suppressDiagnosticOpt: null,
                 cancellationToken: cancellationToken);
         }
 
@@ -157,6 +162,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ConcurrentDictionary<DiagnosticAnalyzer, StrongBox<long>> analyzerExecutionTimeMapOpt,
             Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt,
             Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt,
+            Action<Diagnostic, DiagnosticAnalyzer> suppressDiagnosticOpt,
             CancellationToken cancellationToken)
         {
             _compilation = compilation;
@@ -173,6 +179,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _analyzerExecutionTimeMapOpt = analyzerExecutionTimeMapOpt;
             _addCategorizedLocalDiagnosticOpt = addCategorizedLocalDiagnosticOpt;
             _addCategorizedNonLocalDiagnosticOpt = addCategorizedNonLocalDiagnosticOpt;
+            _suppressDiagnosticOpt = suppressDiagnosticOpt;
             _cancellationToken = cancellationToken;
 
             _compilationAnalysisValueProviderFactory = new CompilationAnalysisValueProviderFactory();
@@ -187,7 +194,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             return new AnalyzerExecutor(_compilation, _analyzerOptions, _addNonCategorizedDiagnosticOpt, _onAnalyzerException, _analyzerExceptionFilter,
                 _isCompilerAnalyzer, _analyzerManager, _shouldSkipAnalysisOnGeneratedCode, _shouldSuppressGeneratedCodeDiagnostic, _isGeneratedCodeLocation,
-                _getAnalyzerGateOpt, _analyzerExecutionTimeMapOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt, cancellationToken);
+                _getAnalyzerGateOpt, _analyzerExecutionTimeMapOpt, _addCategorizedLocalDiagnosticOpt, _addCategorizedNonLocalDiagnosticOpt,
+                _suppressDiagnosticOpt, cancellationToken);
         }
 
         internal Compilation Compilation => _compilation;
@@ -263,6 +271,36 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     data => data.action(data.context),
                     (action: startAction.Action, context: context),
                     new AnalysisContextInfo(_compilation, symbol));
+            }
+        }
+
+        /// <summary>
+        /// Executes the suppression actions.
+        /// </summary>
+        /// <param name="actions"><see cref="AnalyzerActions"/> whose suppression actions are to be executed.</param>
+        /// <param name="reportdiagnostics">Reported analyzer/compiler diagnostics that can be suppressed.</param>
+        /// <param name="analyzer">Analyzer to execute suppression actions.</param>
+        public void ExecuteSuppressionActions(
+            ImmutableArray<SuppressionAnalyzerAction> actions,
+            ImmutableArray<Diagnostic> reportdiagnostics,
+            DiagnosticAnalyzer analyzer)
+        {
+            Debug.Assert(_suppressDiagnosticOpt != null);
+
+            Action<Diagnostic> suppressDiagnostic = d => _suppressDiagnosticOpt(d, analyzer); 
+            foreach (var action in actions)
+            {
+                Debug.Assert(action.Analyzer == analyzer);
+                _cancellationToken.ThrowIfCancellationRequested();
+
+                var context = new SuppressionAnalysisContext(_compilation, _analyzerOptions,
+                    reportdiagnostics, suppressDiagnostic, GetSemanticModel, _cancellationToken);
+
+                ExecuteAndCatchIfThrows(
+                    analyzer,
+                    data => data.action(data.context),
+                    (action: action.Action, context),
+                    new AnalysisContextInfo(_compilation));
             }
         }
 
@@ -1819,6 +1857,18 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return _lazyControlFlowGraphMap.GetOrAdd(operation, op => ControlFlowGraphBuilder.Create(op));
+        }
+
+        private SemanticModel GetSemanticModel(SyntaxTree syntaxTree)
+        {
+            Debug.Assert(syntaxTree != null);
+
+            if (_lazySemanticModelMap == null)
+            {
+                Interlocked.CompareExchange(ref _lazySemanticModelMap, new ConcurrentDictionary<SyntaxTree, SemanticModel>(), null);
+            }
+
+            return _lazySemanticModelMap.GetOrAdd(syntaxTree, t => _compilation.GetSemanticModel(t));
         }
     }
 }

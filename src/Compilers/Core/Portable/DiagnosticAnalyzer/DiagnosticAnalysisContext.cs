@@ -185,6 +185,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             throw new NotImplementedException();
         }
 
+        /// <summary> 
+        /// Register an action to be executed after semantic analysis of a method body or an expression appearing outside a method body. 
+        /// An operation block action reports <see cref="Diagnostic"/>s about operation blocks. 
+        /// </summary> 
+        /// <param name="action">Action to be executed for an operation block.</param> 
+        public virtual void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Enable concurrent execution of analyzer actions registered by this analyzer.
         /// An analyzer that registers for concurrent execution can have better performance than a non-concurrent analyzer.
@@ -1452,5 +1462,84 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Gets a <see cref="ControlFlowGraph"/> for the operation block containing the <see cref="Operation"/>.
         /// </summary>
         public ControlFlowGraph GetControlFlowGraph() => DiagnosticAnalysisContextHelpers.GetControlFlowGraph(Operation, _getControlFlowGraphOpt, _cancellationToken);
+    }
+
+    /// <summary>
+    /// Context for suppressing reported diagnostics.
+    /// A suppression action can suppress "configurable" analyzer and/or compiler diagnostics reported for the compilation.
+    /// A diagnostic is configurable if it does not have <see cref="WellKnownDiagnosticTags.NotConfigurable"/> custom tag.
+    /// Compiler diagnostics with severity <see cref="DiagnosticSeverity.Error"/> are always non-configurable, and cannot be suppressed.
+    /// </summary>
+    public struct SuppressionAnalysisContext
+    {
+        private readonly Action<Diagnostic> _suppressDiagnostic;
+        private readonly Func<SyntaxTree, SemanticModel> _getSemanticModel;
+
+        /// <summary>
+        /// "Configurable" analyzer and/or compiler diagnostics reported for the compilation.
+        /// A diagnostic is configurable if it does not have <see cref="WellKnownDiagnosticTags.NotConfigurable"/> custom tag.
+        /// Compiler diagnostics with severity <see cref="DiagnosticSeverity.Error"/> are always non-configurable, and cannot be suppressed.
+        /// Note that only the diagnostics with IDs from <see cref="DiagnosticAnalyzer.SuppressibleDiagnostics"/> are included.
+        /// </summary>
+        public ImmutableArray<Diagnostic> ReportedDiagnostics { get; }
+
+        /// <summary>
+        /// <see cref="CodeAnalysis.Compilation"/> containing the <see cref="IOperation"/>.
+        /// </summary>
+        public Compilation Compilation { get; }
+
+        /// <summary>
+        /// Options specified for the analysis.
+        /// </summary>
+        public AnalyzerOptions Options { get; }
+
+        /// <summary>
+        /// Token to check for requested cancellation of the analysis.
+        /// </summary>
+        public CancellationToken CancellationToken { get; }
+
+        public SuppressionAnalysisContext(
+            Compilation compilation,
+            AnalyzerOptions options,
+            ImmutableArray<Diagnostic> reportedDiagnostics,
+            Action<Diagnostic> suppressDiagnostic,
+            Func<SyntaxTree, SemanticModel> getSemanticModel,
+            CancellationToken cancellationToken)
+        {
+            Compilation = compilation;
+            Options = options;
+            ReportedDiagnostics = reportedDiagnostics;
+            _suppressDiagnostic = suppressDiagnostic;
+            _getSemanticModel = getSemanticModel;
+            CancellationToken = cancellationToken;
+        }
+
+        /// <summary>
+        /// Suppresses a reported diagnostic from <see cref="ReportDiagnostic"/>.
+        /// </summary>
+        /// <param name="diagnostic"><see cref="Diagnostic"/> to be suppressed.</param>
+        public void SuppressDiagnostic(Diagnostic diagnostic)
+        {
+            if (diagnostic == null)
+            {
+                throw new ArgumentNullException(nameof(diagnostic));
+            }
+
+            if (!ReportedDiagnostics.Contains(diagnostic))
+            {
+                // TODO: Message resource string.
+                throw new ArgumentException(nameof(diagnostic));
+            }
+
+            lock (_suppressDiagnostic)
+            {
+                _suppressDiagnostic(diagnostic);
+            }
+        }
+
+        /// <summary>
+        /// Gets a <see cref="SemanticModel"/> for the given <see cref="SyntaxTree"/>, which is shared across all analyzers.
+        /// </summary>
+        public SemanticModel GetSemanticModel(SyntaxTree syntaxTree) => _getSemanticModel(syntaxTree);
     }
 }

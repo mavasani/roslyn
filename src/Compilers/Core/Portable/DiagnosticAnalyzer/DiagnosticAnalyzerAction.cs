@@ -141,6 +141,19 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public Action<CompilationAnalysisContext> Action { get { return _action; } }
     }
 
+    internal sealed class SuppressionAnalyzerAction : AnalyzerAction
+    {
+        private readonly Action<SuppressionAnalysisContext> _action;
+
+        public SuppressionAnalyzerAction(Action<SuppressionAnalysisContext> action, DiagnosticAnalyzer analyzer)
+            : base(analyzer)
+        {
+            _action = action;
+        }
+
+        public Action<SuppressionAnalysisContext> Action { get { return _action; } }
+    }
+
     internal sealed class SemanticModelAnalyzerAction : AnalyzerAction
     {
         private readonly Action<SemanticModelAnalysisContext> _action;
