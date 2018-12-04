@@ -95,7 +95,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 public override Location Location => _original.Location;
                 public override IReadOnlyList<Location> AdditionalLocations => _original.AdditionalLocations;
                 public override bool IsSuppressed => _original.IsSuppressed;
-                internal override ImmutableHashSet<string> SuppressingAnalyzers => _original.SuppressingAnalyzers;
                 public override ImmutableDictionary<string, string> Properties => _properties;
 
                 public override string GetMessage(IFormatProvider formatProvider = null)
@@ -131,11 +130,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 internal override Diagnostic WithIsSuppressed(bool isSuppressed)
                 {
                     return new CompilerDiagnostic(_original.WithIsSuppressed(isSuppressed), _properties);
-                }
-
-                internal override Diagnostic WithAnalyzerSuppressions(ImmutableHashSet<string> suppressingAnalyzers)
-                {
-                    return new CompilerDiagnostic(_original.WithAnalyzerSuppressions(suppressingAnalyzers), _properties);
                 }
             }
         }

@@ -36,7 +36,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly Action<Diagnostic> _addNonCategorizedDiagnosticOpt;
         private readonly Action<Diagnostic, DiagnosticAnalyzer, bool> _addCategorizedLocalDiagnosticOpt;
         private readonly Action<Diagnostic, DiagnosticAnalyzer> _addCategorizedNonLocalDiagnosticOpt;
-        private readonly Action<Diagnostic, DiagnosticAnalyzer> _suppressDiagnosticOpt;
+        private readonly Action<Diagnostic> _suppressDiagnosticOpt;
         private readonly Action<Exception, DiagnosticAnalyzer, Diagnostic> _onAnalyzerException;
         private readonly Func<Exception, bool> _analyzerExceptionFilter;
         private readonly AnalyzerManager _analyzerManager;
@@ -99,7 +99,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             bool logExecutionTime = false,
             Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt = null,
             Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt = null,
-            Action<Diagnostic, DiagnosticAnalyzer> suppressDiagnosticOpt = null,
+            Action<Diagnostic> suppressDiagnosticOpt = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             // We can either report categorized (local/non-local) diagnostics or non-categorized diagnostics.
@@ -162,7 +162,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ConcurrentDictionary<DiagnosticAnalyzer, StrongBox<long>> analyzerExecutionTimeMapOpt,
             Action<Diagnostic, DiagnosticAnalyzer, bool> addCategorizedLocalDiagnosticOpt,
             Action<Diagnostic, DiagnosticAnalyzer> addCategorizedNonLocalDiagnosticOpt,
-            Action<Diagnostic, DiagnosticAnalyzer> suppressDiagnosticOpt,
+            Action<Diagnostic> suppressDiagnosticOpt,
             CancellationToken cancellationToken)
         {
             _compilation = compilation;
@@ -288,14 +288,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Debug.Assert(_suppressDiagnosticOpt != null);
             Debug.Assert(!reportedDiagnostics.IsEmpty);
 
-            Action<Diagnostic> suppressDiagnostic = d => _suppressDiagnosticOpt(d, analyzer); 
             foreach (var action in actions)
             {
                 Debug.Assert(action.Analyzer == analyzer);
                 _cancellationToken.ThrowIfCancellationRequested();
 
                 var context = new SuppressionAnalysisContext(_compilation, _analyzerOptions,
-                    reportedDiagnostics, suppressDiagnostic, GetSemanticModel, _cancellationToken);
+                    reportedDiagnostics, _suppressDiagnosticOpt, GetSemanticModel, _cancellationToken);
 
                 ExecuteAndCatchIfThrows(
                     analyzer,

@@ -1,8 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Immutable;
-using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -11,8 +9,8 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// </summary>
     internal sealed class CSDiagnostic : DiagnosticWithInfo
     {
-        internal CSDiagnostic(DiagnosticInfo info, Location location, bool isSuppressed = false, ImmutableHashSet<string> suppressingAnalyzers = null)
-            : base(info, location, isSuppressed, suppressingAnalyzers ?? ImmutableHashSet<string>.Empty)
+        internal CSDiagnostic(DiagnosticInfo info, Location location, bool isSuppressed = false)
+            : base(info, location, isSuppressed)
         {
         }
 
@@ -54,13 +52,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return this;
-        }
-
-        internal override Diagnostic WithAnalyzerSuppressions(ImmutableHashSet<string> suppressingAnalyzers)
-        {
-            Debug.Assert(!this.IsSuppressed);
-            Debug.Assert(this.SuppressingAnalyzers.IsEmpty);
-            return new CSDiagnostic(this.Info, this.Location, isSuppressed: true, suppressingAnalyzers);
         }
     }
 }

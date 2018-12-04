@@ -645,16 +645,17 @@ namespace Microsoft.CodeAnalysis
             analyzerCts = null;
             reportAnalyzer = false;
             analyzerDriver = null;
+            bool filterDiagnostics = true;
 
             // Print the diagnostics produced during the parsing stage and exit if there were any errors.
-            compilation.GetDiagnostics(CompilationStage.Parse, includeEarlierStages: false, diagnostics, cancellationToken);
+            compilation.GetDiagnostics(CompilationStage.Parse, includeEarlierStages: false, diagnostics, filterDiagnostics, cancellationToken);
             if (diagnostics.HasAnyErrors())
             {
                 return;
             }
 
             DiagnosticBag analyzerExceptionDiagnostics = null;
-
+            
             if (!analyzers.IsEmpty)
             {
                 analyzerCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -671,9 +672,14 @@ namespace Microsoft.CodeAnalysis
                     out compilation,
                     analyzerCts.Token);
                 reportAnalyzer = Arguments.ReportAnalyzer && !analyzers.IsEmpty;
+
+                // If we have any analyzer suppressible diagnostics, then ensure that we don't apply
+                // diagnostic filtering (/warnaserror) upfront, as some of these diagnostics might
+                // be suppressed by analyzer suppression actions, which run later.
+                filterDiagnostics = !analyzerDriver.HasAnalyzerSuppressibleDiagnostics();
             }
 
-            compilation.GetDiagnostics(CompilationStage.Declare, includeEarlierStages: false, diagnostics, cancellationToken);
+            compilation.GetDiagnostics(CompilationStage.Declare, includeEarlierStages: false, diagnostics, filterDiagnostics, cancellationToken);
             if (diagnostics.HasAnyErrors())
             {
                 return;
@@ -728,9 +734,10 @@ namespace Microsoft.CodeAnalysis
                     emitOptions,
                     debugEntryPoint: null,
                     sourceLinkStream: sourceLinkStreamDisposerOpt?.Stream,
-                    embeddedTexts: embeddedTexts,
+                    embeddedTexts,
                     testData: null,
-                    cancellationToken: cancellationToken);
+                    cancellationToken,
+                    filterDiagnostics);
 
                 if (moduleBeingBuilt != null)
                 {
@@ -745,7 +752,8 @@ namespace Microsoft.CodeAnalysis
                             emitOptions.EmitTestCoverageData,
                             diagnostics,
                             filterOpt: null,
-                            cancellationToken: cancellationToken);
+                            cancellationToken,
+                            filterDiagnostics);
 
                         if (success)
                         {
@@ -797,7 +805,8 @@ namespace Microsoft.CodeAnalysis
                                         win32ResourceStreamOpt,
                                         emitOptions.OutputNameOverride,
                                         diagnostics,
-                                        cancellationToken);
+                                        cancellationToken,
+                                        filterDiagnostics);
                                 }
                             }
 
@@ -817,27 +826,35 @@ namespace Microsoft.CodeAnalysis
 
                         if (analyzerDriver != null)
                         {
+                            // If we skipped filtering compiler diagnostics upfront, do so now.
+                            if (!filterDiagnostics)
+                            {
+                                if (!diagnostics.IsEmptyWithoutResolution)
+                                {
+                                    var newDiagnostics = DiagnosticBag.GetInstance();
+                                    compilation.FilterAndAppendAndFreeDiagnostics(diagnostics, ref newDiagnostics, filterDiagnostics: true);
+                                    diagnostics = newDiagnostics;
+                                }
+                            }
+                            
                             // GetDiagnosticsAsync is called after ReportUnusedImports
                             // since that method calls EventQueue.TryComplete. Without
                             // TryComplete, we may miss diagnostics.
                             var hostDiagnostics = analyzerDriver.GetDiagnosticsAsync(compilation).Result;
                             diagnostics.AddRange(hostDiagnostics);
 
-                            // Apply diagnostic suppressions for compiler and analyzer diagnostics from analyzer suppression actions.
-                            if (analyzerDriver.HasSuppressionActions &&
-                                analyzerDriver.TryApplyAnalyzerSuppressions(diagnostics.ToReadOnly(), compilation, out var newDiagnostics))
+                            if (!diagnostics.IsEmptyWithoutResolution)
                             {
-                                diagnostics.Clear();
-                                diagnostics.AddRange(newDiagnostics);
+                                // Apply diagnostic suppressions for compiler and analyzer diagnostics from analyzer suppression actions.
+                                if (!filterDiagnostics)
+                                {
+                                    analyzerDriver.ApplyAnalyzerSuppressions(diagnostics, compilation);
+                                }
 
-                                if (newDiagnostics.Any(IsReportedError))
+                                if (diagnostics.AsEnumerable().Any(IsReportedError))
                                 {
                                     success = false;
                                 }
-                            }
-                            else if (hostDiagnostics.Any(IsReportedError))
-                            {
-                                success = false;
                             }
                         }
                     }
@@ -873,8 +890,8 @@ namespace Microsoft.CodeAnalysis
                             includePrivateMembers: emitOptions.IncludePrivateMembers,
                             emitTestCoverageData: emitOptions.EmitTestCoverageData,
                             pePdbFilePath: emitOptions.PdbFilePath,
-                            privateKeyOpt: privateKeyOpt,
-                            cancellationToken: cancellationToken);
+                            privateKeyOpt,
+                            cancellationToken);
 
                         peStreamProvider.Close(diagnostics);
                         refPeStreamProviderOpt?.Close(diagnostics);

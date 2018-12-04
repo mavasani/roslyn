@@ -1,8 +1,5 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
-using System.Collections.Immutable;
-using System.Diagnostics;
-
 namespace Microsoft.CodeAnalysis.Diagnostics
 {
     /// <summary>
@@ -21,21 +18,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public AttributeData Attribute { get; }
 
-        /// <summary>
-        /// If the diagnostic was suppressed by one or more analyzer suppression actions, then returns the set of fully qualified
-        /// names of suppressing analyzers.
-        /// Otherwise, returns null.
-        /// </summary>
-        public ImmutableHashSet<string> SuppressingAnalyzers { get; }
-
-        internal SuppressionInfo(string id, AttributeData attribute, ImmutableHashSet<string> suppressingAnalyzers)
+        internal SuppressionInfo(string id, AttributeData attribute)
         {
-            Debug.Assert(suppressingAnalyzers != null);
-            Debug.Assert(attribute == null || suppressingAnalyzers.IsEmpty);
-
             Id = id;
             Attribute = attribute;
-            SuppressingAnalyzers = suppressingAnalyzers;
         }
     }
 }

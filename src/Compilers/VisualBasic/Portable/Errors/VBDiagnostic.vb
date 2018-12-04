@@ -1,6 +1,5 @@
 ﻿' Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
-Imports System.Collections.Immutable
 Imports Microsoft.CodeAnalysis.Text
 Imports Microsoft.CodeAnalysis.VisualBasic.Symbols
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
@@ -9,8 +8,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
     Friend NotInheritable Class VBDiagnostic
         Inherits DiagnosticWithInfo
 
-        Friend Sub New(info As DiagnosticInfo, location As Location, Optional isSuppressed As Boolean = False, Optional suppressingAnalyzers As ImmutableHashSet(Of String) = Nothing)
-            MyBase.New(info, location, isSuppressed, If(suppressingAnalyzers, ImmutableHashSet(Of String).Empty))
+        Friend Sub New(info As DiagnosticInfo, location As Location, Optional isSuppressed As Boolean = False)
+            MyBase.New(info, location, isSuppressed)
         End Sub
 
         Public Overrides Function ToString() As String
@@ -43,12 +42,6 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End If
 
             Return Me
-        End Function
-
-        Friend Overrides Function WithAnalyzerSuppressions(suppressingAnalyzers As ImmutableHashSet(Of String)) As Diagnostic
-            Debug.Assert(Not Me.IsSuppressed)
-            Debug.Assert(Me.SuppressingAnalyzers.IsEmpty)
-            Return New VBDiagnostic(Me.Info, Me.Location, isSuppressed:=True, suppressingAnalyzers:=suppressingAnalyzers)
         End Function
     End Class
 End Namespace

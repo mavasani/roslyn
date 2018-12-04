@@ -420,7 +420,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 }
                 Func<DiagnosticAnalyzer, AnalyzerActionCounts> getAnalyzerActionCounts = analyzer => analyzerActionCounts[analyzer];
 
-                _analysisResultBuilder.StoreAnalysisResult(analysisScope, driver, compilation, getAnalyzerActionCounts, fullAnalysisResultForAnalyzersInScope: true);
+                _analysisResultBuilder.ApplySuppressionsAndStoreAnalysisResult(analysisScope, driver, compilation, getAnalyzerActionCounts, fullAnalysisResultForAnalyzersInScope: true);
             }
             finally
             {
@@ -451,13 +451,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 var compDiags = compilation.GetDiagnostics(cancellationToken);
                 var analyzerDiags = await driver.GetDiagnosticsAsync(compilation).ConfigureAwait(false);
                 var reportedDiagnostics = compDiags.AddRange(analyzerDiags);
-                if (driver.HasSuppressionActions &&
-                    driver.TryApplyAnalyzerSuppressions(reportedDiagnostics, compilation, out var reportedDiagnosticsWithSuppressions))
-                {
-                    reportedDiagnostics = reportedDiagnosticsWithSuppressions;
-                }
-
-                return reportedDiagnostics;
+                return driver.ApplyAnalyzerSuppressions(reportedDiagnostics, compilation);
             }
             finally
             {
@@ -905,7 +899,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     finally
                     {
                         // Update the diagnostic results based on the diagnostics reported on the driver.
-                        _analysisResultBuilder.StoreAnalysisResult(analysisScope, driver, _compilation, _analysisState.GetAnalyzerActionCounts, fullAnalysisResultForAnalyzersInScope: false);
+                        _analysisResultBuilder.ApplySuppressionsAndStoreAnalysisResult(analysisScope, driver, _compilation, _analysisState.GetAnalyzerActionCounts, fullAnalysisResultForAnalyzersInScope: false);
                     }
                 }
             }

@@ -230,6 +230,7 @@ namespace Microsoft.CodeAnalysis
             var driver = AnalyzerDriver.CreateAndAttachToCompilation(c, analyzersArray, options, analyzerManager, onAnalyzerException, null, false, out var newCompilation, CancellationToken.None);
             var discarded = newCompilation.GetDiagnostics();
             diagnostics = driver.GetDiagnosticsAsync(newCompilation).Result.AddRange(exceptionDiagnostics);
+            diagnostics = driver.ApplyAnalyzerSuppressions(diagnostics, newCompilation);
 
             if (!reportSuppressedDiagnostics)
             {
