@@ -1476,6 +1476,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     public struct SuppressionAnalysisContext
     {
         private readonly Action<Diagnostic> _suppressDiagnostic;
+        private readonly Func<DiagnosticDescriptor, bool> _isSupportedSuppressionDescriptor;
         private readonly Func<SyntaxTree, SemanticModel> _getSemanticModel;
 
         /// <summary>
@@ -1498,11 +1499,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public CancellationToken CancellationToken { get; }
 
-        public SuppressionAnalysisContext(
+        internal SuppressionAnalysisContext(
             Compilation compilation,
             AnalyzerOptions options,
             ImmutableArray<Diagnostic> reportedDiagnostics,
             Action<Diagnostic> suppressDiagnostic,
+            Func<DiagnosticDescriptor, bool> isSupportedSuppressionDescriptor,
             Func<SyntaxTree, SemanticModel> getSemanticModel,
             CancellationToken cancellationToken)
         {
@@ -1510,6 +1512,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             Options = options;
             ReportedDiagnostics = reportedDiagnostics;
             _suppressDiagnostic = suppressDiagnostic;
+            _isSupportedSuppressionDescriptor = isSupportedSuppressionDescriptor;
             _getSemanticModel = getSemanticModel;
             CancellationToken = cancellationToken;
         }
@@ -1517,18 +1520,40 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <summary>
         /// Suppresses a reported diagnostic from <see cref="ReportDiagnostic"/>.
         /// </summary>
-        /// <param name="diagnostic"><see cref="Diagnostic"/> to be suppressed.</param>
-        public void SuppressDiagnostic(Diagnostic diagnostic)
+        /// <param name="diagnostic">
+        /// <see cref="Diagnostic"/> to be suppressed, which must be from <see cref="ReportedDiagnostics"/>.
+        /// </param>
+        /// <param name="suppressionDescriptor">
+        /// Descriptor for the suppression, which must be from <see cref="DiagnosticAnalyzer.SupportedDiagnostics"/>.
+        /// </param>
+        public void SuppressDiagnostic(Diagnostic diagnostic, DiagnosticDescriptor suppressionDescriptor)
         {
             if (diagnostic == null)
             {
                 throw new ArgumentNullException(nameof(diagnostic));
             }
 
+            if (suppressionDescriptor == null)
+            {
+                throw new ArgumentNullException(nameof(suppressionDescriptor));
+            }
+
             if (!ReportedDiagnostics.Contains(diagnostic))
             {
                 // TODO: Message resource string.
                 throw new ArgumentException(nameof(diagnostic));
+            }
+
+            if (!_isSupportedSuppressionDescriptor(suppressionDescriptor))
+            {
+                // TODO: Message resource string.
+                throw new ArgumentException(nameof(suppressionDescriptor));
+            }
+
+            if (suppressionDescriptor.GetEffectiveSeverity(Compilation.Options) == ReportDiagnostic.Suppress)
+            {
+                // Suppression has been disabled by the end user through compilation options.
+                return;
             }
 
             lock (_suppressDiagnostic)

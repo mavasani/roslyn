@@ -285,16 +285,19 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ImmutableArray<Diagnostic> reportedDiagnostics,
             DiagnosticAnalyzer analyzer)
         {
+            Debug.Assert(!actions.IsEmpty);
             Debug.Assert(_suppressDiagnosticOpt != null);
             Debug.Assert(!reportedDiagnostics.IsEmpty);
 
+            var supportedDescriptors = _analyzerManager.GetSupportedDiagnosticDescriptors(analyzer, this);
+            Func<DiagnosticDescriptor, bool> isSupportedDiagnosticDescriptor = supportedDescriptors.Contains;
             foreach (var action in actions)
             {
                 Debug.Assert(action.Analyzer == analyzer);
                 _cancellationToken.ThrowIfCancellationRequested();
 
                 var context = new SuppressionAnalysisContext(_compilation, _analyzerOptions,
-                    reportedDiagnostics, _suppressDiagnosticOpt, GetSemanticModel, _cancellationToken);
+                    reportedDiagnostics, _suppressDiagnosticOpt, isSupportedDiagnosticDescriptor, GetSemanticModel, _cancellationToken);
 
                 ExecuteAndCatchIfThrows(
                     analyzer,

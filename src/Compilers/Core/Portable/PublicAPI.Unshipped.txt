@@ -5,8 +5,7 @@ Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.Compilation.get ->
 Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.GetSemanticModel(Microsoft.CodeAnalysis.SyntaxTree syntaxTree) -> Microsoft.CodeAnalysis.SemanticModel
 Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.Options.get -> Microsoft.CodeAnalysis.Diagnostics.AnalyzerOptions
 Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.ReportedDiagnostics.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostic>
-Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.SuppressDiagnostic(Microsoft.CodeAnalysis.Diagnostic diagnostic) -> void
-Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.SuppressionAnalysisContext(Microsoft.CodeAnalysis.Compilation compilation, Microsoft.CodeAnalysis.Diagnostics.AnalyzerOptions options, System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostic> reportedDiagnostics, System.Action<Microsoft.CodeAnalysis.Diagnostic> suppressDiagnostic, System.Func<Microsoft.CodeAnalysis.SyntaxTree, Microsoft.CodeAnalysis.SemanticModel> getSemanticModel, System.Threading.CancellationToken cancellationToken) -> void
+Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.SuppressDiagnostic(Microsoft.CodeAnalysis.Diagnostic diagnostic, Microsoft.CodeAnalysis.DiagnosticDescriptor suppressionDescriptor) -> void
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.SuppressionActionsCount.get -> int
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.SuppressionActionsCount.set -> void
 Microsoft.CodeAnalysis.IFieldSymbol.IsFixedSizeBuffer.get -> bool
