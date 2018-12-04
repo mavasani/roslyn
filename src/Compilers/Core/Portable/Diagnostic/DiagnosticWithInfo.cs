@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using Roslyn.Utilities;
@@ -17,14 +18,18 @@ namespace Microsoft.CodeAnalysis
         private readonly DiagnosticInfo _info;
         private readonly Location _location;
         private readonly bool _isSuppressed;
+        private readonly ImmutableHashSet<string> _suppressingAnalyzers;
 
-        internal DiagnosticWithInfo(DiagnosticInfo info, Location location, bool isSuppressed = false)
+        internal DiagnosticWithInfo(DiagnosticInfo info, Location location, bool isSuppressed, ImmutableHashSet<string> suppressingAnalyzers)
         {
             Debug.Assert(info != null);
             Debug.Assert(location != null);
+            Debug.Assert(suppressingAnalyzers != null);
+
             _info = info;
             _location = location;
             _isSuppressed = isSuppressed;
+            _suppressingAnalyzers = suppressingAnalyzers;
         }
 
         public override Location Location
@@ -88,6 +93,11 @@ namespace Microsoft.CodeAnalysis
         public override bool IsSuppressed
         {
             get { return _isSuppressed; }
+        }
+
+        internal override ImmutableHashSet<string> SuppressingAnalyzers
+        {
+            get { return _suppressingAnalyzers; }
         }
 
         public sealed override int WarningLevel
@@ -193,7 +203,7 @@ namespace Microsoft.CodeAnalysis
 
             if (location != _location)
             {
-                return new DiagnosticWithInfo(_info, location, _isSuppressed);
+                return new DiagnosticWithInfo(_info, location, _isSuppressed, _suppressingAnalyzers);
             }
 
             return this;
@@ -203,7 +213,7 @@ namespace Microsoft.CodeAnalysis
         {
             if (this.Severity != severity)
             {
-                return new DiagnosticWithInfo(this.Info.GetInstanceWithSeverity(severity), _location, _isSuppressed);
+                return new DiagnosticWithInfo(this.Info.GetInstanceWithSeverity(severity), _location, _isSuppressed, _suppressingAnalyzers);
             }
 
             return this;
@@ -213,10 +223,17 @@ namespace Microsoft.CodeAnalysis
         {
             if (this.IsSuppressed != isSuppressed)
             {
-                return new DiagnosticWithInfo(this.Info, _location, isSuppressed);
+                return new DiagnosticWithInfo(this.Info, _location, isSuppressed, _suppressingAnalyzers);
             }
 
             return this;
+        }
+
+        internal override Diagnostic WithAnalyzerSuppressions(ImmutableHashSet<string> suppressingAnalyzers)
+        {
+            Debug.Assert(!this.IsSuppressed);
+            Debug.Assert(this.SuppressingAnalyzers.IsEmpty);
+            return new DiagnosticWithInfo(this.Info, _location, isSuppressed: true, suppressingAnalyzers);
         }
 
         internal sealed override bool IsNotConfigurable()

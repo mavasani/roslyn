@@ -822,7 +822,20 @@ namespace Microsoft.CodeAnalysis
                             // TryComplete, we may miss diagnostics.
                             var hostDiagnostics = analyzerDriver.GetDiagnosticsAsync(compilation).Result;
                             diagnostics.AddRange(hostDiagnostics);
-                            if (hostDiagnostics.Any(IsReportedError))
+
+                            // Apply diagnostic suppressions for compiler and analyzer diagnostics from analyzer suppression actions.
+                            if (analyzerDriver.HasSuppressionActions &&
+                                analyzerDriver.TryApplyAnalyzerSuppressions(diagnostics.ToReadOnly(), compilation, out var newDiagnostics))
+                            {
+                                diagnostics.Clear();
+                                diagnostics.AddRange(newDiagnostics);
+
+                                if (newDiagnostics.Any(IsReportedError))
+                                {
+                                    success = false;
+                                }
+                            }
+                            else if (hostDiagnostics.Any(IsReportedError))
                             {
                                 success = false;
                             }

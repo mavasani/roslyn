@@ -241,7 +241,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <summary>
         /// Return <see cref="DiagnosticAnalyzer.SuppressibleDiagnostics"/> of given <paramref name="analyzer"/>.
         /// </summary>
-        public ImmutableArray<string> GetSuppressibleDiagnostics(
+        public ImmutableHashSet<string> GetSuppressibleDiagnostics(
             DiagnosticAnalyzer analyzer,
             AnalyzerExecutor analyzerExecutor)
         {

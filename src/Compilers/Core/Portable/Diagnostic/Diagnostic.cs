@@ -277,7 +277,7 @@ namespace Microsoft.CodeAnalysis
 
         internal static Diagnostic Create(DiagnosticInfo info)
         {
-            return new DiagnosticWithInfo(info, Location.None);
+            return new DiagnosticWithInfo(info, Location.None, isSuppressed: false, suppressingAnalyzers: ImmutableHashSet<string>.Empty);
         }
 
         /// <summary>
@@ -328,6 +328,9 @@ namespace Microsoft.CodeAnalysis
         /// </summary>
         public abstract bool IsSuppressed { get; }
 
+        internal virtual ImmutableHashSet<string> SuppressingAnalyzers
+            => ImmutableHashSet<string>.Empty;
+
         /// <summary>
         /// Gets the <see cref="SuppressionInfo"/> for suppressed diagnostics, i.e. <see cref="IsSuppressed"/> = true.
         /// Otherwise, returns null.
@@ -340,13 +343,20 @@ namespace Microsoft.CodeAnalysis
             }
 
             AttributeData attribute;
-            var suppressMessageState = new SuppressMessageAttributeState(compilation);
-            if (!suppressMessageState.IsDiagnosticSuppressed(this, out attribute))
+            if (!this.SuppressingAnalyzers.IsEmpty)
             {
                 attribute = null;
             }
+            else
+            {
+                var suppressMessageState = new SuppressMessageAttributeState(compilation);
+                if (!suppressMessageState.IsDiagnosticSuppressed(this, out attribute))
+                {
+                    attribute = null;
+                }
+            }
 
-            return new SuppressionInfo(this.Id, attribute);
+            return new SuppressionInfo(this.Id, attribute, this.SuppressingAnalyzers);
         }
 
         /// <summary>
@@ -444,6 +454,12 @@ namespace Microsoft.CodeAnalysis
         /// Create a new instance of this diagnostic with the suppression info changed.
         /// </summary>
         internal abstract Diagnostic WithIsSuppressed(bool isSuppressed);
+
+        /// <summary>
+        /// Create a new instance of this diagnostic with the suppression info changed to suppress the diagnostic
+        /// with given suppressing analyzer names.
+        /// </summary>
+        internal abstract Diagnostic WithAnalyzerSuppressions(ImmutableHashSet<string> suppressingAnalyzers);
 
         // compatibility
         internal virtual int Code { get { return 0; } }

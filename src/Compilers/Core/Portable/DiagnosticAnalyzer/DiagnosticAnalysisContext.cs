@@ -1466,9 +1466,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
     /// <summary>
     /// Context for suppressing reported diagnostics.
-    /// A suppression action can suppress "configurable" analyzer and/or compiler diagnostics reported for the compilation.
-    /// A diagnostic is configurable if it does not have <see cref="WellKnownDiagnosticTags.NotConfigurable"/> custom tag.
-    /// Compiler diagnostics with severity <see cref="DiagnosticSeverity.Error"/> are always non-configurable, and cannot be suppressed.
+    /// A suppression action can suppress analyzer and/or compiler diagnostics reported for the compilation, which are suppressible.
+    /// A diagnostic is considered not suppressible by analyzers if any of the following conditions are met:
+    ///     1. Diagnostic is already suppressed in source via pragma/suppress message attribute.
+    ///     2. Diagnostic is explicitly tagged with <see cref="WellKnownDiagnosticTags.NotConfigurable"/> by analyzer authors.
+    ///        This includes compiler error diagnostics.
+    ///     3. Diagnostics which have <see cref="Diagnostic.DefaultSeverity"/> of <see cref="DiagnosticSeverity.Error"/>.
     /// </summary>
     public struct SuppressionAnalysisContext
     {
@@ -1476,10 +1479,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly Func<SyntaxTree, SemanticModel> _getSemanticModel;
 
         /// <summary>
-        /// "Configurable" analyzer and/or compiler diagnostics reported for the compilation.
-        /// A diagnostic is configurable if it does not have <see cref="WellKnownDiagnosticTags.NotConfigurable"/> custom tag.
-        /// Compiler diagnostics with severity <see cref="DiagnosticSeverity.Error"/> are always non-configurable, and cannot be suppressed.
-        /// Note that only the diagnostics with IDs from <see cref="DiagnosticAnalyzer.SuppressibleDiagnostics"/> are included.
+        /// Analyzer and/or compiler diagnostics reported for the compilation.
         /// </summary>
         public ImmutableArray<Diagnostic> ReportedDiagnostics { get; }
 

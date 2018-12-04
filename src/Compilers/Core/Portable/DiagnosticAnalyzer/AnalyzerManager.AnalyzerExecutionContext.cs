@@ -55,7 +55,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             /// <summary>
             /// Diagnostic IDs that are suppressible for diagnostic analyzer.
             /// </summary>
-            private ImmutableArray<string> _lazySuppressibleDiagnostics = default(ImmutableArray<string>);
+            private ImmutableHashSet<string> _lazySuppressibleDiagnostics;
 
             public Task<HostSessionStartAnalysisScope> GetSessionAnalysisScopeTask(AnalyzerExecutor analyzerExecutor)
             {
@@ -299,11 +299,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return supportedDiagnostics;
             }
 
-            public ImmutableArray<string> GetOrComputeSuppressibleDiagnostics(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+            public ImmutableHashSet<string> GetOrComputeSuppressibleDiagnostics(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
             {
                 lock (_gate)
                 {
-                    if (!_lazySuppressibleDiagnostics.IsDefault)
+                    if (_lazySuppressibleDiagnostics != null)
                     {
                         return _lazySuppressibleDiagnostics;
                     }
@@ -316,7 +316,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 lock (_gate)
                 {
                     // Check if another thread already stored the computed value.
-                    if (!_lazySuppressibleDiagnostics.IsDefault)
+                    if (_lazySuppressibleDiagnostics != null)
                     {
                         // If so, we return the stored value.
                         suppressibleDiagnostics = _lazySuppressibleDiagnostics;
@@ -331,11 +331,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return suppressibleDiagnostics;
             }
 
-            private static ImmutableArray<string> ComputeSuppressibleDiagnostics(
+            private static ImmutableHashSet<string> ComputeSuppressibleDiagnostics(
                 DiagnosticAnalyzer analyzer,
                 AnalyzerExecutor analyzerExecutor)
             {
-                var suppressibleDiagnostics = ImmutableArray<string>.Empty;
+                var suppressibleDiagnostics = ImmutableHashSet<string>.Empty;
 
                 // Catch Exception from analyzer.SuppressibleDiagnostics
                 analyzerExecutor.ExecuteAndCatchIfThrows(
@@ -343,7 +343,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     _ =>
                     {
                         var suppressibleDiagnosticsLocal = analyzer.SuppressibleDiagnostics;
-                        if (!suppressibleDiagnosticsLocal.IsDefaultOrEmpty)
+                        if (suppressibleDiagnosticsLocal?.Count > 0)
                         {
                             foreach (var diagnosticId in suppressibleDiagnosticsLocal)
                             {

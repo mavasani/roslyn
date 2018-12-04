@@ -450,7 +450,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 // Force compilation diagnostics and wait for analyzer execution to complete.
                 var compDiags = compilation.GetDiagnostics(cancellationToken);
                 var analyzerDiags = await driver.GetDiagnosticsAsync(compilation).ConfigureAwait(false);
-                return compDiags.AddRange(analyzerDiags);
+                var reportedDiagnostics = compDiags.AddRange(analyzerDiags);
+                if (driver.HasSuppressionActions &&
+                    driver.TryApplyAnalyzerSuppressions(reportedDiagnostics, compilation, out var reportedDiagnosticsWithSuppressions))
+                {
+                    reportedDiagnostics = reportedDiagnosticsWithSuppressions;
+                }
+
+                return reportedDiagnostics;
             }
             finally
             {

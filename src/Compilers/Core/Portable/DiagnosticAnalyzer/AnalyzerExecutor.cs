@@ -278,14 +278,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Executes the suppression actions.
         /// </summary>
         /// <param name="actions"><see cref="AnalyzerActions"/> whose suppression actions are to be executed.</param>
-        /// <param name="reportdiagnostics">Reported analyzer/compiler diagnostics that can be suppressed.</param>
+        /// <param name="reportedDiagnostics">Reported analyzer/compiler diagnostics that can be suppressed.</param>
         /// <param name="analyzer">Analyzer to execute suppression actions.</param>
         public void ExecuteSuppressionActions(
             ImmutableArray<SuppressionAnalyzerAction> actions,
-            ImmutableArray<Diagnostic> reportdiagnostics,
+            ImmutableArray<Diagnostic> reportedDiagnostics,
             DiagnosticAnalyzer analyzer)
         {
             Debug.Assert(_suppressDiagnosticOpt != null);
+            Debug.Assert(!reportedDiagnostics.IsEmpty);
 
             Action<Diagnostic> suppressDiagnostic = d => _suppressDiagnosticOpt(d, analyzer); 
             foreach (var action in actions)
@@ -294,7 +295,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 _cancellationToken.ThrowIfCancellationRequested();
 
                 var context = new SuppressionAnalysisContext(_compilation, _analyzerOptions,
-                    reportdiagnostics, suppressDiagnostic, GetSemanticModel, _cancellationToken);
+                    reportedDiagnostics, suppressDiagnostic, GetSemanticModel, _cancellationToken);
 
                 ExecuteAndCatchIfThrows(
                     analyzer,

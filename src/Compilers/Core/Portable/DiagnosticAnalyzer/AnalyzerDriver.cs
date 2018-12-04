@@ -53,6 +53,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         // execute the compilation actions before the compilation end actions.
         private ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<CompilationAnalyzerAction>> _compilationActionsMap;
         private ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<CompilationAnalyzerAction>> _compilationEndActionsMap;
+        private ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<SuppressionAnalyzerAction>> _suppressionActionsMap;
+
+        /// <summary>
+        /// Map from analyzer suppressed diagnostics to the set of one or more analyzers that suppress them. 
+        /// </summary>
+        private ConcurrentDictionary<Diagnostic, ConcurrentBag<string>> _analyzerSuppressedDiagnosticsMap;
 
         /// <summary>
         /// Default analysis mode for generated code.
@@ -191,6 +197,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     _syntaxTreeActionsMap = MakeSyntaxTreeActionsByAnalyzer(this.AnalyzerActions);
                     _compilationActionsMap = MakeCompilationActionsByAnalyzer(this.AnalyzerActions.CompilationActions);
                     _compilationEndActionsMap = MakeCompilationActionsByAnalyzer(this.AnalyzerActions.CompilationEndActions);
+                    _suppressionActionsMap = MakeSuppressionActionsByAnalyzer(this.AnalyzerActions.SuppressionActions);
+                    _analyzerSuppressedDiagnosticsMap = _suppressionActionsMap.Count > 0 ? new ConcurrentDictionary<Diagnostic, ConcurrentBag<string>>() : null;
 
                     if (this.AnalyzerActions.SymbolStartActionsCount > 0)
                     {
@@ -272,9 +280,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var analyzerExecutor = AnalyzerExecutor.Create(
                 compilation, analysisOptions.Options ?? AnalyzerOptions.Empty, addNotCategorizedDiagnosticOpt, newOnAnalyzerException, analysisOptions.AnalyzerExceptionFilter,
                 IsCompilerAnalyzer, AnalyzerManager, ShouldSkipAnalysisOnGeneratedCode, ShouldSuppressGeneratedCodeDiagnostic, IsGeneratedOrHiddenCodeLocation, GetAnalyzerGate,
-                analysisOptions.LogAnalyzerExecutionTime, addCategorizedLocalDiagnosticOpt, addCategorizedNonLocalDiagnosticOpt, cancellationToken);
+                analysisOptions.LogAnalyzerExecutionTime, addCategorizedLocalDiagnosticOpt, addCategorizedNonLocalDiagnosticOpt, AddAnalyzerSuppressedDiagnostic, cancellationToken);
 
             Initialize(analyzerExecutor, diagnosticQueue, compilationData, cancellationToken);
+        }
+
+        private void AddAnalyzerSuppressedDiagnostic(Diagnostic diagnostic, DiagnosticAnalyzer analyzer)
+        {
+            var suppressingAnalyzers = _analyzerSuppressedDiagnosticsMap.GetOrAdd(diagnostic, _ => new ConcurrentBag<string>());
+            suppressingAnalyzers.Add(analyzer.ToString());
         }
 
         private SemaphoreSlim GetAnalyzerGate(DiagnosticAnalyzer analyzer)
@@ -588,19 +602,86 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return allDiagnostics.ToReadOnlyAndFree();
         }
 
+        public bool HasSuppressionActions => _suppressionActionsMap?.Count > 0;
+
+        public bool TryApplyAnalyzerSuppressions(ImmutableArray<Diagnostic> reportedDiagnostics, Compilation compilation, out ImmutableArray<Diagnostic> reportedDiagnosticsWithSuppressions)
+        {
+            Debug.Assert(HasSuppressionActions);
+            Debug.Assert(_analyzerSuppressedDiagnosticsMap != null);
+
+            if (reportedDiagnostics.IsEmpty)
+            {
+                reportedDiagnosticsWithSuppressions = reportedDiagnostics;
+                return false;
+            }
+
+            // We do not allow analyzer based suppressions for following category of diagnostics:
+            //  1. Diagnostics which are already suppressed in source via pragma/suppress message attribute.
+            //  2. Diagnostics explicitly tagged as not configurable by analyzer authors - this includes compiler error diagnostics.
+            //  3. Diagnostics which are marked as error by default by diagnostic authors.
+            var analyzerSuppressibleDiagnostics = reportedDiagnostics.WhereAsArray(d => !d.IsSuppressed &&
+                                                                                        !d.IsNotConfigurable() &&
+                                                                                        d.DefaultSeverity != DiagnosticSeverity.Error);
+            if (analyzerSuppressibleDiagnostics.IsEmpty)
+            {
+                reportedDiagnosticsWithSuppressions = reportedDiagnostics;
+                return false;
+            }
+
+            var analysisScope = new AnalysisScope(compilation, this.Analyzers, concurrentAnalysis: compilation.Options.ConcurrentBuild, categorizeDiagnostics: false);
+            ExecuteSuppressionActions(_suppressionActionsMap, analyzerSuppressibleDiagnostics, analysisScope);
+            if (_analyzerSuppressedDiagnosticsMap.IsEmpty)
+            {
+                reportedDiagnosticsWithSuppressions = reportedDiagnostics;
+                return false;
+            }
+
+            var builder = ArrayBuilder<Diagnostic>.GetInstance(reportedDiagnostics.Length);
+            foreach (var diagnostic in reportedDiagnostics)
+            {
+                if (_analyzerSuppressedDiagnosticsMap.TryGetValue(diagnostic, out var analyzers))
+                {
+                    Debug.Assert(analyzerSuppressibleDiagnostics.Contains(diagnostic));
+
+                    if (compilation.Options.ReportSuppressedDiagnostics)
+                    {
+                        builder.Add(diagnostic.WithAnalyzerSuppressions(analyzers.ToImmutableHashSet()));
+                    }
+                }
+                else
+                {
+                    builder.Add(diagnostic);
+                }
+            }
+
+            reportedDiagnosticsWithSuppressions = builder.ToImmutableAndFree();
+            return true;
+        }
+
         public ImmutableArray<Diagnostic> DequeueLocalDiagnostics(DiagnosticAnalyzer analyzer, bool syntax, Compilation compilation)
         {
             var diagnostics = syntax ? DiagnosticQueue.DequeueLocalSyntaxDiagnostics(analyzer) : DiagnosticQueue.DequeueLocalSemanticDiagnostics(analyzer);
-            return FilterDiagnosticsSuppressedInSource(diagnostics, compilation, CurrentCompilationData.SuppressMessageAttributeState);
+            return FilterDiagnosticsSuppressedInSourceOrByAnalyzers(diagnostics, compilation);
         }
 
         public ImmutableArray<Diagnostic> DequeueNonLocalDiagnostics(DiagnosticAnalyzer analyzer, Compilation compilation)
         {
             var diagnostics = DiagnosticQueue.DequeueNonLocalDiagnostics(analyzer);
-            return FilterDiagnosticsSuppressedInSource(diagnostics, compilation, CurrentCompilationData.SuppressMessageAttributeState);
+            return FilterDiagnosticsSuppressedInSourceOrByAnalyzers(diagnostics, compilation);
         }
 
-        private ImmutableArray<Diagnostic> FilterDiagnosticsSuppressedInSource(ImmutableArray<Diagnostic> diagnostics, Compilation compilation, SuppressMessageAttributeState suppressMessageState)
+        private ImmutableArray<Diagnostic> FilterDiagnosticsSuppressedInSourceOrByAnalyzers(ImmutableArray<Diagnostic> diagnostics, Compilation compilation)
+        {
+            diagnostics = FilterDiagnosticsSuppressedInSource(diagnostics, compilation, CurrentCompilationData.SuppressMessageAttributeState);
+            if (HasSuppressionActions && TryApplyAnalyzerSuppressions(diagnostics, compilation, out var newDiagnostics))
+            {
+                diagnostics = newDiagnostics;
+            }
+
+            return diagnostics;
+        }
+
+        private static ImmutableArray<Diagnostic> FilterDiagnosticsSuppressedInSource(ImmutableArray<Diagnostic> diagnostics, Compilation compilation, SuppressMessageAttributeState suppressMessageState)
         {
             if (diagnostics.IsEmpty)
             {
@@ -802,6 +883,18 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             var builder = ImmutableDictionary.CreateBuilder<DiagnosticAnalyzer, ImmutableArray<CompilationAnalyzerAction>>();
             var actionsByAnalyzers = compilationActions.GroupBy(action => action.Analyzer);
+            foreach (var analyzerAndActions in actionsByAnalyzers)
+            {
+                builder.Add(analyzerAndActions.Key, analyzerAndActions.ToImmutableArray());
+            }
+
+            return builder.ToImmutable();
+        }
+
+        private static ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<SuppressionAnalyzerAction>> MakeSuppressionActionsByAnalyzer(ImmutableArray<SuppressionAnalyzerAction> suppressionActions)
+        {
+            var builder = ImmutableDictionary.CreateBuilder<DiagnosticAnalyzer, ImmutableArray<SuppressionAnalyzerAction>>();
+            var actionsByAnalyzers = suppressionActions.GroupBy(action => action.Analyzer);
             foreach (var analyzerAndActions in actionsByAnalyzers)
             {
                 builder.Add(analyzerAndActions.Key, analyzerAndActions.ToImmutableArray());
@@ -1316,6 +1409,44 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             finally
             {
                 compilationEvent.FlushCache();
+            }
+        }
+
+        private void ExecuteSuppressionActions(
+            ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<SuppressionAnalyzerAction>> suppressionActionsMap,
+            ImmutableArray<Diagnostic> reportedDiagnostics,
+            AnalysisScope analysisScope)
+        {
+            Parallel.ForEach(analysisScope.Analyzers, analyzer =>
+            {
+                if (suppressionActionsMap.TryGetValue(analyzer, out var suppressionActions))
+                {
+                    var suppressibleReportedDiagnostics = getSuppressibleReportedDiagnostics(analyzer);
+                    if (!suppressibleReportedDiagnostics.IsEmpty)
+                    {
+                        AnalyzerExecutor.ExecuteSuppressionActions(suppressionActions, suppressibleReportedDiagnostics, analyzer);
+                    }
+                }
+            });
+
+            ImmutableArray<Diagnostic> getSuppressibleReportedDiagnostics(DiagnosticAnalyzer analyzer)
+            {
+                var suppressibleDiagnostics = AnalyzerManager.GetSuppressibleDiagnostics(analyzer, AnalyzerExecutor);
+                if (suppressibleDiagnostics.IsEmpty)
+                {
+                    return ImmutableArray<Diagnostic>.Empty;
+                }
+
+                var builder = ArrayBuilder<Diagnostic>.GetInstance();
+                foreach (var diagnostic in reportedDiagnostics)
+                {
+                    if (suppressibleDiagnostics.Contains(diagnostic.Id))
+                    {
+                        builder.Add(diagnostic);
+                    }
+                }
+
+                return builder.ToImmutableAndFree();
             }
         }
 

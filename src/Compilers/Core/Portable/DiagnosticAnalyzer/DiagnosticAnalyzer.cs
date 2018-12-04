@@ -16,9 +16,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public abstract ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; }
 
         /// <summary>
-        /// Returns a set of diagnostic IDs that this analyzer is capable of suppressing.
+        /// Returns a set of diagnostic IDs that this analyzer is capable of suppressing, if any.
+        /// Default implementation returns an empty set.
         /// </summary>
-        public virtual ImmutableArray<string> SuppressibleDiagnostics => ImmutableArray<string>.Empty;
+        public virtual ImmutableHashSet<string> SuppressibleDiagnostics => ImmutableHashSet<string>.Empty;
 
         /// <summary>
         /// Called once at session start to register actions in the analysis context.

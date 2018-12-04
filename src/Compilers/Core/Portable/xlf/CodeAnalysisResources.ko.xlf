@@ -64,6 +64,11 @@
         <target state="new">Analyzer '{0}' contains a null descriptor in its 'SupportedDiagnostics'.</target>
         <note />
       </trans-unit>
+      <trans-unit id="SuppressibleDiagnosticsHasInvalidId">
+        <source>Analyzer '{0}' contains a null or empty diagnostic ID in its 'SuppressibleDiagnostics'.</source>
+        <target state="new">Analyzer '{0}' contains a null or empty diagnostic ID in its 'SuppressibleDiagnostics'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Unresolved">
         <source>Unresolved: </source>
         <target state="translated">확인되지 않음: </target>
