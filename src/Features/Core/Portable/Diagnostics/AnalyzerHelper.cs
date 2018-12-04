@@ -366,6 +366,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             public override void RegisterOperationBlockAction(Action<OperationBlockAnalysisContext> action) { }
             public override void RegisterOperationBlockStartAction(Action<OperationBlockStartAnalysisContext> action) { }
             public override void RegisterSymbolStartAction(Action<SymbolStartAnalysisContext> action, SymbolKind symbolKind) { }
+            public override void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action) { }
             #endregion
 
             private class CollectNestedCompilationContext : CompilationStartAnalysisContext
@@ -398,6 +399,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 public override void RegisterOperationBlockAction(Action<OperationBlockAnalysisContext> action) { }
                 public override void RegisterOperationBlockStartAction(Action<OperationBlockStartAnalysisContext> action) { }
                 public override void RegisterSymbolStartAction(Action<SymbolStartAnalysisContext> action, SymbolKind symbolKind) { }
+                public override void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action) { }
                 #endregion
             }
         }

@@ -347,7 +347,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                         {
                             foreach (var diagnosticId in suppressibleDiagnosticsLocal)
                             {
-                                if (!string.IsNullOrEmpty(diagnosticId))
+                                if (string.IsNullOrEmpty(diagnosticId))
                                 {
                                     // Disallow null or empty IDs.
                                     throw new ArgumentException(string.Format(CodeAnalysisResources.SuppressibleDiagnosticsHasInvalidId, analyzer.ToString()), nameof(DiagnosticAnalyzer.SuppressibleDiagnostics));

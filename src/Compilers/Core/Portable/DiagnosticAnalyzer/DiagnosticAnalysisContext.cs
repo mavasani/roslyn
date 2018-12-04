@@ -186,8 +186,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary> 
-        /// Register an action to be executed after semantic analysis of a method body or an expression appearing outside a method body. 
-        /// An operation block action reports <see cref="Diagnostic"/>s about operation blocks. 
+        /// Register an action to suppress reported diagnostics. 
+        /// A suppression action can suppress analyzer and/or compiler diagnostics reported for the compilation, which are suppressible.
+        /// A diagnostic is considered suppressible by analyzers if none of the following conditions are met:
+        ///     1. Diagnostic is already suppressed in source via pragma/suppress message attribute.
+        ///     2. Diagnostic is explicitly tagged with <see cref="WellKnownDiagnosticTags.NotConfigurable"/> by analyzer authors.
+        ///        This includes compiler error diagnostics.
+        ///     3. Diagnostics which have <see cref="Diagnostic.DefaultSeverity"/> of <see cref="DiagnosticSeverity.Error"/>.
         /// </summary> 
         /// <param name="action">Action to be executed for an operation block.</param> 
         public virtual void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action)
@@ -455,6 +460,21 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="action">Action to be executed at completion of semantic analysis of an <see cref="IOperation"/>.</param>
         /// <param name="operationKinds">Action will be executed only if an <see cref="IOperation"/>'s Kind matches one of the operation kind values.</param>
         public virtual void RegisterOperationAction(Action<OperationAnalysisContext> action, ImmutableArray<OperationKind> operationKinds)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary> 
+        /// Register an action to suppress reported diagnostics. 
+        /// A suppression action can suppress analyzer and/or compiler diagnostics reported for the compilation, which are suppressible.
+        /// A diagnostic is considered suppressible by analyzers if none of the following conditions are met:
+        ///     1. Diagnostic is already suppressed in source via pragma/suppress message attribute.
+        ///     2. Diagnostic is explicitly tagged with <see cref="WellKnownDiagnosticTags.NotConfigurable"/> by analyzer authors.
+        ///        This includes compiler error diagnostics.
+        ///     3. Diagnostics which have <see cref="Diagnostic.DefaultSeverity"/> of <see cref="DiagnosticSeverity.Error"/>.
+        /// </summary> 
+        /// <param name="action">Action to be executed for an operation block.</param> 
+        public virtual void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action)
         {
             throw new NotImplementedException();
         }
@@ -1467,7 +1487,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     /// <summary>
     /// Context for suppressing reported diagnostics.
     /// A suppression action can suppress analyzer and/or compiler diagnostics reported for the compilation, which are suppressible.
-    /// A diagnostic is considered not suppressible by analyzers if any of the following conditions are met:
+    /// A diagnostic is considered suppressible by analyzers if none of the following conditions are met:
     ///     1. Diagnostic is already suppressed in source via pragma/suppress message attribute.
     ///     2. Diagnostic is explicitly tagged with <see cref="WellKnownDiagnosticTags.NotConfigurable"/> by analyzer authors.
     ///        This includes compiler error diagnostics.
