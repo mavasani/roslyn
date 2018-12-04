@@ -108,5 +108,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public const string NamingRuleId = "IDE1006";
         public const string UnboundIdentifierId = "IDE1007";
         public const string UnboundConstructorId = "IDE1008";
+
+
+        public const string SuppressUnusedMemberDiagnosticId = "SPR1001";
     }
 }

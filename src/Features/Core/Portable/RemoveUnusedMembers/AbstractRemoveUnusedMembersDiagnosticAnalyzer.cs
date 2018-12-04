@@ -14,6 +14,49 @@ using Microsoft.CodeAnalysis.Shared.Extensions;
 
 namespace Microsoft.CodeAnalysis.RemoveUnusedMembers
 {
+    [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
+    internal sealed class RemoveUnusedMembersSuppressionAnalyzer: DiagnosticAnalyzer
+    {
+        private static readonly DiagnosticDescriptor s_suppressUnusedMembersRule = new DiagnosticDescriptor(
+            IDEDiagnosticIds.SuppressUnusedMemberDiagnosticId,
+            title: "Suppress unused member diagnostic for symbols marked with ImplicitlyUsedAttribute",
+            messageFormat: "Suppress unused member diagnostic for symbols marked with ImplicitlyUsedAttribute",
+            category: "Suppression",
+            defaultSeverity: DiagnosticSeverity.Hidden,
+            isEnabledByDefault: true);
+
+        public override ImmutableHashSet<string> SuppressibleDiagnostics
+            => ImmutableHashSet.Create(IDEDiagnosticIds.RemoveUnusedMembersDiagnosticId, IDEDiagnosticIds.RemoveUnreadMembersDiagnosticId);
+
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
+            => ImmutableArray.Create(s_suppressUnusedMembersRule);
+
+        public override void Initialize(AnalysisContext context)
+        {
+            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze);
+            context.EnableConcurrentExecution();
+
+            context.RegisterSuppressionAction(suppressionContext =>
+            {
+                foreach (var diagnostic in suppressionContext.ReportedDiagnostics)
+                {
+                    var node = diagnostic.Location.FindNode(suppressionContext.CancellationToken);
+                    if (node == null)
+                    {
+                        continue;
+                    }
+
+                    var model = suppressionContext.GetSemanticModel(node.SyntaxTree);
+                    var declaredSymbol = model.GetDeclaredSymbol(node, suppressionContext.CancellationToken);
+                    if (declaredSymbol?.GetAttributes().Any(a => a.AttributeClass.Name.StartsWith("ImplicitlyUsed")) == true)
+                    {
+                        suppressionContext.SuppressDiagnostic(diagnostic, s_suppressUnusedMembersRule);
+                    }
+                }
+            });
+        }
+    }
+
     internal abstract class AbstractRemoveUnusedMembersDiagnosticAnalyzer<TDocumentationCommentTriviaSyntax, TIdentifierNameSyntax>
         : AbstractCodeQualityDiagnosticAnalyzer
         where TDocumentationCommentTriviaSyntax: SyntaxNode
