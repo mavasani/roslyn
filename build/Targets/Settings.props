@@ -34,7 +34,7 @@
     <RoslynDesktopRuntimeIdentifierX86>win-x86</RoslynDesktopRuntimeIdentifierX86>
     <UseSharedCompilation>true</UseSharedCompilation>
 
-    <Features>strict, IOperation</Features>
+    <Features>strict, IOperation, flow-analysis</Features>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GenerateFullPaths>true</GenerateFullPaths>

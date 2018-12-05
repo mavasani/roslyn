@@ -27,7 +27,7 @@
   -->
   <PropertyGroup>
     <!-- Versions used by several individual references below -->
-    <RoslynDiagnosticsNugetPackageVersion>2.6.2-beta2</RoslynDiagnosticsNugetPackageVersion>
+    <RoslynDiagnosticsNugetPackageVersion>2.9.0-ci</RoslynDiagnosticsNugetPackageVersion>
     <CodeStyleLayerCodeAnalysisVersion>2.8.2</CodeStyleLayerCodeAnalysisVersion>
     <MicrosoftCodeAnalysisTestingVersion>1.0.0-beta1-63310-01</MicrosoftCodeAnalysisTestingVersion>
 
@@ -76,7 +76,7 @@
     <MicrosoftMSXMLVersion>8.0.0.0-alpha</MicrosoftMSXMLVersion>
     <!-- Using a private build of Microsoft.Net.Test.SDK to work around issue https://github.com/Microsoft/vstest/issues/1764 -->
     <MicrosoftNETTestSdkVersion>15.9.0-dev2</MicrosoftNETTestSdkVersion>
-    <MicrosoftNetCompilersVersion>2.9.0-beta7-63018-03</MicrosoftNetCompilersVersion>
+    <MicrosoftNetCompilersVersion>2.10.0</MicrosoftNetCompilersVersion>
     <MicrosoftNetCoreAnalyzersVersion>$(RoslynDiagnosticsNugetPackageVersion)</MicrosoftNetCoreAnalyzersVersion>
     <MicrosoftNetCoreILAsmVersion>2.0.0</MicrosoftNetCoreILAsmVersion>
     <MicrosoftNETCoreCompilersVersion>2.9.0-beta7-63018-03</MicrosoftNETCoreCompilersVersion>
@@ -322,6 +322,7 @@
       https://vside.myget.org/F/vs-impl/api/v3/index.json;
       https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
       https://dotnet.myget.org/F/system-commandline/api/v3/index.json;
+	  C:\roslyn-analyzers\artifacts\packages\Debug\Shipping;
     </RestoreSources>
   </PropertyGroup>
 
