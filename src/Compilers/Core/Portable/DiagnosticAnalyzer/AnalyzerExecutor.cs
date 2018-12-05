@@ -279,28 +279,28 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         /// <param name="actions"><see cref="AnalyzerActions"/> whose suppression actions are to be executed.</param>
         /// <param name="reportedDiagnostics">Reported analyzer/compiler diagnostics that can be suppressed.</param>
-        /// <param name="analyzer">Analyzer to execute suppression actions.</param>
+        /// <param name="suppressor">Analyzer to execute suppression actions.</param>
         public void ExecuteSuppressionActions(
             ImmutableArray<SuppressionAnalyzerAction> actions,
             ImmutableArray<Diagnostic> reportedDiagnostics,
-            DiagnosticAnalyzer analyzer)
+            DiagnosticSuppressor suppressor)
         {
             Debug.Assert(!actions.IsEmpty);
             Debug.Assert(_suppressDiagnosticOpt != null);
             Debug.Assert(!reportedDiagnostics.IsEmpty);
 
-            var supportedDescriptors = _analyzerManager.GetSupportedDiagnosticDescriptors(analyzer, this);
-            Func<DiagnosticDescriptor, bool> isSupportedDiagnosticDescriptor = supportedDescriptors.Contains;
+            var supportedSuppressions = _analyzerManager.GetSupportedSuppressionDescriptors(suppressor, this);
+            Func<SuppressionDescriptor, bool> isSupportedSuppression = supportedSuppressions.Contains;
             foreach (var action in actions)
             {
-                Debug.Assert(action.Analyzer == analyzer);
+                Debug.Assert(action.Analyzer == suppressor);
                 _cancellationToken.ThrowIfCancellationRequested();
 
                 var context = new SuppressionAnalysisContext(_compilation, _analyzerOptions,
-                    reportedDiagnostics, _suppressDiagnosticOpt, isSupportedDiagnosticDescriptor, GetSemanticModel, _cancellationToken);
+                    reportedDiagnostics, _suppressDiagnosticOpt, isSupportedSuppression, GetSemanticModel, _cancellationToken);
 
                 ExecuteAndCatchIfThrows(
-                    analyzer,
+                    suppressor,
                     data => data.action(data.context),
                     (action: action.Action, context),
                     new AnalysisContextInfo(_compilation));

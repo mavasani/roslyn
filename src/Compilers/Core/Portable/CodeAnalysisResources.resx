@@ -419,6 +419,9 @@
   <data name="DiagnosticIdCantBeNullOrWhitespace" xml:space="preserve">
     <value>A DiagnosticDescriptor must have an Id that is neither null nor an empty string nor a string that only contains white space.</value>
   </data>
+  <data name="SuppressionIdCantBeNullOrWhitespace" xml:space="preserve">
+    <value>A SuppressionDescriptor must have an Id that is neither null nor an empty string nor a string that only contains white space.</value>
+  </data>
   <data name="RuleSetHasDuplicateRules" xml:space="preserve">
     <value>The rule set file has duplicate rules for '{0}' with differing actions '{1}' and '{2}'.</value>
   </data>
@@ -454,6 +457,9 @@
   </data>
   <data name="SupportedDiagnosticsHasNullDescriptor" xml:space="preserve">
     <value>Analyzer '{0}' contains a null descriptor in its 'SupportedDiagnostics'.</value>
+  </data>
+  <data name="SupportedSuppressionsHasNullDescriptor" xml:space="preserve">
+    <value>Analyzer '{0}' contains a null descriptor in its 'SupportedSuppressions'.</value>
   </data>
   <data name="The_type_0_is_not_understood_by_the_serialization_binder" xml:space="preserve">
     <value>The type '{0}' is not understood by the serialization binder.</value>

@@ -1396,11 +1396,29 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Analyzer &apos;{0}&apos; contains a null descriptor in its &apos;SupportedSuppressions&apos;..
+        /// </summary>
+        internal static string SupportedSuppressionsHasNullDescriptor {
+            get {
+                return ResourceManager.GetString("SupportedSuppressionsHasNullDescriptor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Analyzer &apos;{0}&apos; contains a null or empty diagnostic ID in its &apos;SuppressibleDiagnostics&apos;..
         /// </summary>
         internal static string SuppressibleDiagnosticsHasInvalidId {
             get {
                 return ResourceManager.GetString("SuppressibleDiagnosticsHasInvalidId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to A SuppressionDescriptor must have an Id that is neither null nor an empty string nor a string that only contains white space..
+        /// </summary>
+        internal static string SuppressionIdCantBeNullOrWhitespace {
+            get {
+                return ResourceManager.GetString("SuppressionIdCantBeNullOrWhitespace", resourceCulture);
             }
         }
         

@@ -1496,7 +1496,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     public struct SuppressionAnalysisContext
     {
         private readonly Action<Diagnostic> _suppressDiagnostic;
-        private readonly Func<DiagnosticDescriptor, bool> _isSupportedSuppressionDescriptor;
+        private readonly Func<SuppressionDescriptor, bool> _isSupportedSuppressionDescriptor;
         private readonly Func<SyntaxTree, SemanticModel> _getSemanticModel;
 
         /// <summary>
@@ -1524,7 +1524,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             AnalyzerOptions options,
             ImmutableArray<Diagnostic> reportedDiagnostics,
             Action<Diagnostic> suppressDiagnostic,
-            Func<DiagnosticDescriptor, bool> isSupportedSuppressionDescriptor,
+            Func<SuppressionDescriptor, bool> isSupportedSuppressionDescriptor,
             Func<SyntaxTree, SemanticModel> getSemanticModel,
             CancellationToken cancellationToken)
         {
@@ -1538,15 +1538,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Suppresses a reported diagnostic from <see cref="ReportDiagnostic"/>.
+        /// Suppresses a reported diagnostic from <see cref="ReportedDiagnostics"/>.
         /// </summary>
         /// <param name="diagnostic">
         /// <see cref="Diagnostic"/> to be suppressed, which must be from <see cref="ReportedDiagnostics"/>.
         /// </param>
         /// <param name="suppressionDescriptor">
-        /// Descriptor for the suppression, which must be from <see cref="DiagnosticAnalyzer.SupportedDiagnostics"/>.
+        /// Descriptor for the suppression, which must be from <see cref="DiagnosticAnalyzer.SuppressibleDiagnostics"/>.
         /// </param>
-        public void SuppressDiagnostic(Diagnostic diagnostic, DiagnosticDescriptor suppressionDescriptor)
+        public void SuppressDiagnostic(Diagnostic diagnostic, SuppressionDescriptor suppressionDescriptor)
         {
             if (diagnostic == null)
             {
@@ -1570,7 +1570,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 throw new ArgumentException(nameof(suppressionDescriptor));
             }
 
-            if (suppressionDescriptor.GetEffectiveSeverity(Compilation.Options) == ReportDiagnostic.Suppress)
+            if (suppressionDescriptor.SuppressedDiagnosticId != diagnostic.Id)
+            {
+                // TODO: Message resource string.
+                throw new ArgumentException(nameof(diagnostic));
+            }
+
+            if (suppressionDescriptor.IsDisabled(Compilation.Options))
             {
                 // Suppression has been disabled by the end user through compilation options.
                 return;

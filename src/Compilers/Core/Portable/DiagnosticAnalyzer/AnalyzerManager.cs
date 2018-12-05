@@ -235,18 +235,18 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             AnalyzerExecutor analyzerExecutor)
         {
             var analyzerExecutionContext = GetAnalyzerExecutionContext(analyzer);
-            return analyzerExecutionContext.GetOrComputeDescriptors(analyzer, analyzerExecutor);
+            return analyzerExecutionContext.GetOrComputeDiagnosticDescriptors(analyzer, analyzerExecutor);
         }
 
         /// <summary>
-        /// Return <see cref="DiagnosticAnalyzer.SuppressibleDiagnostics"/> of given <paramref name="analyzer"/>.
+        /// Return <see cref="DiagnosticSuppressor.SupportedSuppressions"/> of given <paramref name="suppressor"/>.
         /// </summary>
-        public ImmutableHashSet<string> GetSuppressibleDiagnostics(
-            DiagnosticAnalyzer analyzer,
+        public ImmutableArray<SuppressionDescriptor> GetSupportedSuppressionDescriptors(
+            DiagnosticSuppressor suppressor,
             AnalyzerExecutor analyzerExecutor)
         {
-            var analyzerExecutionContext = GetAnalyzerExecutionContext(analyzer);
-            return analyzerExecutionContext.GetOrComputeSuppressibleDiagnostics(analyzer, analyzerExecutor);
+            var analyzerExecutionContext = GetAnalyzerExecutionContext(suppressor);
+            return analyzerExecutionContext.GetOrComputeSuppressionDescriptors(suppressor, analyzerExecutor);
         }
 
         internal bool IsSupportedDiagnostic(DiagnosticAnalyzer analyzer, Diagnostic diagnostic, Func<DiagnosticAnalyzer, bool> isCompilerAnalyzer, AnalyzerExecutor analyzerExecutor)
@@ -317,6 +317,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 if (!isSuppressed)
                 {
                     return false;
+                }
+            }
+
+            if (analyzer is DiagnosticSuppressor suppressor)
+            {
+                foreach (var suppressionDescriptor in GetSupportedSuppressionDescriptors(suppressor, analyzerExecutor))
+                {
+                    if (!suppressionDescriptor.IsDisabled(options))
+                    {
+                        return false;
+                    }
                 }
             }
 

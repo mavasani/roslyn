@@ -676,7 +676,7 @@ namespace Microsoft.CodeAnalysis
                 // If we have any analyzer suppressible diagnostics, then ensure that we don't apply
                 // diagnostic filtering (/warnaserror) upfront, as some of these diagnostics might
                 // be suppressed by analyzer suppression actions, which run later.
-                filterDiagnostics = !analyzerDriver.HasAnalyzerSuppressibleDiagnostics();
+                filterDiagnostics = !analyzerDriver.HasDiagnosticSuppressors();
             }
 
             compilation.GetDiagnostics(CompilationStage.Declare, includeEarlierStages: false, diagnostics, filterDiagnostics, cancellationToken);

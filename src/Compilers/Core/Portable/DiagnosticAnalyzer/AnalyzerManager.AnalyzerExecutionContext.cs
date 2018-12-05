@@ -48,9 +48,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             private Dictionary<ISymbol, Task<HostSymbolStartAnalysisScope>> _lazySymbolScopeTasks;
 
             /// <summary>
-            /// Supported descriptors for diagnostic analyzer.
+            /// Supported diagnostic descriptors for diagnostic analyzer, if any.
             /// </summary>
-            private ImmutableArray<DiagnosticDescriptor> _lazyDescriptors = default(ImmutableArray<DiagnosticDescriptor>);
+            private ImmutableArray<DiagnosticDescriptor> _lazyDiagnosticDescriptors = default(ImmutableArray<DiagnosticDescriptor>);
+
+            /// <summary>
+            /// Supported suppression descriptors for diagnostic suppressor, if any.
+            /// </summary>
+            private ImmutableArray<SuppressionDescriptor> _lazySuppressionDescriptors = default(ImmutableArray<SuppressionDescriptor>);
 
             /// <summary>
             /// Diagnostic IDs that are suppressible for diagnostic analyzer.
@@ -215,32 +220,43 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 }
             }
 
-            public ImmutableArray<DiagnosticDescriptor> GetOrComputeDescriptors(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+            public ImmutableArray<DiagnosticDescriptor> GetOrComputeDiagnosticDescriptors(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+                => GetOrComputeDescriptors(ref _lazyDiagnosticDescriptors, ComputeDiagnosticDescriptors, _gate, analyzer, analyzerExecutor);
+
+            public ImmutableArray<SuppressionDescriptor> GetOrComputeSuppressionDescriptors(DiagnosticSuppressor suppressor, AnalyzerExecutor analyzerExecutor)
+                => GetOrComputeDescriptors(ref _lazySuppressionDescriptors, ComputeSuppressionDescriptors, _gate, suppressor, analyzerExecutor);
+
+            private static ImmutableArray<TDescriptor> GetOrComputeDescriptors<TDescriptor>(
+                ref ImmutableArray<TDescriptor> lazyDescriptors,
+                Func<DiagnosticAnalyzer, AnalyzerExecutor, ImmutableArray<TDescriptor>> computeDescriptors,
+                object gate,
+                DiagnosticAnalyzer analyzer,
+                AnalyzerExecutor analyzerExecutor)
             {
-                lock (_gate)
+                lock (gate)
                 {
-                    if (!_lazyDescriptors.IsDefault)
+                    if (!lazyDescriptors.IsDefault)
                     {
-                        return _lazyDescriptors;
+                        return lazyDescriptors;
                     }
                 }
 
                 // Otherwise, compute the value.
                 // We do so outside the lock statement as we are calling into user code, which may be a long running operation.
-                var descriptors = ComputeDescriptors(analyzer, analyzerExecutor);
+                var descriptors = computeDescriptors(analyzer, analyzerExecutor);
 
-                lock (_gate)
+                lock (gate)
                 {
                     // Check if another thread already stored the computed value.
-                    if (!_lazyDescriptors.IsDefault)
+                    if (!lazyDescriptors.IsDefault)
                     {
                         // If so, we return the stored value.
-                        descriptors = _lazyDescriptors;
+                        descriptors = lazyDescriptors;
                     }
                     else
                     {
                         // Otherwise, store the value computed here.
-                        _lazyDescriptors = descriptors;
+                        lazyDescriptors = descriptors;
                     }
                 }
 
@@ -250,7 +266,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             /// <summary>
             /// Compute <see cref="DiagnosticAnalyzer.SupportedDiagnostics"/> and exception handler for the given <paramref name="analyzer"/>.
             /// </summary>
-            private static ImmutableArray<DiagnosticDescriptor> ComputeDescriptors(
+            private static ImmutableArray<DiagnosticDescriptor> ComputeDiagnosticDescriptors(
                 DiagnosticAnalyzer analyzer,
                 AnalyzerExecutor analyzerExecutor)
             {
@@ -299,67 +315,38 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 return supportedDiagnostics;
             }
 
-            public ImmutableHashSet<string> GetOrComputeSuppressibleDiagnostics(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
-            {
-                lock (_gate)
-                {
-                    if (_lazySuppressibleDiagnostics != null)
-                    {
-                        return _lazySuppressibleDiagnostics;
-                    }
-                }
-
-                // Otherwise, compute the value.
-                // We do so outside the lock statement as we are calling into user code, which may be a long running operation.
-                var suppressibleDiagnostics = ComputeSuppressibleDiagnostics(analyzer, analyzerExecutor);
-
-                lock (_gate)
-                {
-                    // Check if another thread already stored the computed value.
-                    if (_lazySuppressibleDiagnostics != null)
-                    {
-                        // If so, we return the stored value.
-                        suppressibleDiagnostics = _lazySuppressibleDiagnostics;
-                    }
-                    else
-                    {
-                        // Otherwise, store the value computed here.
-                        _lazySuppressibleDiagnostics = suppressibleDiagnostics;
-                    }
-                }
-
-                return suppressibleDiagnostics;
-            }
-
-            private static ImmutableHashSet<string> ComputeSuppressibleDiagnostics(
+            private static ImmutableArray<SuppressionDescriptor> ComputeSuppressionDescriptors(
                 DiagnosticAnalyzer analyzer,
                 AnalyzerExecutor analyzerExecutor)
             {
-                var suppressibleDiagnostics = ImmutableHashSet<string>.Empty;
+                var descriptors = ImmutableArray<SuppressionDescriptor>.Empty;
 
-                // Catch Exception from analyzer.SuppressibleDiagnostics
-                analyzerExecutor.ExecuteAndCatchIfThrows(
-                    analyzer,
-                    _ =>
-                    {
-                        var suppressibleDiagnosticsLocal = analyzer.SuppressibleDiagnostics;
-                        if (suppressibleDiagnosticsLocal?.Count > 0)
+                if (analyzer is DiagnosticSuppressor suppressor)
+                {
+                    // Catch Exception from analyzer.SuppressibleDiagnostics
+                    analyzerExecutor.ExecuteAndCatchIfThrows(
+                        analyzer,
+                        _ =>
                         {
-                            foreach (var diagnosticId in suppressibleDiagnosticsLocal)
+                            var descriptorsLocal = suppressor.SupportedSuppressions;
+                            if (!descriptorsLocal.IsDefaultOrEmpty)
                             {
-                                if (string.IsNullOrEmpty(diagnosticId))
+                                foreach (var descriptor in descriptorsLocal)
                                 {
-                                    // Disallow null or empty IDs.
-                                    throw new ArgumentException(string.Format(CodeAnalysisResources.SuppressibleDiagnosticsHasInvalidId, analyzer.ToString()), nameof(DiagnosticAnalyzer.SuppressibleDiagnostics));
+                                    if (descriptor == null)
+                                    {
+                                        // Disallow null descriptors.
+                                        throw new ArgumentException(string.Format(CodeAnalysisResources.SupportedSuppressionsHasNullDescriptor, analyzer.ToString()), nameof(DiagnosticSuppressor.SupportedSuppressions));
+                                    }
                                 }
+
+                                descriptors = descriptorsLocal;
                             }
+                        },
+                        argument: default(object));
+                }
 
-                            suppressibleDiagnostics = suppressibleDiagnosticsLocal;
-                        }
-                    },
-                    argument: default(object));
-
-                return suppressibleDiagnostics;
+                return descriptors;
             }
 
             public bool TryProcessCompletedMemberAndGetPendingSymbolEndActionsForContainer(
