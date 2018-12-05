@@ -185,21 +185,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             throw new NotImplementedException();
         }
 
-        /// <summary> 
-        /// Register an action to suppress reported diagnostics. 
-        /// A suppression action can suppress analyzer and/or compiler diagnostics reported for the compilation, which are suppressible.
-        /// A diagnostic is considered suppressible by analyzers if none of the following conditions are met:
-        ///     1. Diagnostic is already suppressed in source via pragma/suppress message attribute.
-        ///     2. Diagnostic is explicitly tagged with <see cref="WellKnownDiagnosticTags.NotConfigurable"/> by analyzer authors.
-        ///        This includes compiler error diagnostics.
-        ///     3. Diagnostics which have <see cref="Diagnostic.DefaultSeverity"/> of <see cref="DiagnosticSeverity.Error"/>.
-        /// </summary> 
-        /// <param name="action">Action to be executed for an operation block.</param> 
-        public virtual void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Enable concurrent execution of analyzer actions registered by this analyzer.
         /// An analyzer that registers for concurrent execution can have better performance than a non-concurrent analyzer.
@@ -460,21 +445,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <param name="action">Action to be executed at completion of semantic analysis of an <see cref="IOperation"/>.</param>
         /// <param name="operationKinds">Action will be executed only if an <see cref="IOperation"/>'s Kind matches one of the operation kind values.</param>
         public virtual void RegisterOperationAction(Action<OperationAnalysisContext> action, ImmutableArray<OperationKind> operationKinds)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary> 
-        /// Register an action to suppress reported diagnostics. 
-        /// A suppression action can suppress analyzer and/or compiler diagnostics reported for the compilation, which are suppressible.
-        /// A diagnostic is considered suppressible by analyzers if none of the following conditions are met:
-        ///     1. Diagnostic is already suppressed in source via pragma/suppress message attribute.
-        ///     2. Diagnostic is explicitly tagged with <see cref="WellKnownDiagnosticTags.NotConfigurable"/> by analyzer authors.
-        ///        This includes compiler error diagnostics.
-        ///     3. Diagnostics which have <see cref="Diagnostic.DefaultSeverity"/> of <see cref="DiagnosticSeverity.Error"/>.
-        /// </summary> 
-        /// <param name="action">Action to be executed for an operation block.</param> 
-        public virtual void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action)
         {
             throw new NotImplementedException();
         }
@@ -1485,13 +1455,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
     }
 
     /// <summary>
-    /// Context for suppressing reported diagnostics.
-    /// A suppression action can suppress analyzer and/or compiler diagnostics reported for the compilation, which are suppressible.
-    /// A diagnostic is considered suppressible by analyzers if none of the following conditions are met:
-    ///     1. Diagnostic is already suppressed in source via pragma/suppress message attribute.
-    ///     2. Diagnostic is explicitly tagged with <see cref="WellKnownDiagnosticTags.NotConfigurable"/> by analyzer authors.
-    ///        This includes compiler error diagnostics.
-    ///     3. Diagnostics which have <see cref="Diagnostic.DefaultSeverity"/> of <see cref="DiagnosticSeverity.Error"/>.
+    /// Context for suppressing analyzer and/or compiler diagnostics reported for the compilation.
     /// </summary>
     public struct SuppressionAnalysisContext
     {
@@ -1500,7 +1464,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly Func<SyntaxTree, SemanticModel> _getSemanticModel;
 
         /// <summary>
-        /// Analyzer and/or compiler diagnostics reported for the compilation.
+        /// Suppressible analyzer and/or compiler diagnostics reported for the compilation.
+        /// This may be a subset of the full set of reported diagnostics, as an optimization for
+        /// supporting incremental and partial analysis scenarios.
+        /// A diagnostic is considered suppressible by analyzers if *all* of the following conditions are met:
+        ///     1. Diagnostic is not already suppressed in source via pragma/suppress message attribute.
+        ///     2. Diagnostic's <see cref="Diagnostic.DefaultSeverity"/> is not <see cref="DiagnosticSeverity.Error"/>.
+        ///     3. Diagnostic is not tagged with <see cref="WellKnownDiagnosticTags.NotConfigurable"/> custom tag.
         /// </summary>
         public ImmutableArray<Diagnostic> ReportedDiagnostics { get; }
 
@@ -1538,14 +1508,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Suppresses a reported diagnostic from <see cref="ReportedDiagnostics"/>.
+        /// Suppresses a reported diagnostic.
         /// </summary>
-        /// <param name="diagnostic">
-        /// <see cref="Diagnostic"/> to be suppressed, which must be from <see cref="ReportedDiagnostics"/>.
-        /// </param>
-        /// <param name="suppressionDescriptor">
-        /// Descriptor for the suppression, which must be from <see cref="DiagnosticAnalyzer.SuppressibleDiagnostics"/>.
-        /// </param>
+        /// <param name="diagnostic"><see cref="Diagnostic"/> to be suppressed, which must be from <see cref="ReportedDiagnostics"/>.</param>
+        /// <param name="suppressionDescriptor">Descriptor for the suppression, which must be from <see cref="DiagnosticSuppressor.SupportedSuppressions"/>.</param>
         public void SuppressDiagnostic(Diagnostic diagnostic, SuppressionDescriptor suppressionDescriptor)
         {
             if (diagnostic == null)

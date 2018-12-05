@@ -57,11 +57,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             /// </summary>
             private ImmutableArray<SuppressionDescriptor> _lazySuppressionDescriptors = default(ImmutableArray<SuppressionDescriptor>);
 
-            /// <summary>
-            /// Diagnostic IDs that are suppressible for diagnostic analyzer.
-            /// </summary>
-            private ImmutableHashSet<string> _lazySuppressibleDiagnostics;
-
             public Task<HostSessionStartAnalysisScope> GetSessionAnalysisScopeTask(AnalyzerExecutor analyzerExecutor)
             {
                 lock (_gate)
@@ -75,7 +70,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     task = Task.Run(() =>
                     {
                         var sessionScope = new HostSessionStartAnalysisScope();
-                        analyzerExecutor.ExecuteInitializeMethod(_analyzer, sessionScope);
+                        if (_analyzer is DiagnosticSuppressor suppressor)
+                        {
+                            sessionScope.RegisterSuppressionAction(suppressor);
+                        }
+                        else
+                        {
+                            analyzerExecutor.ExecuteInitializeMethod(_analyzer, sessionScope);
+                        }
+
                         return sessionScope;
                     }, analyzerExecutor.CancellationToken);
 

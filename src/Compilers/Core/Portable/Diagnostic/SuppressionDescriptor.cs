@@ -1,8 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Roslyn.Utilities;
 
@@ -29,11 +27,6 @@ namespace Microsoft.CodeAnalysis
         public LocalizableString Description { get; }
 
         /// <summary>
-        /// Returns true if the diagnostic is enabled by default.
-        /// </summary>
-        public bool IsEnabledByDefault { get; }
-
-        /// <summary>
         /// Create a SuppressionDescriptor, which provides description about a programmatic suppression of a <see cref="Diagnostic"/>.
         /// NOTE: For localizable <paramref name="description"/>,
         /// use constructor overload .
@@ -41,13 +34,12 @@ namespace Microsoft.CodeAnalysis
         /// <param name="id">A unique identifier for the suppression. For example, suppression ID "SP1001".</param>
         /// <param name="suppressedDiagnosticId">Identifier of the suppressed diagnostic, i.e. <see cref="Diagnostic.Id"/>. For example, compiler warning Id "CS0649".</param>
         /// <param name="description">Description of the suppression. For example: "Suppress CS0649 on fields marked with YYY attribute as they are implicitly assigned.".</param>
-        /// <param name="isEnabledByDefault">True if the suppression is enabled by default.</param>
         public SuppressionDescriptor(
             string id,
             string suppressedDiagnosticId,
-            string description,
-            bool isEnabledByDefault)
-            : this(id, suppressedDiagnosticId, description, isEnabledByDefault)
+            string description)
+            : this(id, suppressedDiagnosticId,
+                   LocalizableString.Create(description ?? throw new ArgumentNullException(nameof(description))))
         {
         }
 
@@ -57,12 +49,10 @@ namespace Microsoft.CodeAnalysis
         /// <param name="id">A unique identifier for the suppression. For example, suppression ID "SP1001".</param>
         /// <param name="suppressedDiagnosticId">Identifier of the suppressed diagnostic, i.e. <see cref="Diagnostic.Id"/>. For example, compiler warning Id "CS0649".</param>
         /// <param name="description">Description of the suppression. For example: "Suppress CS0649 on fields marked with YYY attribute as they are implicitly assigned.".</param>
-        /// <param name="isEnabledByDefault">True if the suppression is enabled by default.</param>
         public SuppressionDescriptor(
             string id,
             string suppressedDiagnosticId,
-            LocalizableString description,
-            bool isEnabledByDefault)
+            LocalizableString description)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -74,15 +64,9 @@ namespace Microsoft.CodeAnalysis
                 throw new ArgumentException(CodeAnalysisResources.DiagnosticIdCantBeNullOrWhitespace, nameof(suppressedDiagnosticId));
             }
 
-            if (description == null)
-            {
-                throw new ArgumentNullException(nameof(description));
-            }
-
             this.Id = id;
             this.SuppressedDiagnosticId = suppressedDiagnosticId;
-            this.Description = description ?? string.Empty;
-            this.IsEnabledByDefault = isEnabledByDefault;
+            this.Description = description ?? throw new ArgumentNullException(nameof(description));
         }
 
         public bool Equals(SuppressionDescriptor other)
@@ -91,7 +75,6 @@ namespace Microsoft.CodeAnalysis
                 other != null &&
                 this.Id == other.Id &&
                 this.SuppressedDiagnosticId == other.SuppressedDiagnosticId &&
-                this.IsEnabledByDefault == other.IsEnabledByDefault &&
                 this.Description.Equals(other.Description);
         }
 
@@ -103,8 +86,7 @@ namespace Microsoft.CodeAnalysis
         public override int GetHashCode()
         {
             return Hash.Combine(this.Id.GetHashCode(),
-                Hash.Combine(this.SuppressedDiagnosticId.GetHashCode(),
-                Hash.Combine(this.Description.GetHashCode(), this.IsEnabledByDefault.GetHashCode())));
+                   Hash.Combine(this.SuppressedDiagnosticId.GetHashCode(), this.Description.GetHashCode()));
         }
 
         /// <summary>
@@ -118,13 +100,8 @@ namespace Microsoft.CodeAnalysis
                 throw new ArgumentNullException(nameof(compilationOptions));
             }
 
-            if (compilationOptions.SpecificDiagnosticOptions.TryGetValue(Id, out var reportDiagnostic))
-            {
-                return reportDiagnostic == ReportDiagnostic.Suppress ||
-                    reportDiagnostic == ReportDiagnostic.Default && !IsEnabledByDefault;
-            }
-
-            return !IsEnabledByDefault;
+            return compilationOptions.SpecificDiagnosticOptions.TryGetValue(Id, out var reportDiagnostic) &&
+                reportDiagnostic == ReportDiagnostic.Suppress;
         }
     }
 }

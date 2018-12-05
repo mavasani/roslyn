@@ -2,20 +2,27 @@
 
 using System;
 using System.Collections.Immutable;
-using Microsoft.CodeAnalysis.Operations;
+using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.Diagnostics
 {
-    internal abstract class AnalyzerAction
+    internal abstract class AnalyzerAction : BaseAnalyzerAction<DiagnosticAnalyzer>
     {
-        private readonly DiagnosticAnalyzer _analyzer;
-
-        internal AnalyzerAction(DiagnosticAnalyzer analyzer)
+        protected AnalyzerAction(DiagnosticAnalyzer analyzer)
+            : base(analyzer)
         {
-            _analyzer = analyzer;
         }
+    }
 
-        internal DiagnosticAnalyzer Analyzer { get { return _analyzer; } }
+    internal abstract class BaseAnalyzerAction<TDiagnosticAnalyzer>
+        where TDiagnosticAnalyzer : DiagnosticAnalyzer
+    {
+        internal TDiagnosticAnalyzer Analyzer { get; }
+
+        protected BaseAnalyzerAction(TDiagnosticAnalyzer analyzer)
+        {
+            Analyzer = analyzer;
+        }
     }
 
     internal sealed class SymbolAnalyzerAction : AnalyzerAction
@@ -141,17 +148,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public Action<CompilationAnalysisContext> Action { get { return _action; } }
     }
 
-    internal sealed class SuppressionAnalyzerAction : AnalyzerAction
+    internal sealed class SuppressionAnalyzerAction : BaseAnalyzerAction<DiagnosticSuppressor>
     {
-        private readonly Action<SuppressionAnalysisContext> _action;
+        public Action<SuppressionAnalysisContext> Action => Analyzer.ReportSuppressions;
 
-        public SuppressionAnalyzerAction(Action<SuppressionAnalysisContext> action, DiagnosticAnalyzer analyzer)
-            : base(analyzer)
+        public SuppressionAnalyzerAction(DiagnosticSuppressor suppressor)
+            : base(suppressor)
         {
-            _action = action;
         }
-
-        public Action<SuppressionAnalysisContext> Action { get { return _action; } }
     }
 
     internal sealed class SemanticModelAnalyzerAction : AnalyzerAction

@@ -645,10 +645,13 @@ namespace Microsoft.CodeAnalysis
             analyzerCts = null;
             reportAnalyzer = false;
             analyzerDriver = null;
-            bool filterDiagnostics = true;
+
+            // Flag indicating if the compilation phases should apply diagnostic filtering
+            // based on the compiler options (/nowarn, /warn and /warnaserror) and the pragma warning directives.
+            bool filterDiagnosticsWhileCompiling = true;
 
             // Print the diagnostics produced during the parsing stage and exit if there were any errors.
-            compilation.GetDiagnostics(CompilationStage.Parse, includeEarlierStages: false, diagnostics, filterDiagnostics, cancellationToken);
+            compilation.GetDiagnostics(CompilationStage.Parse, includeEarlierStages: false, diagnostics, filterDiagnosticsWhileCompiling, cancellationToken);
             if (diagnostics.HasAnyErrors())
             {
                 return;
@@ -673,13 +676,15 @@ namespace Microsoft.CodeAnalysis
                     analyzerCts.Token);
                 reportAnalyzer = Arguments.ReportAnalyzer && !analyzers.IsEmpty;
 
-                // If we have any analyzer suppressible diagnostics, then ensure that we don't apply
-                // diagnostic filtering (/warnaserror) upfront, as some of these diagnostics might
-                // be suppressed by analyzer suppression actions, which run later.
-                filterDiagnostics = !analyzerDriver.HasDiagnosticSuppressors();
+                // If we have any diagnostic suppressors which can suppress analyzer and/or compiler diagnostics,
+                // then ensure that we skip diagnostic filtering upfront (filtering includes /warnaserror application),
+                // as some of these diagnostics might be suppressed by suppression actions, which run later.
+                // Not doing so will cause compilation phases to incorrectly bail out on compiler warnings
+                // in presence of /warnaserror.
+                filterDiagnosticsWhileCompiling = !analyzerDriver.HasDiagnosticSuppressors;
             }
 
-            compilation.GetDiagnostics(CompilationStage.Declare, includeEarlierStages: false, diagnostics, filterDiagnostics, cancellationToken);
+            compilation.GetDiagnostics(CompilationStage.Declare, includeEarlierStages: false, diagnostics, filterDiagnosticsWhileCompiling, cancellationToken);
             if (diagnostics.HasAnyErrors())
             {
                 return;
@@ -737,7 +742,7 @@ namespace Microsoft.CodeAnalysis
                     embeddedTexts,
                     testData: null,
                     cancellationToken,
-                    filterDiagnostics);
+                    filterDiagnosticsWhileCompiling);
 
                 if (moduleBeingBuilt != null)
                 {
@@ -753,7 +758,7 @@ namespace Microsoft.CodeAnalysis
                             diagnostics,
                             filterOpt: null,
                             cancellationToken,
-                            filterDiagnostics);
+                            filterDiagnosticsWhileCompiling);
 
                         if (success)
                         {
@@ -806,7 +811,7 @@ namespace Microsoft.CodeAnalysis
                                         emitOptions.OutputNameOverride,
                                         diagnostics,
                                         cancellationToken,
-                                        filterDiagnostics);
+                                        filterDiagnosticsWhileCompiling);
                                 }
                             }
 
@@ -826,15 +831,13 @@ namespace Microsoft.CodeAnalysis
 
                         if (analyzerDriver != null)
                         {
-                            // If we skipped filtering compiler diagnostics upfront, do so now.
-                            if (!filterDiagnostics)
+                            // If we skipped filtering diagnostics while compiling, apply the filtering now.
+                            if (!filterDiagnosticsWhileCompiling &&
+                                !diagnostics.IsEmptyWithoutResolution)
                             {
-                                if (!diagnostics.IsEmptyWithoutResolution)
-                                {
-                                    var newDiagnostics = DiagnosticBag.GetInstance();
-                                    compilation.FilterAndAppendAndFreeDiagnostics(diagnostics, ref newDiagnostics, filterDiagnostics: true);
-                                    diagnostics = newDiagnostics;
-                                }
+                                var newDiagnostics = DiagnosticBag.GetInstance();
+                                compilation.FilterAndAppendAndFreeDiagnostics(diagnostics, ref newDiagnostics, filterDiagnostics: true);
+                                diagnostics = newDiagnostics;
                             }
                             
                             // GetDiagnosticsAsync is called after ReportUnusedImports
@@ -845,11 +848,8 @@ namespace Microsoft.CodeAnalysis
 
                             if (!diagnostics.IsEmptyWithoutResolution)
                             {
-                                // Apply diagnostic suppressions for compiler and analyzer diagnostics from analyzer suppression actions.
-                                if (!filterDiagnostics)
-                                {
-                                    analyzerDriver.ApplyAnalyzerSuppressions(diagnostics, compilation);
-                                }
+                                // Apply diagnostic suppressions for analyzer and/or compiler diagnostics from diagnostic suppressors.
+                                analyzerDriver.ApplyAnalyzerSuppressions(diagnostics, compilation);
 
                                 if (diagnostics.AsEnumerable().Any(IsReportedError))
                                 {

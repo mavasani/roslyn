@@ -15,45 +15,32 @@ using Microsoft.CodeAnalysis.Shared.Extensions;
 namespace Microsoft.CodeAnalysis.RemoveUnusedMembers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
-    internal sealed class RemoveUnusedMembersSuppressionAnalyzer: DiagnosticAnalyzer
+    internal sealed class RemoveUnusedMembersSuppressionAnalyzer: DiagnosticSuppressor
     {
-        private static readonly DiagnosticDescriptor s_suppressUnusedMembersRule = new DiagnosticDescriptor(
-            IDEDiagnosticIds.SuppressUnusedMemberDiagnosticId,
-            title: "Suppress unused member diagnostic for symbols marked with ImplicitlyUsedAttribute",
-            messageFormat: "Suppress unused member diagnostic for symbols marked with ImplicitlyUsedAttribute",
-            category: "Suppression",
-            defaultSeverity: DiagnosticSeverity.Hidden,
-            isEnabledByDefault: true);
+        private static readonly SuppressionDescriptor s_suppressUnusedMembersRule = new SuppressionDescriptor(
+            id: "SPR1001",
+            suppressedDiagnosticId: IDEDiagnosticIds.RemoveUnusedMembersDiagnosticId,
+            description: "Suppress unused member diagnostic for symbols marked with ImplicitlyUsedAttribute");
 
-        public override ImmutableHashSet<string> SuppressibleDiagnostics
-            => ImmutableHashSet.Create(IDEDiagnosticIds.RemoveUnusedMembersDiagnosticId, IDEDiagnosticIds.RemoveUnreadMembersDiagnosticId);
+        public override ImmutableArray<SuppressionDescriptor> SupportedSuppressions => ImmutableArray.Create(s_suppressUnusedMembersRule);
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-            => ImmutableArray.Create(s_suppressUnusedMembersRule);
-
-        public override void Initialize(AnalysisContext context)
+        public override void ReportSuppressions(SuppressionAnalysisContext context)
         {
-            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze);
-            context.EnableConcurrentExecution();
-
-            context.RegisterSuppressionAction(suppressionContext =>
+            foreach (var diagnostic in context.ReportedDiagnostics)
             {
-                foreach (var diagnostic in suppressionContext.ReportedDiagnostics)
+                var node = diagnostic.Location.FindNode(context.CancellationToken);
+                if (node == null)
                 {
-                    var node = diagnostic.Location.FindNode(suppressionContext.CancellationToken);
-                    if (node == null)
-                    {
-                        continue;
-                    }
-
-                    var model = suppressionContext.GetSemanticModel(node.SyntaxTree);
-                    var declaredSymbol = model.GetDeclaredSymbol(node, suppressionContext.CancellationToken);
-                    if (declaredSymbol?.GetAttributes().Any(a => a.AttributeClass.Name.StartsWith("ImplicitlyUsed")) == true)
-                    {
-                        suppressionContext.SuppressDiagnostic(diagnostic, s_suppressUnusedMembersRule);
-                    }
+                    continue;
                 }
-            });
+
+                var model = context.GetSemanticModel(node.SyntaxTree);
+                var declaredSymbol = model.GetDeclaredSymbol(node, context.CancellationToken);
+                if (declaredSymbol?.GetAttributes().Any(a => a.AttributeClass.Name.StartsWith("ImplicitlyUsed")) == true)
+                {
+                    context.SuppressDiagnostic(diagnostic, s_suppressUnusedMembersRule);
+                }
+            }
         }
     }
 

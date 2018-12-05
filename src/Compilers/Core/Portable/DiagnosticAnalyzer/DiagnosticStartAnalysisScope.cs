@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
 using Microsoft.CodeAnalysis.FlowAnalysis;
@@ -33,12 +32,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             DiagnosticAnalysisContextHelpers.VerifyArguments(action);
             _scope.RegisterCompilationAction(_analyzer, action);
-        }
-
-        public override void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action)
-        {
-            DiagnosticAnalysisContextHelpers.VerifyArguments(action);
-            _scope.RegisterSuppressionAction(_analyzer, action);
         }
 
         public override void RegisterSyntaxTreeAction(Action<SyntaxTreeAnalysisContext> action)
@@ -199,12 +192,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             DiagnosticAnalysisContextHelpers.VerifyArguments(action, operationKinds);
             _scope.RegisterOperationAction(_analyzer, action, operationKinds);
-        }
-
-        public override void RegisterSuppressionAction(Action<SuppressionAnalysisContext> action)
-        {
-            DiagnosticAnalysisContextHelpers.VerifyArguments(action);
-            _scope.RegisterSuppressionAction(_analyzer, action);
         }
 
         internal override bool TryGetValueCore<TKey, TValue>(TKey key, AnalysisValueProvider<TKey, TValue> valueProvider, out TValue value)
@@ -502,10 +489,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             this.GetOrCreateAnalyzerActions(analyzer).AddCompilationEndAction(analyzerAction);
         }
 
-        public void RegisterSuppressionAction(DiagnosticAnalyzer analyzer, Action<SuppressionAnalysisContext> action)
+        public void RegisterSuppressionAction(DiagnosticSuppressor suppressor)
         {
-            SuppressionAnalyzerAction analyzerAction = new SuppressionAnalyzerAction(action, analyzer);
-            this.GetOrCreateAnalyzerActions(analyzer).AddSuppressionAction(analyzerAction);
+            var action = new SuppressionAnalyzerAction(suppressor);
+            this.GetOrCreateAnalyzerActions(suppressor).AddSuppressionAction(action);
         }
 
         public void RegisterSemanticModelAction(DiagnosticAnalyzer analyzer, Action<SemanticModelAnalysisContext> action)

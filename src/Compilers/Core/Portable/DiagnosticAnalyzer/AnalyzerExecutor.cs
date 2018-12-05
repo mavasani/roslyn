@@ -275,36 +275,27 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Executes the suppression actions.
+        /// Executes the given suppression analyzer action.
         /// </summary>
-        /// <param name="actions"><see cref="AnalyzerActions"/> whose suppression actions are to be executed.</param>
+        /// <param name="suppressionAction">Suppression action to be executed.</param>
         /// <param name="reportedDiagnostics">Reported analyzer/compiler diagnostics that can be suppressed.</param>
-        /// <param name="suppressor">Analyzer to execute suppression actions.</param>
-        public void ExecuteSuppressionActions(
-            ImmutableArray<SuppressionAnalyzerAction> actions,
-            ImmutableArray<Diagnostic> reportedDiagnostics,
-            DiagnosticSuppressor suppressor)
+        public void ExecuteSuppressionAction(SuppressionAnalyzerAction suppressionAction, ImmutableArray<Diagnostic> reportedDiagnostics)
         {
-            Debug.Assert(!actions.IsEmpty);
             Debug.Assert(_suppressDiagnosticOpt != null);
             Debug.Assert(!reportedDiagnostics.IsEmpty);
 
-            var supportedSuppressions = _analyzerManager.GetSupportedSuppressionDescriptors(suppressor, this);
-            Func<SuppressionDescriptor, bool> isSupportedSuppression = supportedSuppressions.Contains;
-            foreach (var action in actions)
-            {
-                Debug.Assert(action.Analyzer == suppressor);
-                _cancellationToken.ThrowIfCancellationRequested();
+            _cancellationToken.ThrowIfCancellationRequested();
 
-                var context = new SuppressionAnalysisContext(_compilation, _analyzerOptions,
-                    reportedDiagnostics, _suppressDiagnosticOpt, isSupportedSuppression, GetSemanticModel, _cancellationToken);
+            var supportedSuppressions = _analyzerManager.GetSupportedSuppressionDescriptors(suppressionAction.Analyzer, this);
+            Func<SuppressionDescriptor, bool> isSupportedSuppression = supportedSuppressions.Contains;            
+            var context = new SuppressionAnalysisContext(_compilation, _analyzerOptions,
+                reportedDiagnostics, _suppressDiagnosticOpt, isSupportedSuppression, GetSemanticModel, _cancellationToken);
 
-                ExecuteAndCatchIfThrows(
-                    suppressor,
-                    data => data.action(data.context),
-                    (action: action.Action, context),
-                    new AnalysisContextInfo(_compilation));
-            }
+            ExecuteAndCatchIfThrows(
+                suppressionAction.Analyzer,
+                data => data.action(data.context),
+                (action: suppressionAction.Action, context),
+                new AnalysisContextInfo(_compilation));
         }
 
         /// <summary>
