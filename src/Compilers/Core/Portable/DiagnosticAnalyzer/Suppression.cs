@@ -16,8 +16,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             if (descriptor.SuppressedDiagnosticId != suppressedDiagnostic.Id)
             {
-                // TODO: Message
-                throw new ArgumentException();
+                // Suppressed diagnostic ID '{0}' does not match suppressable ID '{1}' for the given suppression descriptor.
+                var message = string.Format(CodeAnalysisResources.InvalidDiagnosticSuppressionReported, suppressedDiagnostic.Id, descriptor.SuppressedDiagnosticId);
+                throw new ArgumentException(message);
             }
         }
 

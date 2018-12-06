@@ -25,11 +25,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Telemetry
         public int CompilationActionsCount { get; set; } = 0;
 
         /// <summary>
-        /// Count of registered suppression actions.
-        /// </summary>
-        public int SuppressionActionsCount { get; set; } = 0;
-
-        /// <summary>
         /// Count of registered syntax tree actions.
         /// </summary>
         public int SyntaxTreeActionsCount { get; set; } = 0;
@@ -95,6 +90,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Telemetry
         public int OperationBlockActionsCount { get; set; } = 0;
 
         /// <summary>
+        /// Count of registered suppression actions.
+        /// This is the same as count of <see cref="DiagnosticSuppressor"/>s as each suppressor
+        /// has a single suppression action, i.e. <see cref="DiagnosticSuppressor.ReportSuppressions(SuppressionAnalysisContext)"/>.
+        /// </summary>
+        public int SuppressionActionsCount { get; set; } = 0;
+
+        /// <summary>
         /// Total execution time.
         /// </summary>
         public TimeSpan ExecutionTime { get; set; } = TimeSpan.Zero;
@@ -104,12 +106,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Telemetry
         /// </summary>
         public bool Concurrent { get; set; }
 
-        internal AnalyzerTelemetryInfo(AnalyzerActionCounts actionCounts, TimeSpan executionTime)
+        internal AnalyzerTelemetryInfo(AnalyzerActionCounts actionCounts, int suppressionActionCounts, TimeSpan executionTime)
         {
             CompilationStartActionsCount = actionCounts.CompilationStartActionsCount;
             CompilationEndActionsCount = actionCounts.CompilationEndActionsCount;
             CompilationActionsCount = actionCounts.CompilationActionsCount;
-            SuppressionActionsCount = actionCounts.SuppressionActionsCount;
 
             SyntaxTreeActionsCount = actionCounts.SyntaxTreeActionsCount;
             SemanticModelActionsCount = actionCounts.SemanticModelActionsCount;
@@ -126,6 +127,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics.Telemetry
             OperationBlockStartActionsCount = actionCounts.OperationBlockStartActionsCount;
             OperationBlockEndActionsCount = actionCounts.OperationBlockEndActionsCount;
             OperationBlockActionsCount = actionCounts.OperationBlockActionsCount;
+
+            SuppressionActionsCount = suppressionActionCounts;
 
             ExecutionTime = executionTime;
             Concurrent = actionCounts.Concurrent;

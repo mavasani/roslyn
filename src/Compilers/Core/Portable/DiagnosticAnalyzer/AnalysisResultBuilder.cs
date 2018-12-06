@@ -348,8 +348,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 foreach (var analyzer in analyzers)
                 {
                     var actionCounts = _analyzerActionCounts[analyzer];
+                    var suppressionActionCounts = analyzer is DiagnosticSuppressor ? 1 : 0;
                     var executionTime = _analyzerExecutionTimeOpt != null ? _analyzerExecutionTimeOpt[analyzer] : default(TimeSpan);
-                    var telemetryInfo = new AnalyzerTelemetryInfo(actionCounts, executionTime);
+                    var telemetryInfo = new AnalyzerTelemetryInfo(actionCounts, suppressionActionCounts, executionTime);
                     builder.Add(analyzer, telemetryInfo);
                 }
             }

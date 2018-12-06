@@ -1228,8 +1228,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             try
             {
                 var actionCounts = await GetAnalyzerActionCountsAsync(analyzer, cancellationToken).ConfigureAwait(false);
+                var suppressionActionCounts = analyzer is DiagnosticSuppressor ? 1 : 0;
                 var executionTime = GetAnalyzerExecutionTime(analyzer);
-                return new AnalyzerTelemetryInfo(actionCounts, executionTime);
+                return new AnalyzerTelemetryInfo(actionCounts, suppressionActionCounts, executionTime);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {

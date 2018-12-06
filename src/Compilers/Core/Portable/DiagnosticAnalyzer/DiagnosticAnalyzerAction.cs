@@ -18,17 +18,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         internal DiagnosticAnalyzer Analyzer { get { return _analyzer; } }
     }
 
-    internal abstract class BaseAnalyzerAction<TDiagnosticAnalyzer>
-        where TDiagnosticAnalyzer : DiagnosticAnalyzer
-    {
-        internal TDiagnosticAnalyzer Analyzer { get; }
-
-        protected BaseAnalyzerAction(TDiagnosticAnalyzer analyzer)
-        {
-            Analyzer = analyzer;
-        }
-    }
-
     internal sealed class SymbolAnalyzerAction : AnalyzerAction
     {
         public Action<SymbolAnalysisContext> Action { get; }

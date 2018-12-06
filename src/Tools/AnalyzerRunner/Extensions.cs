@@ -11,7 +11,6 @@ namespace AnalyzerRunner
             analyzerTelemetryInfo.CodeBlockEndActionsCount += addendum.CodeBlockEndActionsCount;
             analyzerTelemetryInfo.CodeBlockStartActionsCount += addendum.CodeBlockStartActionsCount;
             analyzerTelemetryInfo.CompilationActionsCount += addendum.CompilationActionsCount;
-            analyzerTelemetryInfo.SuppressionActionsCount += addendum.SuppressionActionsCount;
             analyzerTelemetryInfo.CompilationEndActionsCount += addendum.CompilationEndActionsCount;
             analyzerTelemetryInfo.CompilationStartActionsCount += addendum.CompilationStartActionsCount;
             analyzerTelemetryInfo.ExecutionTime += addendum.ExecutionTime;
@@ -25,6 +24,7 @@ namespace AnalyzerRunner
             analyzerTelemetryInfo.SymbolEndActionsCount += addendum.SymbolEndActionsCount;
             analyzerTelemetryInfo.SyntaxNodeActionsCount += addendum.SyntaxNodeActionsCount;
             analyzerTelemetryInfo.SyntaxTreeActionsCount += addendum.SyntaxTreeActionsCount;
+            analyzerTelemetryInfo.SuppressionActionsCount += addendum.SuppressionActionsCount;
         }
     }
 }

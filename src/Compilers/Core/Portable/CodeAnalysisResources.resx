@@ -446,6 +446,15 @@
   <data name="UnsupportedDiagnosticReported" xml:space="preserve">
     <value>Reported diagnostic with ID '{0}' is not supported by the analyzer.</value>
   </data>
+  <data name="UnsupportedSuppressionReported" xml:space="preserve">
+    <value>Reported suppression with ID '{0}' is not supported by the suppressor.</value>
+  </data>
+  <data name="InvalidDiagnosticSuppressionReported" xml:space="preserve">
+    <value>Suppressed diagnostic ID '{0}' does not match suppressable ID '{1}' for the given suppression descriptor.</value>
+  </data>
+  <data name="NonReportedDiagnosticCannotBeSuppressed" xml:space="preserve">
+    <value>Non-reported diagnostic with ID '{0}' cannot be suppressed.</value>
+  </data>
   <data name="InvalidDiagnosticIdReported" xml:space="preserve">
     <value>Reported diagnostic has an ID '{0}', which is not a valid identifier.</value>
   </data>

@@ -167,7 +167,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             writer.WriteInt32(telemetryInfo.CompilationStartActionsCount);
             writer.WriteInt32(telemetryInfo.CompilationEndActionsCount);
             writer.WriteInt32(telemetryInfo.CompilationActionsCount);
-            writer.WriteInt32(telemetryInfo.SuppressionActionsCount);
             writer.WriteInt32(telemetryInfo.SyntaxTreeActionsCount);
             writer.WriteInt32(telemetryInfo.SemanticModelActionsCount);
             writer.WriteInt32(telemetryInfo.SymbolActionsCount);
@@ -181,6 +180,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             writer.WriteInt32(telemetryInfo.OperationBlockActionsCount);
             writer.WriteInt32(telemetryInfo.OperationBlockStartActionsCount);
             writer.WriteInt32(telemetryInfo.OperationBlockEndActionsCount);
+            writer.WriteInt32(telemetryInfo.SuppressionActionsCount);
             writer.WriteInt64(telemetryInfo.ExecutionTime.Ticks);
             writer.WriteBoolean(telemetryInfo.Concurrent);
         }
@@ -192,7 +192,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var compilationStartActionsCount = reader.ReadInt32();
             var compilationEndActionsCount = reader.ReadInt32();
             var compilationActionsCount = reader.ReadInt32();
-            var suppressionActionsCount = reader.ReadInt32();
             var syntaxTreeActionsCount = reader.ReadInt32();
             var semanticModelActionsCount = reader.ReadInt32();
             var symbolActionsCount = reader.ReadInt32();
@@ -206,6 +205,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var operationBlockActionsCount = reader.ReadInt32();
             var operationBlockStartActionsCount = reader.ReadInt32();
             var operationBlockEndActionsCount = reader.ReadInt32();
+            var suppressionActionsCount = reader.ReadInt32();
             var executionTime = new TimeSpan(reader.ReadInt64());
             var concurrent = reader.ReadBoolean();
 
@@ -214,7 +214,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 CompilationStartActionsCount = compilationStartActionsCount,
                 CompilationEndActionsCount = compilationEndActionsCount,
                 CompilationActionsCount = compilationActionsCount,
-                SuppressionActionsCount = suppressionActionsCount,
 
                 SyntaxTreeActionsCount = syntaxTreeActionsCount,
                 SemanticModelActionsCount = semanticModelActionsCount,
@@ -231,6 +230,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 OperationBlockStartActionsCount = operationBlockStartActionsCount,
                 OperationBlockEndActionsCount = operationBlockEndActionsCount,
                 OperationBlockActionsCount = operationBlockActionsCount,
+
+                SuppressionActionsCount = suppressionActionsCount,
 
                 ExecutionTime = executionTime,
 

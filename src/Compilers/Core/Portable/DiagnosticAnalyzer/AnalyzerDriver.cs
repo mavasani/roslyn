@@ -606,13 +606,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         public void ApplyAnalyzerSuppressions(DiagnosticBag reportedDiagnostics, Compilation compilation)
         {
+            Debug.Assert(!reportedDiagnostics.IsEmptyWithoutResolution);
             if (!_hasDiagnosticSuppressors)
             {
                 return;
             }
 
-            Debug.Assert(!reportedDiagnostics.IsEmptyWithoutResolution);
-            var newDiagnostics = ApplyAnalyzerSuppressions(reportedDiagnostics.ToReadOnly(), compilation);
+            var newDiagnostics = ApplyAnalyzerSuppressionsCore(reportedDiagnostics.ToReadOnly(), compilation);
             reportedDiagnostics.Clear();
             reportedDiagnostics.AddRange(newDiagnostics);
         }
@@ -620,11 +620,18 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public ImmutableArray<Diagnostic> ApplyAnalyzerSuppressions(ImmutableArray<Diagnostic> reportedDiagnostics, Compilation compilation)
         {
             if (reportedDiagnostics.IsEmpty ||
-                this.AnalyzerActions.SuppressionActionsCount == 0)
+                !_hasDiagnosticSuppressors)
             {
                 return reportedDiagnostics;
             }
 
+            return ApplyAnalyzerSuppressionsCore(reportedDiagnostics, compilation);
+        }
+
+        private ImmutableArray<Diagnostic> ApplyAnalyzerSuppressionsCore(ImmutableArray<Diagnostic> reportedDiagnostics, Compilation compilation)
+        {
+            Debug.Assert(_hasDiagnosticSuppressors);
+            Debug.Assert(!reportedDiagnostics.IsEmpty);
             Debug.Assert(_analyzerSuppressedDiagnostics != null);
 
             // We do not allow analyzer based suppressions for following category of diagnostics:
@@ -661,6 +668,37 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             return builder.ToImmutableAndFree();
+        }
+
+        private void ExecuteSuppressionActions(ImmutableArray<Diagnostic> reportedDiagnostics)
+        {
+            Parallel.ForEach(this.Analyzers.OfType<DiagnosticSuppressor>(), suppressor =>
+            {
+                AnalyzerExecutor.ExecuteSuppressionAction(suppressor, getSuppressableDiagnostics(suppressor));
+            });
+
+            return;
+
+            // Local functions.
+            ImmutableArray<Diagnostic> getSuppressableDiagnostics(DiagnosticSuppressor suppressor)
+            {
+                var supportedSuppressions = AnalyzerManager.GetSupportedSuppressionDescriptors(suppressor, AnalyzerExecutor);
+                if (supportedSuppressions.IsEmpty)
+                {
+                    return ImmutableArray<Diagnostic>.Empty;
+                }
+
+                var builder = ArrayBuilder<Diagnostic>.GetInstance();
+                foreach (var diagnostic in reportedDiagnostics)
+                {
+                    if (supportedSuppressions.Contains(s => s.SuppressedDiagnosticId == diagnostic.Id))
+                    {
+                        builder.Add(diagnostic);
+                    }
+                }
+
+                return builder.ToImmutableAndFree();
+            }
         }
 
         public ImmutableArray<Diagnostic> DequeueLocalDiagnosticsAndApplySuppressions(DiagnosticAnalyzer analyzer, bool syntax, Compilation compilation)
@@ -1397,38 +1435,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             finally
             {
                 compilationEvent.FlushCache();
-            }
-        }
-
-        private void ExecuteSuppressionActions(ImmutableArray<Diagnostic> reportedDiagnostics)
-        {
-            Parallel.ForEach(this.AnalyzerActions.SuppressionActions, suppressionAction =>
-            {
-                var suppressibleReportedDiagnostics = getSuppressibleReportedDiagnostics(suppressionAction.Analyzer);
-                if (!suppressibleReportedDiagnostics.IsEmpty)
-                {
-                    AnalyzerExecutor.ExecuteSuppressionAction(suppressionAction, suppressibleReportedDiagnostics);
-                }
-            });
-
-            ImmutableArray<Diagnostic> getSuppressibleReportedDiagnostics(DiagnosticSuppressor suppressor)
-            {
-                var supportedSuppressions = AnalyzerManager.GetSupportedSuppressionDescriptors(suppressor, AnalyzerExecutor);
-                if (supportedSuppressions.IsEmpty)
-                {
-                    return ImmutableArray<Diagnostic>.Empty;
-                }
-
-                var builder = ArrayBuilder<Diagnostic>.GetInstance();
-                foreach (var diagnostic in reportedDiagnostics)
-                {
-                    if (supportedSuppressions.Contains(s => s.SuppressedDiagnosticId == diagnostic.Id))
-                    {
-                        builder.Add(diagnostic);
-                    }
-                }
-
-                return builder.ToImmutableAndFree();
             }
         }
 

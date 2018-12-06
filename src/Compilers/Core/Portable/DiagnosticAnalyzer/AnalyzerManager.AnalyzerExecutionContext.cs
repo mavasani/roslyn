@@ -70,15 +70,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     task = Task.Run(() =>
                     {
                         var sessionScope = new HostSessionStartAnalysisScope();
-                        if (_analyzer is DiagnosticSuppressor suppressor)
-                        {
-                            sessionScope.RegisterSuppressionAction(suppressor);
-                        }
-                        else
-                        {
-                            analyzerExecutor.ExecuteInitializeMethod(_analyzer, sessionScope);
-                        }
-
+                        analyzerExecutor.ExecuteInitializeMethod(_analyzer, sessionScope);
                         return sessionScope;
                     }, analyzerExecutor.CancellationToken);
 

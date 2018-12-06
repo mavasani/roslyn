@@ -19,7 +19,7 @@ namespace Microsoft.CodeAnalysis {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class CodeAnalysisResources {
@@ -766,6 +766,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Suppressed diagnostic ID &apos;{0}&apos; does not match suppressable ID &apos;{1}&apos; for the given suppression descriptor..
+        /// </summary>
+        internal static string InvalidDiagnosticSuppressionReported {
+            get {
+                return ResourceManager.GetString("InvalidDiagnosticSuppressionReported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Invalid hash..
         /// </summary>
         internal static string InvalidHash {
@@ -1041,6 +1050,15 @@ namespace Microsoft.CodeAnalysis {
         internal static string NodeOrTokenOutOfSequence {
             get {
                 return ResourceManager.GetString("NodeOrTokenOutOfSequence", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Non-reported diagnostic with ID &apos;{0}&apos; cannot be suppressed..
+        /// </summary>
+        internal static string NonReportedDiagnosticCannotBeSuppressed {
+            get {
+                return ResourceManager.GetString("NonReportedDiagnosticCannotBeSuppressed", resourceCulture);
             }
         }
         
@@ -1599,6 +1617,15 @@ namespace Microsoft.CodeAnalysis {
         internal static string UnsupportedHashAlgorithm {
             get {
                 return ResourceManager.GetString("UnsupportedHashAlgorithm", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reported suppression with ID &apos;{0}&apos; is not supported by the suppressor..
+        /// </summary>
+        internal static string UnsupportedSuppressionReported {
+            get {
+                return ResourceManager.GetString("UnsupportedSuppressionReported", resourceCulture);
             }
         }
         

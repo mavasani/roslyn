@@ -489,12 +489,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             this.GetOrCreateAnalyzerActions(analyzer).AddCompilationEndAction(analyzerAction);
         }
 
-        public void RegisterSuppressionAction(DiagnosticSuppressor suppressor)
-        {
-            var action = new SuppressionAnalyzerAction(suppressor);
-            this.GetOrCreateAnalyzerActions(suppressor).AddSuppressionAction(action);
-        }
-
         public void RegisterSemanticModelAction(DiagnosticAnalyzer analyzer, Action<SemanticModelAnalysisContext> action)
         {
             SemanticModelAnalyzerAction analyzerAction = new SemanticModelAnalyzerAction(action, analyzer);
@@ -638,7 +632,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ImmutableArray<CompilationStartAnalyzerAction> _compilationStartActions = ImmutableArray<CompilationStartAnalyzerAction>.Empty;
         private ImmutableArray<CompilationAnalyzerAction> _compilationEndActions = ImmutableArray<CompilationAnalyzerAction>.Empty;
         private ImmutableArray<CompilationAnalyzerAction> _compilationActions = ImmutableArray<CompilationAnalyzerAction>.Empty;
-        private ImmutableArray<SuppressionAnalyzerAction> _suppressionActions = ImmutableArray<SuppressionAnalyzerAction>.Empty;
         private ImmutableArray<SyntaxTreeAnalyzerAction> _syntaxTreeActions = ImmutableArray<SyntaxTreeAnalyzerAction>.Empty;
         private ImmutableArray<SemanticModelAnalyzerAction> _semanticModelActions = ImmutableArray<SemanticModelAnalyzerAction>.Empty;
         private ImmutableArray<SymbolAnalyzerAction> _symbolActions = ImmutableArray<SymbolAnalyzerAction>.Empty;
@@ -662,7 +655,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public int CompilationStartActionsCount { get { return _compilationStartActions.Length; } }
         public int CompilationEndActionsCount { get { return _compilationEndActions.Length; } }
         public int CompilationActionsCount { get { return _compilationActions.Length; } }
-        public int SuppressionActionsCount { get { return _suppressionActions.Length; } }
         public int SyntaxTreeActionsCount { get { return _syntaxTreeActions.Length; } }
         public int SemanticModelActionsCount { get { return _semanticModelActions.Length; } }
         public int SymbolActionsCount { get { return _symbolActions.Length; } }
@@ -692,11 +684,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         internal ImmutableArray<CompilationAnalyzerAction> CompilationActions
         {
             get { return _compilationActions; }
-        }
-
-        internal ImmutableArray<SuppressionAnalyzerAction> SuppressionActions
-        {
-            get { return _suppressionActions; }
         }
 
         internal ImmutableArray<SyntaxTreeAnalyzerAction> SyntaxTreeActions
@@ -779,12 +766,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         internal void AddCompilationAction(CompilationAnalyzerAction action)
         {
             _compilationActions = _compilationActions.Add(action);
-            IsEmpty = false;
-        }
-
-        internal void AddSuppressionAction(SuppressionAnalyzerAction action)
-        {
-            _suppressionActions = _suppressionActions.Add(action);
             IsEmpty = false;
         }
 
@@ -886,7 +867,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             actions._compilationStartActions = _compilationStartActions.AddRange(otherActions._compilationStartActions);
             actions._compilationEndActions = _compilationEndActions.AddRange(otherActions._compilationEndActions);
             actions._compilationActions = _compilationActions.AddRange(otherActions._compilationActions);
-            actions._suppressionActions = _suppressionActions.AddRange(otherActions._suppressionActions);
             actions._syntaxTreeActions = _syntaxTreeActions.AddRange(otherActions._syntaxTreeActions);
             actions._semanticModelActions = _semanticModelActions.AddRange(otherActions._semanticModelActions);
             actions._symbolActions = _symbolActions.AddRange(otherActions._symbolActions);
