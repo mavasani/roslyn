@@ -39,7 +39,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Flag indicating if the <see cref="Analyzers"/> include any <see cref="DiagnosticSuppressor"/>
         /// which can suppress reported analyzer/compiler diagnostics.
         /// </summary>
-        public bool HasDiagnosticSuppressors { get; }
+        public bool _hasDiagnosticSuppressors { get; }
 
         // Lazy fields/properties
         private CancellationTokenRegistration _queueRegistration;
@@ -166,8 +166,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             this.Analyzers = analyzers;
             this.AnalyzerManager = analyzerManager;
             _isGeneratedCode = (tree, ct) => GeneratedCodeUtilities.IsGeneratedCode(tree, isComment, ct);
-            HasDiagnosticSuppressors = this.Analyzers.Any(a => a is DiagnosticSuppressor);
-            _analyzerSuppressedDiagnostics = HasDiagnosticSuppressors ? new ConcurrentSet<Diagnostic>() : null;
+            _hasDiagnosticSuppressors = this.Analyzers.Any(a => a is DiagnosticSuppressor);
+            _analyzerSuppressedDiagnostics = _hasDiagnosticSuppressors ? new ConcurrentSet<Diagnostic>() : null;
         }
 
         /// <summary>
@@ -606,7 +606,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         public void ApplyAnalyzerSuppressions(DiagnosticBag reportedDiagnostics, Compilation compilation)
         {
-            if (!HasDiagnosticSuppressors)
+            if (!_hasDiagnosticSuppressors)
             {
                 return;
             }
@@ -626,7 +626,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             Debug.Assert(_analyzerSuppressedDiagnostics != null);
-            Debug.Assert(this.HasDiagnosticSuppressors);
 
             // We do not allow analyzer based suppressions for following category of diagnostics:
             //  1. Diagnostics which are already suppressed in source via pragma/suppress message attribute.

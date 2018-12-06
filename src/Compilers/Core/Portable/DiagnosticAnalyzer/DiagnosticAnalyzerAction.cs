@@ -6,12 +6,16 @@ using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.Diagnostics
 {
-    internal abstract class AnalyzerAction : BaseAnalyzerAction<DiagnosticAnalyzer>
+    internal abstract class AnalyzerAction
     {
-        protected AnalyzerAction(DiagnosticAnalyzer analyzer)
-            : base(analyzer)
+        private readonly DiagnosticAnalyzer _analyzer;
+
+        internal AnalyzerAction(DiagnosticAnalyzer analyzer)
         {
+            _analyzer = analyzer;
         }
+
+        internal DiagnosticAnalyzer Analyzer { get { return _analyzer; } }
     }
 
     internal abstract class BaseAnalyzerAction<TDiagnosticAnalyzer>
@@ -146,16 +150,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         public Action<CompilationAnalysisContext> Action { get { return _action; } }
-    }
-
-    internal sealed class SuppressionAnalyzerAction : BaseAnalyzerAction<DiagnosticSuppressor>
-    {
-        public Action<SuppressionAnalysisContext> Action => Analyzer.ReportSuppressions;
-
-        public SuppressionAnalyzerAction(DiagnosticSuppressor suppressor)
-            : base(suppressor)
-        {
-        }
     }
 
     internal sealed class SemanticModelAnalyzerAction : AnalyzerAction

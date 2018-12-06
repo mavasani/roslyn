@@ -38,7 +38,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedMembers
                 var declaredSymbol = model.GetDeclaredSymbol(node, context.CancellationToken);
                 if (declaredSymbol?.GetAttributes().Any(a => a.AttributeClass.Name.StartsWith("ImplicitlyUsed")) == true)
                 {
-                    context.SuppressDiagnostic(diagnostic, s_suppressUnusedMembersRule);
+                    context.ReportSuppression(Suppression.Create(s_suppressUnusedMembersRule, diagnostic));
                 }
             }
         }

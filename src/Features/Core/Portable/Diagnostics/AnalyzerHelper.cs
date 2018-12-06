@@ -313,6 +313,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return context.IsCompilationEndAnalyzer;
         }
 
+        public static ImmutableArray<DiagnosticAnalyzer> AppendDiagnosticSuppressors(ImmutableArray<DiagnosticAnalyzer> analyzers, IEnumerable<DiagnosticAnalyzer> allAnalyzersAndSuppressors)
+        {
+            // Append while ensuring no duplicates are added.
+            var diagnosticSuppressors = allAnalyzersAndSuppressors.OfType<DiagnosticSuppressor>();
+            return !diagnosticSuppressors.Any()
+                ? analyzers
+                : analyzers.Concat(diagnosticSuppressors).Distinct().ToImmutableArray();
+        }
+
         /// <summary>
         /// Right now, there is no API compiler will tell us whether DiagnosticAnalyzer has compilation end analysis or not
         /// 

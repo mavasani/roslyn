@@ -1508,41 +1508,23 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         /// <summary>
-        /// Suppresses a reported diagnostic.
+        /// Report a <see cref="Suppression"/> for a reported diagnostic.
         /// </summary>
-        /// <param name="diagnostic"><see cref="Diagnostic"/> to be suppressed, which must be from <see cref="ReportedDiagnostics"/>.</param>
-        /// <param name="suppressionDescriptor">Descriptor for the suppression, which must be from <see cref="DiagnosticSuppressor.SupportedSuppressions"/>.</param>
-        public void SuppressDiagnostic(Diagnostic diagnostic, SuppressionDescriptor suppressionDescriptor)
+        public void ReportSuppression(Suppression suppression)
         {
-            if (diagnostic == null)
-            {
-                throw new ArgumentNullException(nameof(diagnostic));
-            }
-
-            if (suppressionDescriptor == null)
-            {
-                throw new ArgumentNullException(nameof(suppressionDescriptor));
-            }
-
-            if (!ReportedDiagnostics.Contains(diagnostic))
+            if (!ReportedDiagnostics.Contains(suppression.SuppressedDiagnostic))
             {
                 // TODO: Message resource string.
-                throw new ArgumentException(nameof(diagnostic));
+                throw new ArgumentException(nameof(suppression));
             }
 
-            if (!_isSupportedSuppressionDescriptor(suppressionDescriptor))
+            if (!_isSupportedSuppressionDescriptor(suppression.Descriptor))
             {
                 // TODO: Message resource string.
-                throw new ArgumentException(nameof(suppressionDescriptor));
+                throw new ArgumentException(nameof(suppression));
             }
 
-            if (suppressionDescriptor.SuppressedDiagnosticId != diagnostic.Id)
-            {
-                // TODO: Message resource string.
-                throw new ArgumentException(nameof(diagnostic));
-            }
-
-            if (suppressionDescriptor.IsDisabled(Compilation.Options))
+            if (suppression.Descriptor.IsDisabled(Compilation.Options))
             {
                 // Suppression has been disabled by the end user through compilation options.
                 return;
@@ -1550,7 +1532,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             lock (_suppressDiagnostic)
             {
-                _suppressDiagnostic(diagnostic);
+                _suppressDiagnostic(suppression.SuppressedDiagnostic);
             }
         }
 

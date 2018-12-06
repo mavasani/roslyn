@@ -648,7 +648,11 @@ namespace Microsoft.CodeAnalysis
 
             // Flag indicating if the compilation phases should apply diagnostic filtering
             // based on the compiler options (/nowarn, /warn and /warnaserror) and the pragma warning directives.
-            bool filterDiagnosticsWhileCompiling = true;
+            // If we have any diagnostic suppressors which can suppress diagnostics,
+            // then we postpone diagnostic filtering until all diagnostics are computed because
+            // compiler warnings promoted to errors by /warnaserror might be suppressed by diagnostic suppressors, which run later.
+            // Not doing so will cause compilation phases to incorrectly bail out on compiler warnings promoted to errors.
+            bool filterDiagnosticsWhileCompiling = !analyzers.Any(a => a is DiagnosticSuppressor);
 
             // Print the diagnostics produced during the parsing stage and exit if there were any errors.
             compilation.GetDiagnostics(CompilationStage.Parse, includeEarlierStages: false, diagnostics, filterDiagnosticsWhileCompiling, cancellationToken);
@@ -675,13 +679,6 @@ namespace Microsoft.CodeAnalysis
                     out compilation,
                     analyzerCts.Token);
                 reportAnalyzer = Arguments.ReportAnalyzer && !analyzers.IsEmpty;
-
-                // If we have any diagnostic suppressors which can suppress analyzer and/or compiler diagnostics,
-                // then ensure that we skip diagnostic filtering upfront (filtering includes /warnaserror application),
-                // as some of these diagnostics might be suppressed by suppression actions, which run later.
-                // Not doing so will cause compilation phases to incorrectly bail out on compiler warnings
-                // in presence of /warnaserror.
-                filterDiagnosticsWhileCompiling = !analyzerDriver.HasDiagnosticSuppressors;
             }
 
             compilation.GetDiagnostics(CompilationStage.Declare, includeEarlierStages: false, diagnostics, filterDiagnosticsWhileCompiling, cancellationToken);

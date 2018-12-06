@@ -106,6 +106,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
 
                 var analysisOptions = GetAnalyzerOptions(project, logAnalyzerExecutionTime, reportSuppressedDiagnostics);
 
+                // Always run diagnostic suppressors.
+                analyzers = AnalyzerHelper.AppendDiagnosticSuppressors(analyzers,
+                    allAnalyzersAndSuppressors: _owner._stateManager.GetOrCreateStateSets(project).Select(s => s.Analyzer));
+                
                 // Create driver that holds onto compilation and associated analyzers
                 return compilation.WithAnalyzers(analyzers, analysisOptions);
             }

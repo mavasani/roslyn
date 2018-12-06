@@ -191,6 +191,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                     return null;
                 }
 
+                // Always run diagnostic suppressors.
+                analyzers = AnalyzerHelper.AppendDiagnosticSuppressors(analyzers, allAnalyzersAndSuppressors: analyzerDriver.Analyzers);
+
                 return analyzerDriver.Compilation.WithAnalyzers(analyzers, analyzerDriver.AnalysisOptions);
             }
 

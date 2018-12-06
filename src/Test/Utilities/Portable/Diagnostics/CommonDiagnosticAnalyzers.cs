@@ -1661,5 +1661,35 @@ namespace Microsoft.CodeAnalysis
                 }
             }
         }
+
+        [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
+        public sealed class UnusedFieldDiagnosticSuppressor: DiagnosticSuppressor
+        {
+            private static readonly SuppressionDescriptor s_suppressUnusedFieldRule = new SuppressionDescriptor(
+                id: "SPR1001",
+                suppressedDiagnosticId: "CS0169",
+                description: "Suppress unused member diagnostic for symbols marked with ImplicitlyUsedAttribute");
+
+            public override ImmutableArray<SuppressionDescriptor> SupportedSuppressions => ImmutableArray.Create(s_suppressUnusedFieldRule);
+
+            public override void ReportSuppressions(SuppressionAnalysisContext context)
+            {
+                foreach (var diagnostic in context.ReportedDiagnostics)
+                {
+                    var root = diagnostic.Location.SourceTree.GetRoot(context.CancellationToken);
+                    var node = root.FindNode(diagnostic.Location.SourceSpan);
+                    if (node == null)
+                    {
+                        continue;
+                    }
+
+                    var model = context.GetSemanticModel(node.SyntaxTree);
+                    if (model.GetDeclaredSymbol(node, context.CancellationToken) is IFieldSymbol)
+                    {
+                        context.ReportSuppression(Suppression.Create(s_suppressUnusedFieldRule, diagnostic));
+                    }
+                }
+            }
+        }
     }
 }
