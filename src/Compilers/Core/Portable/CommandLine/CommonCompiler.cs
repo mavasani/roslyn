@@ -833,8 +833,10 @@ namespace Microsoft.CodeAnalysis
                                 !diagnostics.IsEmptyWithoutResolution)
                             {
                                 var newDiagnostics = DiagnosticBag.GetInstance();
-                                compilation.FilterAndAppendAndFreeDiagnostics(diagnostics, ref newDiagnostics, filterDiagnostics: true);
-                                diagnostics = newDiagnostics;
+                                compilation.FilterAndAppendDiagnostics(newDiagnostics, 
+                                    diagnostics.AsEnumerableWithoutResolution(), filterDiagnostics: true, exclude: null);
+                                diagnostics.Clear();
+                                diagnostics.AddRange(newDiagnostics);
                             }
                             
                             // GetDiagnosticsAsync is called after ReportUnusedImports

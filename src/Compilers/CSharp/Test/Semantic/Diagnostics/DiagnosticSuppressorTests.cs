@@ -56,7 +56,7 @@ class C
             string source = @"
 class C
 {
-    // warning CS0169: The field 'C.field' is never used
+    // warning CS0169: The field 'C.f' is never used
     private readonly int f;
 }";
             var expectedDiagnostic =
@@ -114,12 +114,100 @@ class C
         }
 
         [Fact, WorkItem(20242, "https://github.com/dotnet/roslyn/issues/20242")]
+        public void TestSuppression_MultipleDiagnostics()
+        {
+            string source = @"
+class C
+{
+    // warning CS0169: The field 'C.f' is never used
+    private readonly int f;
+    // warning CS0169: The field 'C.f2' is never used
+    private readonly int f2;
+}";
+            var expectedDiagnostics = new DiagnosticDescription[] {
+                // (5,26): warning CS0169: The field 'C.f' is never used
+                //     private readonly int f;
+                Diagnostic(ErrorCode.WRN_UnreferencedField, "f").WithArguments("C.f").WithLocation(5, 26),
+                // (7,26): warning CS0169: The field 'C.f2' is never used
+                //     private readonly int f2;
+                Diagnostic(ErrorCode.WRN_UnreferencedField, "f2").WithArguments("C.f2").WithLocation(7, 26)
+            };
+
+            var tree = CSharpSyntaxTree.ParseText(source);
+            var compilation = CreateCompilationWithMscorlib45(new[] { tree });
+            compilation.VerifyDiagnostics(expectedDiagnostics);
+
+            var analyzers = new DiagnosticAnalyzer[] { new DiagnosticSuppressorForId("CS0169") };
+            compilation.VerifySuppressedDiagnostics(analyzers, null, null, true, expectedDiagnostics);
+        }
+
+        [Fact, WorkItem(20242, "https://github.com/dotnet/roslyn/issues/20242")]
+        public void TestSuppression_MultipleSuppressors_SameDiagnostic()
+        {
+            string source = @"
+class C
+{
+    // warning CS0169: The field 'C.f' is never used
+    private readonly int f;
+}";
+            var expectedDiagnostic =
+                // (5,26): warning CS0169: The field 'C.f' is never used
+                //     private readonly int f;
+                Diagnostic(ErrorCode.WRN_UnreferencedField, "f").WithArguments("C.f").WithLocation(5, 26);
+
+            var tree = CSharpSyntaxTree.ParseText(source);
+            var compilation = CreateCompilationWithMscorlib45(new[] { tree });
+            compilation.VerifyDiagnostics(expectedDiagnostic);
+
+            var analyzers = new DiagnosticAnalyzer[] { new DiagnosticSuppressorForId("CS0169"), new DiagnosticSuppressorForId("CS0169") };
+            compilation.VerifySuppressedDiagnostics(analyzers, null, null, true, expectedDiagnostic);
+        }
+
+        [Fact, WorkItem(20242, "https://github.com/dotnet/roslyn/issues/20242")]
+        public void TestSuppression_MultipleSuppressors_DifferentDiagnostic()
+        {
+            string source = @"
+class C
+{
+    // warning CS0169: The field 'C.f' is never used
+    private readonly int f;
+}";
+            var expectedCompilerDiagnostic =
+                // (5,26): warning CS0169: The field 'C.f' is never used
+                //     private readonly int f;
+                Diagnostic(ErrorCode.WRN_UnreferencedField, "f").WithArguments("C.f").WithLocation(5, 26);
+
+            var tree = CSharpSyntaxTree.ParseText(source);
+            var compilation = CreateCompilationWithMscorlib45(new[] { tree });
+            compilation.VerifyDiagnostics(expectedCompilerDiagnostic);
+
+            var expectedAnalyzerDiagnostic =
+                Diagnostic("ID1000", @"class C
+{
+    // warning CS0169: The field 'C.f' is never used
+    private readonly int f;
+}").WithLocation(2, 1);
+
+            var analyzer = new CompilationAnalyzerWithSeverity(DiagnosticSeverity.Warning, configurable: true);
+            compilation.VerifyAnalyzerDiagnostics(new DiagnosticAnalyzer[] { analyzer }, null, null, true,
+                expectedAnalyzerDiagnostic);
+
+            var suppressor1 = new DiagnosticSuppressorForId("CS0169");
+            var suppresor2 = new DiagnosticSuppressorForId(analyzer.Descriptor.Id);
+
+            var analyzers = new DiagnosticAnalyzer[] { analyzer, suppressor1, suppresor2 };
+            compilation.VerifySuppressedDiagnostics(analyzers, null, null, true,
+                expectedCompilerDiagnostic,
+                expectedAnalyzerDiagnostic);
+        }
+
+        [Fact, WorkItem(20242, "https://github.com/dotnet/roslyn/issues/20242")]
         public void TestNoSuppression_SpecificOptionsTurnsOffSuppressor()
         {
             string source = @"
 class C
 {
-    // warning CS0169: The field 'C.field' is never used
+    // warning CS0169: The field 'C.f' is never used
     private readonly int f;
 }";
             var expectedDiagnostic =
