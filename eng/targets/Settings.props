@@ -40,6 +40,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GenerateFullPaths>true</GenerateFullPaths>
     <UseRoslynAnalyzers Condition="'$(UseRoslynAnalyzers)' == ''">true</UseRoslynAnalyzers>
+    <!-- Enable flow-analysis feature flag (can be removed when we move to "RoslynDiagnosticsNugetPackageVersion" to 3.0 or larger) -->
+    <Features>$(Features);flow-analysis</Features>
 
     <!-- Set to non-existent file to prevent common targets from importing Microsoft.CodeAnalysis.targets -->
     <CodeAnalysisTargets>*none*</CodeAnalysisTargets>
