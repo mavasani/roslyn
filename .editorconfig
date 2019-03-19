@@ -190,3 +190,5 @@ csharp_space_between_parentheses = false
 csharp_prefer_braces = true:silent
 csharp_preserve_single_line_blocks = true
 csharp_preserve_single_line_statements = true
+
+dotnet_code_quality.dispose_ownership_transfer_at_constructor = true
