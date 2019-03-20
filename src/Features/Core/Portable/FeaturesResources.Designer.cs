@@ -694,6 +694,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Call System.IDisposable.Dispose on object created by &apos;{0}&apos; before all references to it are out of scope..
+        /// </summary>
+        internal static string Call_Dispose_on_object_created_by_0_before_all_references_to_it_are_out_of_scope {
+            get {
+                return ResourceManager.GetString("Call_Dispose_on_object_created_by_0_before_all_references_to_it_are_out_of_scope", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to can&apos;t not construct final tree.
         /// </summary>
         internal static string can_t_not_construct_final_tree {
@@ -1158,6 +1167,15 @@ namespace Microsoft.CodeAnalysis {
         internal static string Deleting_captured_variable_0_will_prevent_the_debug_session_from_continuing {
             get {
                 return ResourceManager.GetString("Deleting_captured_variable_0_will_prevent_the_debug_session_from_continuing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Dispose objects before losing scope.
+        /// </summary>
+        internal static string Dispose_objects_before_losing_scope {
+            get {
+                return ResourceManager.GetString("Dispose_objects_before_losing_scope", resourceCulture);
             }
         }
         
@@ -4408,6 +4426,26 @@ namespace Microsoft.CodeAnalysis {
         internal static string Use_range_operator {
             get {
                 return ResourceManager.GetString("Use_range_operator", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use recommended dispose pattern.
+        /// </summary>
+        internal static string Use_recommended_dispose_pattern {
+            get {
+                return ResourceManager.GetString("Use_recommended_dispose_pattern", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use recommended dispose pattern to ensure that object created by &apos;{0}&apos; is disposed on all paths. If possible, wrap the creation within a &apos;using&apos; statement or a &apos;using&apos; declaration. Otherwise, use a try-finally pattern..
+        /// </summary>
+        internal static string Use_recommended_dispose_pattern_to_ensure_that_object_created_by_0_is_disposed_on_all_paths_If_possible_wrap_the_creation_within_a_using_statement_or_a_using_declaration_Otherwise_use_a_try_finally_pattern {
+            get {
+                return ResourceManager.GetString("Use_recommended_dispose_pattern_to_ensure_that_object_created_by_0_is_disposed_on" +
+                        "_all_paths_If_possible_wrap_the_creation_within_a_using_statement_or_a_using_dec" +
+                        "laration_Otherwise_use_a_try_finally_pattern", resourceCulture);
             }
         }
         

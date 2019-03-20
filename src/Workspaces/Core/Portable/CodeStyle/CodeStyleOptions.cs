@@ -2,6 +2,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using Analyzer.Utilities;
 using Microsoft.CodeAnalysis.Options;
 using Roslyn.Utilities;
 using static Microsoft.CodeAnalysis.CodeStyle.CodeStyleHelpers;
@@ -236,6 +237,22 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                         o => GetUnusedParametersPreferenceEditorConfigString(o, s_preferAllMethodsUnusedParametersPreference.Value)),
                 new RoamingProfileStorageLocation($"TextEditor.%LANGUAGE%.Specific.{nameof(UnusedParameters)}Preference") });
 
+        private static readonly CodeStyleOption<DisposeAnalysisKind> s_flagNoneDispose =
+             new CodeStyleOption<DisposeAnalysisKind>(default, NotificationOption.None);
+        private static readonly CodeStyleOption<DisposeAnalysisKind> s_flagNotDisposedAndMayBeNotDisposed =
+            new CodeStyleOption<DisposeAnalysisKind>(DisposeAnalysisKind.NonExceptionPaths, NotificationOption.Suggestion);
+
+        internal static readonly PerLanguageOption<CodeStyleOption<DisposeAnalysisKind>> DisposeAnalysis = CreateOption(
+            CodeStyleOptionGroups.ExpressionLevelPreferences,
+            nameof(DisposeAnalysis),
+            defaultValue: s_flagNotDisposedAndMayBeNotDisposed,
+            storageLocations: new OptionStorageLocation[]{
+                new EditorConfigStorageLocation<CodeStyleOption<DisposeAnalysisKind>>(
+                        "dotnet_code_quality_dispose_analysis_kind",
+                        ParseDisposeAnalysisKind,
+                        o => GetDisposeAnalysisKindEditorConfigString(o, s_flagNotDisposedAndMayBeNotDisposed.Value)),
+                new RoamingProfileStorageLocation($"TextEditor.%LANGUAGE%.Specific.{nameof(DisposeAnalysis)}Kind") });
+
         private static readonly CodeStyleOption<AccessibilityModifiersRequired> s_requireAccessibilityModifiersDefault =
             new CodeStyleOption<AccessibilityModifiersRequired>(AccessibilityModifiersRequired.ForNonInterfaceMembers, NotificationOption.Silent);
 
@@ -358,6 +375,13 @@ namespace Microsoft.CodeAnalysis.CodeStyle
                 KeyValuePairUtil.Create("all", UnusedParametersPreference.AllMethods),
             });
 
+        private static readonly BidirectionalMap<string, DisposeAnalysisKind> s_disposeAnalysisKindMap =
+            new BidirectionalMap<string, DisposeAnalysisKind>(new[]
+            {
+                KeyValuePairUtil.Create("not_disposed", DisposeAnalysisKind.NonExceptionPathsOnlyNotDisposed),
+                KeyValuePairUtil.Create("not_disposed_and_maybe_not_disposed", DisposeAnalysisKind.NonExceptionPaths),
+            });
+
         static CodeStyleOptions()
         {
             // Note that the static constructor executes after all the static field initializers for the options have executed,
@@ -398,10 +422,29 @@ namespace Microsoft.CodeAnalysis.CodeStyle
             return s_preferNoneUnusedParametersPreference;
         }
 
+        private static Optional<CodeStyleOption<DisposeAnalysisKind>> ParseDisposeAnalysisKind(string optionString)
+        {
+            if (TryGetCodeStyleValueAndOptionalNotification(optionString,
+                out var value, out var notificationOpt))
+            {
+                return new CodeStyleOption<DisposeAnalysisKind>(
+                    s_disposeAnalysisKindMap.GetValueOrDefault(value), notificationOpt ?? NotificationOption.Suggestion);
+            }
+
+            return s_flagNoneDispose;
+        }
+
         private static string GetUnusedParametersPreferenceEditorConfigString(CodeStyleOption<UnusedParametersPreference> option, UnusedParametersPreference defaultPreference)
         {
             Debug.Assert(s_unusedParametersPreferenceMap.ContainsValue(option.Value));
             var value = s_unusedParametersPreferenceMap.GetKeyOrDefault(option.Value) ?? s_unusedParametersPreferenceMap.GetKeyOrDefault(defaultPreference);
+            return option.Notification == null ? value : $"{value}:{option.Notification.ToEditorConfigString()}";
+        }
+
+        private static string GetDisposeAnalysisKindEditorConfigString(CodeStyleOption<DisposeAnalysisKind> option, DisposeAnalysisKind defaultKind)
+        {
+            Debug.Assert(s_disposeAnalysisKindMap.ContainsValue(option.Value));
+            var value = s_disposeAnalysisKindMap.GetKeyOrDefault(option.Value) ?? s_disposeAnalysisKindMap.GetKeyOrDefault(defaultKind);
             return option.Notification == null ? value : $"{value}:{option.Notification.ToEditorConfigString()}";
         }
     }

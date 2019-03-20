@@ -47,6 +47,11 @@
         <target state="translated">Dopasuj opakowane parametry</target>
         <note />
       </trans-unit>
+      <trans-unit id="Call_Dispose_on_object_created_by_0_before_all_references_to_it_are_out_of_scope">
+        <source>Call System.IDisposable.Dispose on object created by '{0}' before all references to it are out of scope.</source>
+        <target state="new">Call System.IDisposable.Dispose on object created by '{0}' before all references to it are out of scope.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Change_namespace_to_0">
         <source>Change namespace to '{0}'</source>
         <target state="translated">Zmień przestrzeń nazw na „{0}”</target>
@@ -90,6 +95,11 @@
       <trans-unit id="Convert_to_tuple">
         <source>Convert to tuple</source>
         <target state="translated">Konwertuj na spójną kolekcję</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Dispose_objects_before_losing_scope">
+        <source>Dispose objects before losing scope</source>
+        <target state="new">Dispose objects before losing scope</target>
         <note />
       </trans-unit>
       <trans-unit id="Expression_value_is_never_used">
@@ -395,6 +405,16 @@
       <trans-unit id="Use_range_operator">
         <source>Use range operator</source>
         <target state="translated">Użyj operatora zakresu</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Use_recommended_dispose_pattern">
+        <source>Use recommended dispose pattern</source>
+        <target state="new">Use recommended dispose pattern</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Use_recommended_dispose_pattern_to_ensure_that_object_created_by_0_is_disposed_on_all_paths_If_possible_wrap_the_creation_within_a_using_statement_or_a_using_declaration_Otherwise_use_a_try_finally_pattern">
+        <source>Use recommended dispose pattern to ensure that object created by '{0}' is disposed on all paths. If possible, wrap the creation within a 'using' statement or a 'using' declaration. Otherwise, use a try-finally pattern.</source>
+        <target state="new">Use recommended dispose pattern to ensure that object created by '{0}' is disposed on all paths. If possible, wrap the creation within a 'using' statement or a 'using' declaration. Otherwise, use a try-finally pattern.</target>
         <note />
       </trans-unit>
       <trans-unit id="Use_simple_using_statement">

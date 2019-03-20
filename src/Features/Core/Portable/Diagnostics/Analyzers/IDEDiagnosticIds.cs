@@ -107,6 +107,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         public const string MakeStructFieldsWritable = "IDE0064";
 
+        public const string DisposeObjectsBeforeLosingScopeDiagnosticId = "IDE0065";
 
         // Analyzer error Ids
         public const string AnalyzerChangedId = "IDE1001";
