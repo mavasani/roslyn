@@ -903,5 +903,9 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
 
             return false;
         }
+
+        public static bool IsDisposable(this ITypeSymbol type, ITypeSymbol iDisposableType)
+            => iDisposableType != null &&
+               type?.AllInterfaces.Contains(iDisposableType) == true;
     }
 }

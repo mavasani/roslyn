@@ -79,6 +79,16 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos; contains field &apos;{1}&apos; that is of IDisposable type &apos;{2}&apos;, but it is never disposed. Change the Dispose method on &apos;{0}&apos; to call Close or Dispose on this field..
+        /// </summary>
+        internal static string _0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Change_the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field {
+            get {
+                return ResourceManager.GetString("0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Change_" +
+                        "the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to {0} Keyword.
         /// </summary>
         internal static string _0_Keyword {
@@ -1167,6 +1177,15 @@ namespace Microsoft.CodeAnalysis {
         internal static string Deleting_captured_variable_0_will_prevent_the_debug_session_from_continuing {
             get {
                 return ResourceManager.GetString("Deleting_captured_variable_0_will_prevent_the_debug_session_from_continuing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Disposable fields should be disposed.
+        /// </summary>
+        internal static string Disposable_fields_should_be_disposed {
+            get {
+                return ResourceManager.GetString("Disposable_fields_should_be_disposed", resourceCulture);
             }
         }
         
@@ -4426,15 +4445,6 @@ namespace Microsoft.CodeAnalysis {
         internal static string Use_range_operator {
             get {
                 return ResourceManager.GetString("Use_range_operator", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Use recommended dispose pattern.
-        /// </summary>
-        internal static string Use_recommended_dispose_pattern {
-            get {
-                return ResourceManager.GetString("Use_recommended_dispose_pattern", resourceCulture);
             }
         }
         

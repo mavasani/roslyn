@@ -1650,10 +1650,13 @@ This version used in: {2}</value>
   <data name="Call_Dispose_on_object_created_by_0_before_all_references_to_it_are_out_of_scope" xml:space="preserve">
     <value>Call System.IDisposable.Dispose on object created by '{0}' before all references to it are out of scope.</value>
   </data>
-  <data name="Use_recommended_dispose_pattern" xml:space="preserve">
-    <value>Use recommended dispose pattern</value>
-  </data>
   <data name="Use_recommended_dispose_pattern_to_ensure_that_object_created_by_0_is_disposed_on_all_paths_If_possible_wrap_the_creation_within_a_using_statement_or_a_using_declaration_Otherwise_use_a_try_finally_pattern" xml:space="preserve">
     <value>Use recommended dispose pattern to ensure that object created by '{0}' is disposed on all paths. If possible, wrap the creation within a 'using' statement or a 'using' declaration. Otherwise, use a try-finally pattern.</value>
+  </data>
+  <data name="Disposable_fields_should_be_disposed" xml:space="preserve">
+    <value>Disposable fields should be disposed</value>
+  </data>
+  <data name="0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Change_the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field" xml:space="preserve">
+    <value>'{0}' contains field '{1}' that is of IDisposable type '{2}', but it is never disposed. Change the Dispose method on '{0}' to call Close or Dispose on this field.</value>
   </data>
 </root>
