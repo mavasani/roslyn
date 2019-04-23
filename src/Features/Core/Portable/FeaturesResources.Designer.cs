@@ -79,16 +79,6 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to &apos;{0}&apos; contains field &apos;{1}&apos; that is of IDisposable type &apos;{2}&apos;, but it is never disposed. Change the Dispose method on &apos;{0}&apos; to call Close or Dispose on this field..
-        /// </summary>
-        internal static string _0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Change_the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field {
-            get {
-                return ResourceManager.GetString("0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Change_" +
-                        "the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to {0} Keyword.
         /// </summary>
         internal static string _0_Keyword {
@@ -3754,6 +3744,16 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Type &apos;{0}&apos; contains field &apos;{1}&apos; that is of IDisposable type &apos;{2}&apos;, but it is never disposed. Change the Dispose method on &apos;{0}&apos; to call Close or Dispose on this field..
+        /// </summary>
+        internal static string Type_0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Change_the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field {
+            get {
+                return ResourceManager.GetString("Type_0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Ch" +
+                        "ange_the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to type constraint.
         /// </summary>
         internal static string type_constraint {
@@ -4655,6 +4655,15 @@ namespace Microsoft.CodeAnalysis {
         internal static string Wrap_expression {
             get {
                 return ResourceManager.GetString("Wrap_expression", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Wrap inside using statement.
+        /// </summary>
+        internal static string Wrap_inside_using_statement {
+            get {
+                return ResourceManager.GetString("Wrap_inside_using_statement", resourceCulture);
             }
         }
         

@@ -2,11 +2,6 @@
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
   <file datatype="xml" source-language="en" target-language="it" original="../FeaturesResources.resx">
     <body>
-      <trans-unit id="0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Change_the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field">
-        <source>'{0}' contains field '{1}' that is of IDisposable type '{2}', but it is never disposed. Change the Dispose method on '{0}' to call Close or Dispose on this field.</source>
-        <target state="new">'{0}' contains field '{1}' that is of IDisposable type '{2}', but it is never disposed. Change the Dispose method on '{0}' to call Close or Dispose on this field.</target>
-        <note />
-      </trans-unit>
       <trans-unit id="Add_member_name">
         <source>Add member name</source>
         <target state="translated">Aggiungi nome del membro</target>
@@ -332,6 +327,11 @@
         <target state="new">Split into nested '{0}' statements</target>
         <note />
       </trans-unit>
+      <trans-unit id="Type_0_contains_field_1_that_is_of_IDisposable_type_2_but_it_is_never_disposed_Change_the_Dispose_method_on_0_to_call_Close_or_Dispose_on_this_field">
+        <source>Type '{0}' contains field '{1}' that is of IDisposable type '{2}', but it is never disposed. Change the Dispose method on '{0}' to call Close or Dispose on this field.</source>
+        <target state="new">Type '{0}' contains field '{1}' that is of IDisposable type '{2}', but it is never disposed. Change the Dispose method on '{0}' to call Close or Dispose on this field.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Unwrap_all_arguments">
         <source>Unwrap all arguments</source>
         <target state="translated">Annulla ritorno a capo per tutti gli argomenti</target>
@@ -461,6 +461,11 @@
         <source>Wrap expression</source>
         <target state="translated">Imposta ritorno a capo per l'espressione</target>
         <note />
+      </trans-unit>
+      <trans-unit id="Wrap_inside_using_statement">
+        <source>Wrap inside using statement</source>
+        <target state="new">Wrap inside using statement</target>
+        <note>{Locked="using"} is a C# keyword and should not be localized.</note>
       </trans-unit>
       <trans-unit id="Wrap_long_argument_list">
         <source>Wrap long argument list</source>
