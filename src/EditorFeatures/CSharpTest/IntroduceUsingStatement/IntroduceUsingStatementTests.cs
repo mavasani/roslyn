@@ -515,5 +515,145 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.IntroduceUsingStatement
     }
 }");
         }
+
+        [Fact]
+        public async Task DoesNotBreakIntersectingLocalDeclarations()
+        {
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class A : IDisposable
+{
+    public void Dispose() { }
+    public void M() { }
+}
+
+class C
+{
+    void M()
+    {
+        var x1 = new A();[||]
+        var x2 = new A();
+        x1.M();
+        x2.M();
+    }
+}",
+@"using System;
+
+class A : IDisposable
+{
+    public void Dispose() { }
+    public void M() { }
+}
+
+class C
+{
+    void M()
+    {
+        using (var x1 = new A())
+        {
+            var x2 = new A();
+            x1.M();
+            x2.M();
+        }
+    }
+}");
+        }
+
+        [Fact]
+        public async Task DoesNotBreakIntersectingLocalDeclarations_02()
+        {
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class A : IDisposable
+{
+    public void Dispose() { }
+    public void M() { }
+}
+
+class C
+{
+    void M()
+    {
+        var x1 = new A();[||]
+        var x2 = new A();
+        x1.M();
+        var x3 = new A();
+        x2.M();
+        x3.M();
+    }
+}",
+@"using System;
+
+class A : IDisposable
+{
+    public void Dispose() { }
+    public void M() { }
+}
+
+class C
+{
+    void M()
+    {
+        using (var x1 = new A())
+        {
+            var x2 = new A();
+            x1.M();
+            var x3 = new A();
+            x2.M();
+            x3.M();
+        }
+    }
+}");
+        }
+
+        [Fact]
+        public async Task DoesNotBreakIntersectingLocalDeclarations_03()
+        {
+            await TestInRegularAndScriptAsync(
+@"using System;
+
+class A : IDisposable
+{
+    public void Dispose() { }
+    public void M() { }
+}
+
+class C
+{
+    void M()
+    {
+        var x1 = new A();
+        var x2 = new A();[||]
+        x1.M();
+        var x3 = new A();
+        x2.M();
+        x3.M();
+    }
+}",
+@"using System;
+
+class A : IDisposable
+{
+    public void Dispose() { }
+    public void M() { }
+}
+
+class C
+{
+    void M()
+    {
+        var x1 = new A();
+        using (var x2 = new A())
+        {
+            x1.M();
+            var x3 = new A();
+            x2.M();
+            x3.M();
+        }
+    }
+}");
+        }
     }
 }
