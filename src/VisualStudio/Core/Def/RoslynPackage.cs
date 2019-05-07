@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Completion.Log;
 using Microsoft.CodeAnalysis.Editor;
 using Microsoft.CodeAnalysis.Editor.Shared.Utilities;
+using Microsoft.CodeAnalysis.Editor.Suggestions;
 using Microsoft.CodeAnalysis.ErrorReporting;
 using Microsoft.CodeAnalysis.Experiments;
 using Microsoft.CodeAnalysis.Logging;
@@ -39,6 +40,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Setup
     [Guid(Guids.RoslynPackageIdString)]
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [ProvideMenuResource("Menus.ctmenu", version: 17)]
+    [ProvideToolWindow(typeof(AvailableCodeActionsWindow))]
     internal class RoslynPackage : AbstractPackage
     {
         private VisualStudioWorkspace _workspace;
@@ -87,6 +89,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Setup
             _solutionEventMonitor = new SolutionEventMonitor(_workspace);
 
             TrackBulkFileOperations();
+
+            await ShowToolWindowAsync(typeof(AvailableCodeActionsWindow), id: 0, create: true, this.DisposalToken).ConfigureAwait(true);
         }
 
         private void InitializeColors()
@@ -295,6 +299,27 @@ namespace Microsoft.VisualStudio.LanguageServices.Setup
                     localRegistration = null;
                 }
             }
+        }
+
+        public override IVsAsyncToolWindowFactory GetAsyncToolWindowFactory(Guid toolWindowType)
+        {
+            // Return this for everything, as all our windows are now async
+            return this;
+        }
+
+        protected override string GetToolWindowTitle(Type toolWindowType, int id)
+        {
+            if (toolWindowType == typeof(AvailableCodeActionsWindow))
+            {
+                return EditorFeaturesWpfResources.Available_Code_Actions;
+            }
+
+            return null;
+        }
+
+        protected override Task<object> InitializeToolWindowAsync(Type toolWindowType, int id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new object());
         }
     }
 }

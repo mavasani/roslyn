@@ -14,6 +14,8 @@ using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Microsoft.CodeAnalysis.Shared.Utilities;
 using Microsoft.VisualStudio.Language.Intellisense;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Roslyn.Utilities;
@@ -46,6 +48,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
         public readonly ImmutableArray<Lazy<ISuggestedActionCallback>> ActionCallbacks;
 
         public readonly ImmutableArray<Lazy<IImageMonikerService, OrderableMetadata>> ImageMonikerServices;
+        private readonly IVsUIShell _uiShell;
 
         [ImportingConstructor]
         [Obsolete(MefConstruction.ImportingConstructorMessage, error: true)]
@@ -58,6 +61,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
             IWaitIndicator waitIndicator,
             ISuggestedActionCategoryRegistryService suggestedActionCategoryRegistry,
             IAsynchronousOperationListenerProvider listenerProvider,
+            SVsServiceProvider serviceProvider,
             [ImportMany] IEnumerable<Lazy<IImageMonikerService, OrderableMetadata>> imageMonikerServices,
             [ImportMany] IEnumerable<Lazy<ISuggestedActionCallback>> actionCallbacks)
         {
@@ -69,6 +73,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
             ActionCallbacks = actionCallbacks.ToImmutableArray();
             EditHandler = editHandler;
             WaitIndicator = waitIndicator;
+            _uiShell = (IVsUIShell)serviceProvider.GetService<IVsUIShell, SVsUIShell>();
             OperationListener = listenerProvider.GetListener(FeatureAttribute.LightBulb);
 
             ImageMonikerServices = ExtensionOrderer.Order(imageMonikerServices).ToImmutableArray();
@@ -79,7 +84,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
             Contract.ThrowIfNull(textView);
             Contract.ThrowIfNull(textBuffer);
 
-            return new SuggestedActionsSource(_threadingContext, this, textView, textBuffer, _suggestedActionCategoryRegistry);
+            return new SuggestedActionsSource(_threadingContext, this, textView, textBuffer, _suggestedActionCategoryRegistry, _uiShell);
         }
     }
 }

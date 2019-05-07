@@ -66,9 +66,22 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
             }
         }
 
-        public async Task<bool> HasRefactoringsAsync(
+        public Task<bool> HasRefactoringsAsync(
             Document document,
             TextSpan state,
+            CancellationToken cancellationToken)
+            => HasRefactoringsCoreAsync(document, state, nodeToCheckOpt: null, cancellationToken);
+
+        public Task<bool> HasRefactoringsAsync(
+            Document document,
+            SyntaxNode node,
+            CancellationToken cancellationToken)
+            => HasRefactoringsCoreAsync(document, node.Span, nodeToCheckOpt: node, cancellationToken);
+
+        public async Task<bool> HasRefactoringsCoreAsync(
+            Document document,
+            TextSpan state,
+            SyntaxNode nodeToCheckOpt,
             CancellationToken cancellationToken)
         {
             var extensionManager = document.Project.Solution.Workspace.Services.GetService<IExtensionManager>();
@@ -78,7 +91,7 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var refactoring = await GetRefactoringFromProviderAsync(
-                    document, state, provider, extensionManager, cancellationToken).ConfigureAwait(false);
+                    document, state, nodeToCheckOpt, provider, extensionManager, cancellationToken).ConfigureAwait(false);
 
                 if (refactoring != null)
                 {
@@ -89,9 +102,22 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
             return false;
         }
 
-        public async Task<ImmutableArray<CodeRefactoring>> GetRefactoringsAsync(
+        public Task<ImmutableArray<CodeRefactoring>> GetRefactoringsAsync(
             Document document,
             TextSpan state,
+            CancellationToken cancellationToken)
+            => GetRefactoringsCoreAsync(document, state, nodeToCheckOpt: null, cancellationToken);
+
+        public Task<ImmutableArray<CodeRefactoring>> GetRefactoringsAsync(
+            Document document,
+            SyntaxNode node,
+            CancellationToken cancellationToken)
+            => GetRefactoringsCoreAsync(document, node.Span, node, cancellationToken);
+
+        private async Task<ImmutableArray<CodeRefactoring>> GetRefactoringsCoreAsync(
+            Document document,
+            TextSpan state,
+            SyntaxNode nodeToCheckOpt,
             CancellationToken cancellationToken)
         {
             using (Logger.LogBlock(FunctionId.Refactoring_CodeRefactoringService_GetRefactoringsAsync, cancellationToken))
@@ -102,7 +128,7 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
                 foreach (var provider in this.GetProviders(document))
                 {
                     tasks.Add(Task.Run(
-                        () => GetRefactoringFromProviderAsync(document, state, provider, extensionManager, cancellationToken), cancellationToken));
+                        () => GetRefactoringFromProviderAsync(document, state, nodeToCheckOpt, provider, extensionManager, cancellationToken), cancellationToken));
                 }
 
                 var results = await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -113,12 +139,14 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
         private async Task<CodeRefactoring> GetRefactoringFromProviderAsync(
             Document document,
             TextSpan state,
+            SyntaxNode nodeToCheckOpt,
             CodeRefactoringProvider provider,
             IExtensionManager extensionManager,
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (extensionManager.IsDisabled(provider))
+            if (extensionManager.IsDisabled(provider) ||
+                nodeToCheckOpt != null && !provider.IsSupportedSyntaxNode(nodeToCheckOpt))
             {
                 return null;
             }

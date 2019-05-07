@@ -48,6 +48,9 @@ namespace Microsoft.CodeAnalysis.ConvertForToForEach
             TForStatementSyntax currentFor, TTypeNode typeNode, SyntaxToken foreachIdentifier,
             TExpressionSyntax collectionExpression, ITypeSymbol iterationVariableType, OptionSet options);
 
+        internal override bool IsSupportedSyntaxNode(SyntaxNode node)
+            => node is TForStatementSyntax;
+
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             var cancellationToken = context.CancellationToken;
@@ -65,9 +68,13 @@ namespace Microsoft.CodeAnalysis.ConvertForToForEach
             if (!context.Span.IsEmpty)
             {
                 // if there is a selection, it must match the 'for' span exactly.
-                if (context.Span != forStatement.GetFirstToken().Span)
+                if (context.Span != forStatement.Span)
                 {
-                    return;
+                    var node = root.FindNode(context.Span);
+                    if (node == null || node.Span != forStatement.Span)
+                    {
+                        return;
+                    }
                 }
             }
             else

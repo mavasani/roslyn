@@ -41,6 +41,9 @@ namespace Microsoft.CodeAnalysis.ConvertForEachToFor
         protected abstract void ConvertToForStatement(
             SemanticModel model, ForEachInfo info, SyntaxEditor editor, CancellationToken cancellationToken);
 
+        internal override bool IsSupportedSyntaxNode(SyntaxNode node)
+            => node is TForEachStatement;
+
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             var document = context.Document;
