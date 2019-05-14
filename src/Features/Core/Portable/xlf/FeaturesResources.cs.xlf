@@ -82,6 +82,11 @@
         <target state="translated">Kvalita kódu</target>
         <note />
       </trans-unit>
+      <trans-unit id="Configure_0_severity">
+        <source>Configure {0} severity</source>
+        <target state="new">Configure {0} severity</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Convert_to_linq">
         <source>Convert to LINQ</source>
         <target state="translated">Převést na LINQ</target>
@@ -345,6 +350,11 @@
       <trans-unit id="Split_into_nested_0_statements">
         <source>Split into nested '{0}' statements</source>
         <target state="new">Split into nested '{0}' statements</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Suppress_0">
+        <source>Suppress {0}</source>
+        <target state="new">Suppress {0}</target>
         <note />
       </trans-unit>
       <trans-unit id="Target_type_matches">
@@ -1436,11 +1446,6 @@ Chcete pokračovat?</target>
       <trans-unit id="Style">
         <source>Style</source>
         <target state="translated">Styl</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Suppress_0">
-        <source>Suppress {0}</source>
-        <target state="translated">Potlačit {0}</target>
         <note />
       </trans-unit>
       <trans-unit id="Re_triage_0_currently_1">
