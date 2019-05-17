@@ -33,12 +33,18 @@ namespace Microsoft.CodeAnalysis
                 IEnumerable<Location> additionalLocations,
                 object[] messageArgs,
                 ImmutableDictionary<string, string> properties,
-                bool isSuppressed)
+                bool isSuppressed,
+                string suppressionMessageOpt)
             {
                 if ((warningLevel == 0 && severity != DiagnosticSeverity.Error) ||
                     (warningLevel != 0 && severity == DiagnosticSeverity.Error))
                 {
                     throw new ArgumentException($"{nameof(warningLevel)} ({warningLevel}) and {nameof(severity)} ({severity}) are not compatible.", nameof(warningLevel));
+                }
+
+                if (!string.IsNullOrEmpty(suppressionMessageOpt) && !isSuppressed)
+                {
+                    throw new ArgumentException(nameof(isSuppressed));
                 }
 
                 _descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
@@ -49,6 +55,7 @@ namespace Microsoft.CodeAnalysis
                 _messageArgs = messageArgs ?? Array.Empty<object>();
                 _properties = properties ?? ImmutableDictionary<string, string>.Empty;
                 _isSuppressed = isSuppressed;
+                SuppressionMessageOpt = suppressionMessageOpt;
             }
 
             internal static SimpleDiagnostic Create(
@@ -61,7 +68,7 @@ namespace Microsoft.CodeAnalysis
                 ImmutableDictionary<string, string> properties,
                 bool isSuppressed = false)
             {
-                return new SimpleDiagnostic(descriptor, severity, warningLevel, location, additionalLocations, messageArgs, properties, isSuppressed);
+                return new SimpleDiagnostic(descriptor, severity, warningLevel, location, additionalLocations, messageArgs, properties, isSuppressed, suppressionMessageOpt: null);
             }
 
             internal static SimpleDiagnostic Create(string id, LocalizableString title, string category, LocalizableString message, LocalizableString description, string helpLink,
@@ -72,7 +79,7 @@ namespace Microsoft.CodeAnalysis
             {
                 var descriptor = new DiagnosticDescriptor(id, title, message,
                      category, defaultSeverity, isEnabledByDefault, description, helpLink, customTags.ToImmutableArrayOrEmpty());
-                return new SimpleDiagnostic(descriptor, severity, warningLevel, location, additionalLocations, messageArgs: null, properties: properties, isSuppressed: isSuppressed);
+                return new SimpleDiagnostic(descriptor, severity, warningLevel, location, additionalLocations, messageArgs: null, properties: properties, isSuppressed: isSuppressed, suppressionMessageOpt: null);
             }
 
             public override DiagnosticDescriptor Descriptor
@@ -119,6 +126,8 @@ namespace Microsoft.CodeAnalysis
             {
                 get { return _isSuppressed; }
             }
+
+            internal override string SuppressionMessageOpt { get; }
 
             public override int WarningLevel
             {
@@ -183,7 +192,7 @@ namespace Microsoft.CodeAnalysis
 
                 if (location != _location)
                 {
-                    return new SimpleDiagnostic(_descriptor, _severity, _warningLevel, location, _additionalLocations, _messageArgs, _properties, _isSuppressed);
+                    return new SimpleDiagnostic(_descriptor, _severity, _warningLevel, location, _additionalLocations, _messageArgs, _properties, _isSuppressed, SuppressionMessageOpt);
                 }
 
                 return this;
@@ -194,7 +203,7 @@ namespace Microsoft.CodeAnalysis
                 if (this.Severity != severity)
                 {
                     var warningLevel = GetDefaultWarningLevel(severity);
-                    return new SimpleDiagnostic(_descriptor, severity, warningLevel, _location, _additionalLocations, _messageArgs, _properties, _isSuppressed);
+                    return new SimpleDiagnostic(_descriptor, severity, warningLevel, _location, _additionalLocations, _messageArgs, _properties, _isSuppressed, SuppressionMessageOpt);
                 }
 
                 return this;
@@ -204,7 +213,22 @@ namespace Microsoft.CodeAnalysis
             {
                 if (this.IsSuppressed != isSuppressed)
                 {
-                    return new SimpleDiagnostic(_descriptor, _severity, _warningLevel, _location, _additionalLocations, _messageArgs, _properties, isSuppressed);
+                    return new SimpleDiagnostic(_descriptor, _severity, _warningLevel, _location, _additionalLocations, _messageArgs, _properties, isSuppressed, SuppressionMessageOpt);
+                }
+
+                return this;
+            }
+
+            internal Diagnostic WithSuppressionMessage(string suppressionMessage)
+            {
+                if (suppressionMessage == null)
+                {
+                    throw new ArgumentNullException(nameof(suppressionMessage));
+                }
+
+                if (this.SuppressionMessageOpt != suppressionMessage)
+                {
+                    return new SimpleDiagnostic(_descriptor, _severity, _warningLevel, _location, _additionalLocations, _messageArgs, _properties, isSuppressed: true, suppressionMessage);
                 }
 
                 return this;
