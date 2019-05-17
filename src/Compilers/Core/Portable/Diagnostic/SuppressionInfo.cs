@@ -18,10 +18,19 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public AttributeData Attribute { get; }
 
-        internal SuppressionInfo(string id, AttributeData attribute)
+        /// <summary>
+        /// Additional information about the source of the suppression. Possible values are:
+        ///     1. "pragma": Suppressed by an inline pragma source directive
+        ///     2. "SuppressMessageAttribute": Suppressed by a SuppressMessageAttribute
+        ///     3. Comma separated list of programmatic suppressions, where each suppression is in the format: %SuppressionID: SuppressionDescription%
+        /// </summary>
+        public string Source { get; }
+
+        internal SuppressionInfo(string id, AttributeData attribute, string suppressionMessage)
         {
             Id = id;
             Attribute = attribute;
+            Source = suppressionMessage;
         }
     }
 }

@@ -486,6 +486,14 @@ namespace Microsoft.CodeAnalysis
             bool hasErrors = false;
             foreach (var diag in diagnostics)
             {
+                ReportDiagnostic(diag);
+            }
+
+            return hasErrors;
+
+            // Local functions
+            void ReportDiagnostic(Diagnostic diag)
+            {
                 if (_reportedDiagnostics.Contains(diag))
                 {
                     // TODO: This invariant fails (at least) in the case where we see a member declaration "x = 1;".
@@ -496,20 +504,28 @@ namespace Microsoft.CodeAnalysis
                     // we previously created.
                     //this assert isn't valid if we change the design to not bail out after each phase.
                     //System.Diagnostics.Debug.Assert(diag.Severity != DiagnosticSeverity.Error);
-                    continue;
+                    return;
                 }
                 else if (diag.Severity == DiagnosticSeverity.Hidden)
                 {
                     // Not reported from the command-line compiler.
-                    continue;
+                    return;
                 }
 
                 // We want to report diagnostics with source suppression in the error log file.
                 // However, these diagnostics should not be reported on the console output.
                 errorLoggerOpt?.LogDiagnostic(diag);
-                if (diag.IsSuppressed)
+
+                // If the diagnostic was suppressed by a DiagnosticSuppressor, then we report an info diagnostic
+                // so that the suppression information is available in the binary logs and verbose build logs.
+                if (diag.SuppressionSource != null)
                 {
-                    continue;
+                    // Diagnostic '{0}' was programmatically suppressed by DiagnosticSuppressor(s): '{1}'
+                    diag = Diagnostic.Create(SuppressionDiagnosticDescriptor, diag.Location, diag.Id, diag.SuppressionSource);
+                }
+                else if (diag.IsSuppressed)
+                {
+                    return;
                 }
 
                 // Diagnostics that aren't suppressed will be reported to the console output and, if they are errors,
@@ -523,9 +539,15 @@ namespace Microsoft.CodeAnalysis
 
                 _reportedDiagnostics.Add(diag);
             }
-
-            return hasErrors;
         }
+
+        private readonly DiagnosticDescriptor SuppressionDiagnosticDescriptor = new DiagnosticDescriptor(
+            "SPR0001",
+            CodeAnalysisResources.SuppressionDiagnosticDescriptorTitle,
+            CodeAnalysisResources.SuppressionDiagnosticDescriptorMessage,
+            "ProgrammaticSuppression",
+            DiagnosticSeverity.Info,
+            isEnabledByDefault: true);
 
         /// <summary>Returns true if there were any errors, false otherwise.</summary>
         private bool ReportDiagnostics(DiagnosticBag diagnostics, TextWriter consoleOutput, ErrorLogger errorLoggerOpt)
@@ -1021,11 +1043,18 @@ namespace Microsoft.CodeAnalysis
                             // since that method calls EventQueue.TryComplete. Without
                             // TryComplete, we may miss diagnostics.
                             var hostDiagnostics = analyzerDriver.GetDiagnosticsAsync(compilation).Result;
-                            diagnostics.AddRange(hostDiagnostics);
-                            if (hostDiagnostics.Any(IsReportedError))
+                            if (!hostDiagnostics.IsEmpty)
                             {
-                                success = false;
+                                // Apply diagnostic suppressions for analyzer diagnostics from diagnostic suppressors.
+                                hostDiagnostics = analyzerDriver.ApplyAnalyzerSuppressions(hostDiagnostics, compilation);
+
+                                if (hostDiagnostics.Any(IsReportedError))
+                                {
+                                    success = false;
+                                }
                             }
+
+                            diagnostics.AddRange(hostDiagnostics);
                         }
                     }
                     finally

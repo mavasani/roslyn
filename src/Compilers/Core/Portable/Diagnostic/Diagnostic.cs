@@ -329,6 +329,11 @@ namespace Microsoft.CodeAnalysis
         public abstract bool IsSuppressed { get; }
 
         /// <summary>
+        /// Optional suppression source for more context on the suppression.
+        /// </summary>
+        internal virtual string SuppressionSource { get; }
+
+        /// <summary>
         /// Gets the <see cref="SuppressionInfo"/> for suppressed diagnostics, i.e. <see cref="IsSuppressed"/> = true.
         /// Otherwise, returns null.
         /// </summary>
@@ -346,7 +351,10 @@ namespace Microsoft.CodeAnalysis
                 attribute = null;
             }
 
-            return new SuppressionInfo(this.Id, attribute);
+            string suppressionMessage = SuppressionSource ??
+                (attribute != null ? "SuppressMessageAttribute" : "pragma");
+
+            return new SuppressionInfo(this.Id, attribute, suppressionMessage);
         }
 
         /// <summary>
