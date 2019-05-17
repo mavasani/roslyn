@@ -199,6 +199,7 @@ namespace Microsoft.CodeAnalysis
                 title, description, helpLink, location, additionalLocations, customTags, properties);
         }
 
+#pragma warning disable RS0026 // Do not add multiple public overloads with optional parameters
         /// <summary>
         /// Creates a <see cref="Diagnostic"/> instance which is localizable.
         /// </summary>
@@ -228,8 +229,10 @@ namespace Microsoft.CodeAnalysis
         /// can convey more detailed information to the fixer. If null, <see cref="Properties"/> will return
         /// <see cref="ImmutableDictionary{TKey, TValue}.Empty"/>.
         /// </param>
+        /// <param name="suppressionSource">Optional information about source of a suppression for suppressed diagnostics.</param>
         /// <returns>The <see cref="Diagnostic"/> instance.</returns>
         public static Diagnostic Create(
+#pragma warning restore RS0026 // Do not add multiple public overloads with optional parameters
             string id,
             string category,
             LocalizableString message,
@@ -244,7 +247,8 @@ namespace Microsoft.CodeAnalysis
             Location location = null,
             IEnumerable<Location> additionalLocations = null,
             IEnumerable<string> customTags = null,
-            ImmutableDictionary<string, string> properties = null)
+            ImmutableDictionary<string, string> properties = null,
+            string suppressionSource = null)
         {
             if (id == null)
             {
@@ -262,7 +266,7 @@ namespace Microsoft.CodeAnalysis
             }
 
             return SimpleDiagnostic.Create(id, title ?? string.Empty, category, message, description ?? string.Empty, helpLink ?? string.Empty,
-                severity, defaultSeverity, isEnabledByDefault, warningLevel, location ?? Location.None, additionalLocations, customTags, properties, isSuppressed);
+                severity, defaultSeverity, isEnabledByDefault, warningLevel, location ?? Location.None, additionalLocations, customTags, properties, isSuppressed, suppressionSource);
         }
 
         internal static Diagnostic Create(CommonMessageProvider messageProvider, int errorCode)
@@ -331,7 +335,7 @@ namespace Microsoft.CodeAnalysis
         /// <summary>
         /// Optional suppression message for more context on the suppression.
         /// </summary>
-        internal virtual string SuppressionMessageOpt { get; }
+        internal virtual string SuppressionSourceOpt { get; }
 
         /// <summary>
         /// Gets the <see cref="SuppressionInfo"/> for suppressed diagnostics, i.e. <see cref="IsSuppressed"/> = true.
@@ -351,7 +355,7 @@ namespace Microsoft.CodeAnalysis
                 attribute = null;
             }
 
-            string suppressionMessage = SuppressionMessageOpt ??
+            string suppressionMessage = SuppressionSourceOpt ??
                 (attribute != null ? "SuppressMessageAttribute" : "pragma");
 
             return new SuppressionInfo(this.Id, attribute, suppressionMessage);

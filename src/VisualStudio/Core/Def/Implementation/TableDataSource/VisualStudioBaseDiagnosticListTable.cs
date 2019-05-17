@@ -27,7 +27,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
             StandardTableColumnDefinitions.BuildTool,
             StandardTableColumnDefinitions.ErrorSource,
             StandardTableColumnDefinitions.DetailsExpander,
-            SuppressionStateColumnDefinition.ColumnName
+            SuppressionStateColumnDefinition.ColumnName,
+            SuppressionSourceColumnDefinition.ColumnName
         };
 
         protected VisualStudioBaseDiagnosticListTable(Workspace workspace, IDiagnosticService diagnosticService, ITableManagerProvider provider) :

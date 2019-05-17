@@ -353,6 +353,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                         case SuppressionStateColumnDefinition.ColumnName:
                             content = data.IsSuppressed ? ServicesVSResources.Suppressed : ServicesVSResources.Active;
                             return true;
+                        case SuppressionSourceColumnDefinition.ColumnName:
+                            content = data.SuppressionSourceOpt ?? string.Empty;
+                            return true;
                         default:
                             content = null;
                             return false;

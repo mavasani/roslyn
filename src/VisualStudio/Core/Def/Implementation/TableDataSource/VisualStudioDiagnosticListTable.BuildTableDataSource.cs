@@ -230,6 +230,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                             content = item.ProjectGuids;
                             return ((Guid[])content).Length > 0;
                         case SuppressionStateColumnDefinition.ColumnName:
+                        case SuppressionSourceColumnDefinition.ColumnName:
                             // Build doesn't support suppression.
                             Contract.ThrowIfTrue(data.IsSuppressed);
                             content = ServicesVSResources.NotApplicable;

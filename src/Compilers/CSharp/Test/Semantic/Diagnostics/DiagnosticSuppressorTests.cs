@@ -386,7 +386,7 @@ class C { }";
             var diagnostics = compilation.GetAnalyzerDiagnostics(analyzersAndSuppressors, reportSuppressedDiagnostics: true);
             Assert.Single(diagnostics);
             var suppressionInfos = diagnostics.Select(d => d.GetSuppressionInfo(compilation));
-            Assert.Equal($"{suppressionId}: {suppressor.SuppressionDescriptor.Description}", suppressionInfos.Single().SuppressionMessage);
+            Assert.Equal($"{suppressionId}: {suppressor.SuppressionDescriptor.Description}", suppressionInfos.Single().Source);
 
             const string suppressionId2 = "SPR1002";
             var suppressor2 = new DiagnosticSuppressorForId(analyzer.Descriptor.Id, suppressionId2);
@@ -395,7 +395,7 @@ class C { }";
             Assert.Single(diagnostics);
             suppressionInfos = diagnostics.Select(d => d.GetSuppressionInfo(compilation));
             Assert.Equal($"{suppressionId}: {suppressor.SuppressionDescriptor.Description}, {suppressionId2}: {suppressor2.SuppressionDescriptor.Description}",
-                suppressionInfos.Single().SuppressionMessage);
+                suppressionInfos.Single().Source);
         }
 
         [Fact, WorkItem(20242, "https://github.com/dotnet/roslyn/issues/20242")]
@@ -417,7 +417,7 @@ class C1
                 Diagnostic(ErrorCode.WRN_UnreferencedField, "f").WithArguments("C1.f").WithLocation(6, 26));
 
             var suppressionInfos = diagnostics.Select(d => d.GetSuppressionInfo(compilation));
-            Assert.Equal("pragma", suppressionInfos.Single().SuppressionMessage);
+            Assert.Equal("pragma", suppressionInfos.Single().Source);
         }
 
         [Fact, WorkItem(20242, "https://github.com/dotnet/roslyn/issues/20242")]
@@ -434,7 +434,7 @@ class C1 {{ }}";
             diagnostics.Verify(Diagnostic(analyzer.Descriptor.Id, source));
 
             var suppressionInfos = diagnostics.Select(d => d.GetSuppressionInfo(compilation));
-            Assert.Equal($"SuppressMessageAttribute", suppressionInfos.Single().SuppressionMessage);
+            Assert.Equal($"SuppressMessageAttribute", suppressionInfos.Single().Source);
         }
     }
 }

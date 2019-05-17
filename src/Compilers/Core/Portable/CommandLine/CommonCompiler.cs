@@ -518,10 +518,10 @@ namespace Microsoft.CodeAnalysis
 
                 // If the diagnostic was suppressed by a DiagnosticSuppressor, then we report an info diagnostic
                 // so that the suppression information is available in the binary logs and verbose build logs.
-                if (diag.SuppressionMessageOpt != null)
+                if (diag.SuppressionSourceOpt != null)
                 {
                     // Diagnostic '{0}' was programmatically suppressed by DiagnosticSuppressor(s): '{1}'
-                    diag = Diagnostic.Create(SuppressionDiagnosticDescriptor, diag.Location, diag.Id, diag.SuppressionMessageOpt);
+                    diag = Diagnostic.Create(SuppressionDiagnosticDescriptor, diag.Location, diag.Id, diag.SuppressionSourceOpt);
                 }
                 else if (diag.IsSuppressed)
                 {

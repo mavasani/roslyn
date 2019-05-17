@@ -12,7 +12,7 @@ Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.GetSemanticModel(M
 Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.Options.get -> Microsoft.CodeAnalysis.Diagnostics.AnalyzerOptions
 Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.ReportSuppression(Microsoft.CodeAnalysis.Diagnostics.Suppression suppression) -> void
 Microsoft.CodeAnalysis.Diagnostics.SuppressionAnalysisContext.ReportedDiagnostics.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Diagnostic>
-Microsoft.CodeAnalysis.Diagnostics.SuppressionInfo.SuppressionMessage.get -> string
+Microsoft.CodeAnalysis.Diagnostics.SuppressionInfo.Source.get -> string
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.SuppressionActionsCount.get -> int
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.SuppressionActionsCount.set -> void
 Microsoft.CodeAnalysis.IArrayTypeSymbol.ElementNullableAnnotation.get -> Microsoft.CodeAnalysis.NullableAnnotation
@@ -292,6 +292,7 @@ static Microsoft.CodeAnalysis.AnalyzerConfig.Section.NameComparer.get -> System.
 static Microsoft.CodeAnalysis.AnalyzerConfig.Section.PropertiesKeyComparer.get -> System.StringComparer
 static Microsoft.CodeAnalysis.AnalyzerConfig.TryCreateSectionNameMatcher(string sectionName) -> Microsoft.CodeAnalysis.AnalyzerConfig.SectionNameMatcher?
 static Microsoft.CodeAnalysis.AnalyzerConfigSet.Create<TList>(TList analyzerConfigs) -> Microsoft.CodeAnalysis.AnalyzerConfigSet
+static Microsoft.CodeAnalysis.Diagnostic.Create(string id, string category, Microsoft.CodeAnalysis.LocalizableString message, Microsoft.CodeAnalysis.DiagnosticSeverity severity, Microsoft.CodeAnalysis.DiagnosticSeverity defaultSeverity, bool isEnabledByDefault, int warningLevel, bool isSuppressed, Microsoft.CodeAnalysis.LocalizableString title = null, Microsoft.CodeAnalysis.LocalizableString description = null, string helpLink = null, Microsoft.CodeAnalysis.Location location = null, System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.Location> additionalLocations = null, System.Collections.Generic.IEnumerable<string> customTags = null, System.Collections.Immutable.ImmutableDictionary<string, string> properties = null, string suppressionSource = null) -> Microsoft.CodeAnalysis.Diagnostic
 static Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptions.KeyComparer.get -> System.StringComparer
 override Microsoft.CodeAnalysis.NullabilityInfo.Equals(object other) -> bool
 override Microsoft.CodeAnalysis.NullabilityInfo.GetHashCode() -> int

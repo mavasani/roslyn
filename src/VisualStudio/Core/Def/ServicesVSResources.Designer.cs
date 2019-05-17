@@ -2773,6 +2773,15 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Suppression Source.
+        /// </summary>
+        internal static string Suppression_Source {
+            get {
+                return ResourceManager.GetString("Suppression_Source", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Suppression State.
         /// </summary>
         internal static string Suppression_State {

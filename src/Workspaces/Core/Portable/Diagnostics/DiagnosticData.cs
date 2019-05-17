@@ -96,6 +96,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         public readonly IReadOnlyList<string> CustomTags;
         public readonly ImmutableDictionary<string, string> Properties;
         public readonly bool IsSuppressed;
+        public readonly string SuppressionSourceOpt;
 
         public readonly string ENUMessageForBingSearch;
 
@@ -122,13 +123,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             string description = null,
             string helpLink = null,
             bool isSuppressed = false,
+            string suppressionSourceOpt = null,
             IReadOnlyList<string> customTags = null,
             ImmutableDictionary<string, string> properties = null) :
                 this(
                     id, category, message, enuMessageForBingSearch,
                     severity, severity, isEnabledByDefault, warningLevel,
                     customTags ?? ImmutableArray<string>.Empty, properties ?? ImmutableDictionary<string, string>.Empty,
-                    workspace, projectId, location, additionalLocations, title, description, helpLink, isSuppressed)
+                    workspace, projectId, location, additionalLocations, title, description, helpLink, isSuppressed, suppressionSourceOpt)
         {
         }
 
@@ -150,7 +152,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             string title = null,
             string description = null,
             string helpLink = null,
-            bool isSuppressed = false)
+            bool isSuppressed = false,
+            string suppressionSourceOpt = null)
         {
             this.Id = id;
             this.Category = category;
@@ -173,6 +176,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             this.Description = description;
             this.HelpLink = helpLink;
             this.IsSuppressed = isSuppressed;
+            this.SuppressionSourceOpt = suppressionSourceOpt;
         }
 
         public bool HasTextSpan { get { return (DataLocation?.SourceSpan).HasValue; } }
@@ -199,6 +203,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     Severity == other.Severity &&
                     WarningLevel == other.WarningLevel &&
                     IsSuppressed == other.IsSuppressed &&
+                    SuppressionSourceOpt == other.SuppressionSourceOpt &&
                     ProjectId == other.ProjectId &&
                     DocumentId == other.DocumentId &&
                     DataLocation?.OriginalStartLine == other?.DataLocation?.OriginalStartLine &&
@@ -212,10 +217,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                    Hash.Combine(this.Message,
                    Hash.Combine(this.WarningLevel,
                    Hash.Combine(this.IsSuppressed,
+                   Hash.Combine(this.SuppressionSourceOpt ?? string.Empty,
                    Hash.Combine(this.ProjectId,
                    Hash.Combine(this.DocumentId,
                    Hash.Combine(this.DataLocation?.OriginalStartLine ?? 0,
-                   Hash.Combine(this.DataLocation?.OriginalStartColumn ?? 0, (int)this.Severity)))))))));
+                   Hash.Combine(this.DataLocation?.OriginalStartColumn ?? 0, (int)this.Severity))))))))));
         }
 
         public override string ToString()
@@ -252,7 +258,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return new DiagnosticData(this.Id, this.Category, this.Message, this.ENUMessageForBingSearch,
                 this.Severity, this.DefaultSeverity, this.IsEnabledByDefault, this.WarningLevel,
                 this.CustomTags, this.Properties, this.Workspace, this.ProjectId,
-                newLocation, this.AdditionalLocations, this.Title, this.Description, this.HelpLink, this.IsSuppressed);
+                newLocation, this.AdditionalLocations, this.Title, this.Description, this.HelpLink, this.IsSuppressed, this.SuppressionSourceOpt);
         }
 
         public async Task<Diagnostic> ToDiagnosticAsync(Project project, CancellationToken cancellationToken)
@@ -263,7 +269,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return Diagnostic.Create(
                 this.Id, this.Category, this.Message, this.Severity, this.DefaultSeverity,
                 this.IsEnabledByDefault, this.WarningLevel, this.IsSuppressed, this.Title, this.Description, this.HelpLink,
-                location, additionalLocations, customTags: this.CustomTags, properties: this.Properties);
+                location, additionalLocations, customTags: this.CustomTags, properties: this.Properties, this.SuppressionSourceOpt);
         }
 
         public static TextSpan GetTextSpan(DiagnosticDataLocation dataLocation, SourceText text)
