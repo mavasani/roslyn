@@ -7,10 +7,11 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.AvailableCodeActions;
 using Microsoft.CodeAnalysis.Completion.Log;
 using Microsoft.CodeAnalysis.Editor;
+using Microsoft.CodeAnalysis.Editor.Implementation.Suggestions;
 using Microsoft.CodeAnalysis.Editor.Shared.Utilities;
-using Microsoft.CodeAnalysis.Editor.Suggestions;
 using Microsoft.CodeAnalysis.ErrorReporting;
 using Microsoft.CodeAnalysis.Experiments;
 using Microsoft.CodeAnalysis.Logging;
@@ -25,6 +26,7 @@ using Microsoft.VisualStudio.LanguageServices.Implementation.Interactive;
 using Microsoft.VisualStudio.LanguageServices.Implementation.LanguageService;
 using Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem;
 using Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem.RuleSets;
+using Microsoft.VisualStudio.LanguageServices.Implementation.Suggestions;
 using Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource;
 using Microsoft.VisualStudio.LanguageServices.Telemetry;
 using Microsoft.VisualStudio.PlatformUI;
@@ -40,11 +42,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Setup
     [Guid(Guids.RoslynPackageIdString)]
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [ProvideMenuResource("Menus.ctmenu", version: 17)]
-    [ProvideToolWindow(typeof(AvailableCodeActionsWindow))]
+    [ProvideToolWindow(typeof(AvailableCodeActionsWindow), Style = VsDockStyle.Tabbed, Transient = true)]
     internal class RoslynPackage : AbstractPackage
     {
         private VisualStudioWorkspace _workspace;
         private WorkspaceFailureOutputPane _outputPane;
+        private AvailableCodeActionsService _updateAvailableCodeActionsService;
         private IComponentModel _componentModel;
         private RuleSetEventHandler _ruleSetEventHandler;
         private IDisposable _solutionEventMonitor;
@@ -90,7 +93,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Setup
 
             TrackBulkFileOperations();
 
-            await ShowToolWindowAsync(typeof(AvailableCodeActionsWindow), id: 0, create: true, this.DisposalToken).ConfigureAwait(true);
+            _updateAvailableCodeActionsService = (AvailableCodeActionsService)_workspace.Services.GetService<IAvailableCodeActionsService>();
+            var availableCodeActionsWindow = await FindToolWindowAsync(typeof(AvailableCodeActionsWindow), id: 0, create: true, this.DisposalToken).ConfigureAwait(false) as AvailableCodeActionsWindow;
+            _updateAvailableCodeActionsService.SetAvailableCodeActionsWindow(availableCodeActionsWindow);
         }
 
         private void InitializeColors()
@@ -311,7 +316,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Setup
         {
             if (toolWindowType == typeof(AvailableCodeActionsWindow))
             {
-                return EditorFeaturesWpfResources.Available_Code_Actions;
+                return ServicesVSResources.Available_Code_Actions;
             }
 
             return null;
@@ -319,6 +324,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Setup
 
         protected override Task<object> InitializeToolWindowAsync(Type toolWindowType, int id, CancellationToken cancellationToken)
         {
+            if (toolWindowType == typeof(AvailableCodeActionsWindow))
+            {
+                _updateAvailableCodeActionsService.UpdateAvailableCodeActionsForActiveDocumentAsync(CancellationToken.None).Wait();
+            }
+
             return Task.FromResult(new object());
         }
     }

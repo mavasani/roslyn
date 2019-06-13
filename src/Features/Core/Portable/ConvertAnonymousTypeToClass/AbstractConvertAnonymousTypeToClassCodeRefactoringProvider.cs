@@ -29,7 +29,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertAnonymousTypeToClass
         TObjectCreationExpressionSyntax,
         TAnonymousObjectCreationExpressionSyntax,
         TNamespaceDeclarationSyntax>
-        : CodeRefactoringProvider
+        : SyntaxBasedCodeRefactoringProvider<TAnonymousObjectCreationExpressionSyntax>
         where TExpressionSyntax : SyntaxNode
         where TNameSyntax : TExpressionSyntax
         where TIdentifierNameSyntax : TNameSyntax

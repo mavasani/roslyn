@@ -35,7 +35,7 @@ namespace Microsoft.CodeAnalysis.ConvertTupleToStruct
         TTupleTypeSyntax,
         TTypeBlockSyntax,
         TNamespaceDeclarationSyntax>
-        : CodeRefactoringProvider
+        : SyntaxBasedCodeRefactoringProvider
         where TExpressionSyntax : SyntaxNode
         where TNameSyntax : TExpressionSyntax
         where TIdentifierNameSyntax : TNameSyntax
@@ -58,6 +58,8 @@ namespace Microsoft.CodeAnalysis.ConvertTupleToStruct
         protected abstract TObjectCreationExpressionSyntax CreateObjectCreationExpression(
             TNameSyntax nameNode, SyntaxToken openParen, SeparatedSyntaxList<TArgumentSyntax> arguments, SyntaxToken closeParen);
 
+        internal sealed override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+            => node is TTupleExpressionSyntax || node is TTupleTypeSyntax;
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             var document = context.Document;

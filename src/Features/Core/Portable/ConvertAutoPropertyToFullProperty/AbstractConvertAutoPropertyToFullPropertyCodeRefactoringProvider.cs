@@ -14,10 +14,11 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.ConvertAutoPropertyToFullProperty
 {
-    internal abstract class AbstractConvertAutoPropertyToFullPropertyCodeRefactoringProvider
-        : CodeRefactoringProvider
+    internal abstract class AbstractConvertAutoPropertyToFullPropertyCodeRefactoringProvider<TPropertyDeclarationSyntax>
+        : SyntaxBasedCodeRefactoringProvider<TPropertyDeclarationSyntax>
+        where TPropertyDeclarationSyntax : SyntaxNode
     {
-        internal abstract SyntaxNode GetProperty(SyntaxToken token);
+        internal abstract TPropertyDeclarationSyntax GetProperty(SyntaxToken token);
         internal abstract Task<string> GetFieldNameAsync(Document document, IPropertySymbol propertySymbol, CancellationToken cancellationToken);
         internal abstract (SyntaxNode newGetAccessor, SyntaxNode newSetAccessor) GetNewAccessors(
             DocumentOptionSet options, SyntaxNode property, string fieldName, SyntaxGenerator generator);

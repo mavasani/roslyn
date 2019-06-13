@@ -17,7 +17,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseExpressionBody
 {
     [ExportCodeRefactoringProvider(LanguageNames.CSharp,
         Name = PredefinedCodeRefactoringProviderNames.UseExpressionBody), Shared]
-    internal class UseExpressionBodyCodeRefactoringProvider : CodeRefactoringProvider
+    internal class UseExpressionBodyCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
         private static readonly ImmutableArray<UseExpressionBodyHelper> _helpers = UseExpressionBodyHelper.Helpers;
 
@@ -26,6 +26,18 @@ namespace Microsoft.CodeAnalysis.CSharp.UseExpressionBody
         {
         }
 
+        internal sealed override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+        {
+            foreach (var helper in _helpers)
+            {
+                if (GetDeclaration(node, helper) != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             if (context.Span.Length > 0)

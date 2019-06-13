@@ -16,7 +16,8 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.AddFileBanner
 {
-    internal abstract class AbstractAddFileBannerCodeRefactoringProvider : CodeRefactoringProvider
+    internal abstract class AbstractAddFileBannerCodeRefactoringProvider<TCompilationUnitSyntax> : SyntaxBasedCodeRefactoringProvider<TCompilationUnitSyntax>
+        where TCompilationUnitSyntax : SyntaxNode
     {
         protected abstract bool IsCommentStartCharacter(char ch);
 

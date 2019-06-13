@@ -11,7 +11,7 @@ using static Microsoft.CodeAnalysis.CodeActions.CodeAction;
 namespace Microsoft.CodeAnalysis.CodeRefactorings.SyncNamespace
 {
     internal abstract partial class AbstractSyncNamespaceCodeRefactoringProvider<TNamespaceDeclarationSyntax, TCompilationUnitSyntax, TMemberDeclarationSyntax>
-        : CodeRefactoringProvider
+        : SyntaxBasedCodeRefactoringProvider<TNamespaceDeclarationSyntax>
         where TNamespaceDeclarationSyntax : SyntaxNode
         where TCompilationUnitSyntax : SyntaxNode
         where TMemberDeclarationSyntax : SyntaxNode

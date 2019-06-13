@@ -75,10 +75,11 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
         public Task<bool> HasRefactoringsAsync(
             Document document,
             SyntaxNode node,
+            bool useSpanStart,
             CancellationToken cancellationToken)
-            => HasRefactoringsCoreAsync(document, node.Span, nodeToCheckOpt: node, cancellationToken);
+            => HasRefactoringsCoreAsync(document, useSpanStart ? new TextSpan(node.SpanStart, 0) : node.Span, nodeToCheckOpt: node, cancellationToken);
 
-        public async Task<bool> HasRefactoringsCoreAsync(
+        private async Task<bool> HasRefactoringsCoreAsync(
             Document document,
             TextSpan state,
             SyntaxNode nodeToCheckOpt,
@@ -111,8 +112,9 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
         public Task<ImmutableArray<CodeRefactoring>> GetRefactoringsAsync(
             Document document,
             SyntaxNode node,
+            bool useSpanStart,
             CancellationToken cancellationToken)
-            => GetRefactoringsCoreAsync(document, node.Span, node, cancellationToken);
+            => GetRefactoringsCoreAsync(document, useSpanStart ? new TextSpan(node.SpanStart, 0) : node.Span, node, cancellationToken);
 
         private async Task<ImmutableArray<CodeRefactoring>> GetRefactoringsCoreAsync(
             Document document,
@@ -145,8 +147,13 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (extensionManager.IsDisabled(provider) ||
-                nodeToCheckOpt != null && !provider.IsSupportedSyntaxNode(nodeToCheckOpt))
+            if (extensionManager.IsDisabled(provider))
+            {
+                return null;
+            }
+
+            if (nodeToCheckOpt != null &&
+                (provider as SyntaxBasedCodeRefactoringProvider)?.IsRefactoringCandidate(nodeToCheckOpt, document, cancellationToken) != true)
             {
                 return null;
             }

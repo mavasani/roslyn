@@ -14,8 +14,8 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
 
         Task<ImmutableArray<CodeRefactoring>> GetRefactoringsAsync(Document document, TextSpan textSpan, CancellationToken cancellationToken);
 
-        Task<bool> HasRefactoringsAsync(Document document, SyntaxNode node, CancellationToken cancellationToken);
+        Task<bool> HasRefactoringsAsync(Document document, SyntaxNode node, bool useSpanStart, CancellationToken cancellationToken);
 
-        Task<ImmutableArray<CodeRefactoring>> GetRefactoringsAsync(Document document, SyntaxNode node, CancellationToken cancellationToken);
+        Task<ImmutableArray<CodeRefactoring>> GetRefactoringsAsync(Document document, SyntaxNode node, bool useSpanStart, CancellationToken cancellationToken);
     }
 }

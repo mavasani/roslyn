@@ -21,7 +21,8 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings.AddAwait
     /// Or:
     ///     var x = await GetAsync().ConfigureAwait(false);
     /// </summary>
-    internal abstract class AbstractAddAwaitCodeRefactoringProvider<TExpressionSyntax, TInvocationExpressionSyntax> : CodeRefactoringProvider
+    internal abstract class AbstractAddAwaitCodeRefactoringProvider<TExpressionSyntax, TInvocationExpressionSyntax>
+        : SyntaxBasedCodeRefactoringProvider<TInvocationExpressionSyntax>
         where TExpressionSyntax : SyntaxNode
         where TInvocationExpressionSyntax : TExpressionSyntax
     {

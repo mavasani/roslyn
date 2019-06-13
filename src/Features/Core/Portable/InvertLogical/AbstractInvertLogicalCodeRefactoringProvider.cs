@@ -19,7 +19,7 @@ namespace Microsoft.CodeAnalysis.InvertLogical
         TSyntaxKind,
         TExpressionSyntax,
         TBinaryExpressionSyntax>
-        : CodeRefactoringProvider
+        : SyntaxBasedCodeRefactoringProvider<TBinaryExpressionSyntax>
         where TSyntaxKind : struct
         where TExpressionSyntax : SyntaxNode
         where TBinaryExpressionSyntax : TExpressionSyntax

@@ -15,8 +15,11 @@ using Roslyn.Utilities;
 namespace Microsoft.CodeAnalysis.CSharp.CodeRefactorings.LambdaSimplifier
 {
     // [ExportCodeRefactoringProvider(LanguageNames.CSharp, Name = PredefinedCodeRefactoringProviderNames.SimplifyLambda)]
-    internal partial class LambdaSimplifierCodeRefactoringProvider : CodeRefactoringProvider
+    internal partial class LambdaSimplifierCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
+        internal override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+            => node is SimpleLambdaExpressionSyntax || node is ParenthesizedLambdaExpressionSyntax;
+
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             var document = context.Document;

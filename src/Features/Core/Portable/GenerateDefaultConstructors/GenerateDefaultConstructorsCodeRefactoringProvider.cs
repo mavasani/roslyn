@@ -1,9 +1,11 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Composition;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.GenerateMember.GenerateDefaultConstructors;
+using Microsoft.CodeAnalysis.LanguageServices;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 
 namespace Microsoft.CodeAnalysis.GenerateDefaultConstructors
@@ -22,11 +24,18 @@ namespace Microsoft.CodeAnalysis.GenerateDefaultConstructors
     /// </summary>
     [ExportCodeRefactoringProvider(LanguageNames.CSharp, LanguageNames.VisualBasic,
         Name = PredefinedCodeRefactoringProviderNames.GenerateDefaultConstructors), Shared]
-    internal class GenerateDefaultConstructorsCodeRefactoringProvider : CodeRefactoringProvider
+    internal sealed class GenerateDefaultConstructorsCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
         [ImportingConstructor]
         public GenerateDefaultConstructorsCodeRefactoringProvider()
         {
+        }
+
+        internal override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+        {
+            var root = document.GetSyntaxRootSynchronously(cancellationToken);
+            var syntaxFacts = document.GetLanguageService<ISyntaxFactsService>();
+            return syntaxFacts.IsOnTypeHeader(root, node.SpanStart);
         }
 
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)

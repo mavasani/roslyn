@@ -3,12 +3,13 @@
 using System.Composition;
 using Microsoft.CodeAnalysis.AddFileBanner;
 using Microsoft.CodeAnalysis.CodeRefactorings;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.CodeAnalysis.CSharp.AddFileBanner
 {
     [ExportCodeRefactoringProvider(LanguageNames.CSharp,
         Name = PredefinedCodeRefactoringProviderNames.AddFileBanner), Shared]
-    internal class CSharpAddFileBannerCodeRefactoringProvider : AbstractAddFileBannerCodeRefactoringProvider
+    internal class CSharpAddFileBannerCodeRefactoringProvider : AbstractAddFileBannerCodeRefactoringProvider<CompilationUnitSyntax>
     {
         [ImportingConstructor]
         public CSharpAddFileBannerCodeRefactoringProvider()

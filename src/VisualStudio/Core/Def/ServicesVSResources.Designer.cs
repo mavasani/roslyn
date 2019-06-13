@@ -398,6 +398,15 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Available Code Actions.
+        /// </summary>
+        internal static string Available_Code_Actions {
+            get {
+                return ResourceManager.GetString("Available_Code_Actions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Avoid expression statements that implicitly ignore value.
         /// </summary>
         internal static string Avoid_expression_statements_that_implicitly_ignore_value {

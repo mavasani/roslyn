@@ -19,8 +19,10 @@ namespace Microsoft.CodeAnalysis.ConvertToInterpolatedString
     /// into:
     ///     $"{a + b} str {d}{e}".
     /// </summary>
-    internal abstract class AbstractConvertConcatenationToInterpolatedStringRefactoringProvider : CodeRefactoringProvider
+    internal abstract class AbstractConvertConcatenationToInterpolatedStringRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
+        internal sealed override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+            => document.GetLanguageService<ISyntaxFactsService>().IsBinaryExpression(node);
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             // Currently only supported if there is no selection, to prevent possible confusion when

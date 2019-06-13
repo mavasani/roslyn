@@ -21,7 +21,7 @@ using Roslyn.Utilities;
 namespace Microsoft.CodeAnalysis.CSharp.CodeRefactorings.ConvertLocalFunctionToMethod
 {
     [ExportCodeRefactoringProvider(LanguageNames.CSharp, Name = nameof(CSharpConvertLocalFunctionToMethodCodeRefactoringProvider)), Shared]
-    internal sealed class CSharpConvertLocalFunctionToMethodCodeRefactoringProvider : CodeRefactoringProvider
+    internal sealed class CSharpConvertLocalFunctionToMethodCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider<LocalFunctionStatementSyntax>
     {
         private static readonly SyntaxAnnotation s_delegateToReplaceAnnotation = new SyntaxAnnotation();
         private static readonly SyntaxGenerator s_generator = CSharpSyntaxGenerator.Instance;

@@ -37,6 +37,11 @@
         <target state="translated">应用“{0}”项映射计划</target>
         <note />
       </trans-unit>
+      <trans-unit id="Available_Code_Actions">
+        <source>Available Code Actions</source>
+        <target state="new">Available Code Actions</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Avoid_expression_statements_that_implicitly_ignore_value">
         <source>Avoid expression statements that implicitly ignore value</source>
         <target state="translated">避免会隐式忽略值的表达式语句</target>

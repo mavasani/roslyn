@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis.ConvertForToForEach
         TExpressionSyntax,
         TMemberAccessExpressionSyntax,
         TTypeNode,
-        TVariableDeclaratorSyntax> : CodeRefactoringProvider
+        TVariableDeclaratorSyntax> : SyntaxBasedCodeRefactoringProvider<TForStatementSyntax>
         where TStatementSyntax : SyntaxNode
         where TForStatementSyntax : TStatementSyntax
         where TExpressionSyntax : SyntaxNode
@@ -47,9 +47,6 @@ namespace Microsoft.CodeAnalysis.ConvertForToForEach
         protected abstract SyntaxNode ConvertForNode(
             TForStatementSyntax currentFor, TTypeNode typeNode, SyntaxToken foreachIdentifier,
             TExpressionSyntax collectionExpression, ITypeSymbol iterationVariableType, OptionSet options);
-
-        internal override bool IsSupportedSyntaxNode(SyntaxNode node)
-            => node is TForStatementSyntax;
 
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {

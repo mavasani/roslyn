@@ -807,8 +807,8 @@ Do you want to continue?</value>
   <data name="Replace_0_and_1_with_property" xml:space="preserve">
     <value>Replace '{0}' and '{1}' with property</value>
   </data>
-  <data name="Replace_0_with_property" xml:space="preserve">
-    <value>Replace '{0}' with property</value>
+  <data name="Replace_method_with_property" xml:space="preserve">
+    <value>Replace method with property</value>
   </data>
   <data name="Method_referenced_implicitly" xml:space="preserve">
     <value>Method referenced implicitly</value>
@@ -944,11 +944,11 @@ This version used in: {2}</value>
   <data name="Add_braces" xml:space="preserve">
     <value>Add braces</value>
   </data>
-  <data name="Replace_0_with_method" xml:space="preserve">
-    <value>Replace '{0}' with method</value>
+  <data name="Replace_property_with_method" xml:space="preserve">
+    <value>Replace property with method</value>
   </data>
-  <data name="Replace_0_with_methods" xml:space="preserve">
-    <value>Replace '{0}' with methods</value>
+  <data name="Replace_property_with_methods" xml:space="preserve">
+    <value>Replace property with methods</value>
   </data>
   <data name="Property_referenced_implicitly" xml:space="preserve">
     <value>Property referenced implicitly</value>
@@ -1106,8 +1106,8 @@ This version used in: {2}</value>
   <data name="Add_document_0" xml:space="preserve">
     <value>Add document '{0}'</value>
   </data>
-  <data name="Add_argument_name_0" xml:space="preserve">
-    <value>Add argument name '{0}'</value>
+  <data name="Add_argument_name" xml:space="preserve">
+    <value>Add argument name</value>
   </data>
   <data name="Add_tuple_element_name_0" xml:space="preserve">
     <value>Add tuple element name '{0}'</value>
@@ -1298,8 +1298,8 @@ This version used in: {2}</value>
   <data name="Variable_declaration_can_be_deconstructed" xml:space="preserve">
     <value>Variable declaration can be deconstructed</value>
   </data>
-  <data name="Add_argument_name_0_including_trailing_arguments" xml:space="preserve">
-    <value>Add argument name '{0}' (including trailing arguments)</value>
+  <data name="Add_argument_name_including_trailing_arguments" xml:space="preserve">
+    <value>Add argument name (including trailing arguments)</value>
   </data>
   <data name="Using_readonly_structs_will_prevent_the_debug_session_from_continuing" xml:space="preserve">
     <value>Using readonly structs will prevent the debug session from continuing.</value>
@@ -1662,5 +1662,8 @@ This version used in: {2}</value>
   </data>
   <data name="DisposableFieldsShouldBeDisposedDescription" xml:space="preserve">
     <value>A type that implements System.IDisposable declares fields that are of types that also implement IDisposable. The Dispose method of the field is not called by the Dispose method of the declaring type. To fix a violation of this rule, call Dispose on fields that are of types that implement IDisposable if you are responsible for allocating and releasing the unmanaged resources held by the field.</value>
+  </data>
+  <data name="View_all_actions_in_this_document" xml:space="preserve">
+    <value>View all actions in this document...</value>
   </data>
 </root>

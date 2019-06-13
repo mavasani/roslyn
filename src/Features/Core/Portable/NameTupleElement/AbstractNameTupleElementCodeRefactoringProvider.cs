@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Microsoft.CodeAnalysis.NameTupleElement
 {
-    abstract class AbstractNameTupleElementCodeRefactoringProvider<TArgumentSyntax, TTupleExpressionSyntax> : CodeRefactoringProvider
+    abstract class AbstractNameTupleElementCodeRefactoringProvider<TArgumentSyntax, TTupleExpressionSyntax> : SyntaxBasedCodeRefactoringProvider<TArgumentSyntax>
         where TArgumentSyntax : SyntaxNode
         where TTupleExpressionSyntax : SyntaxNode
     {

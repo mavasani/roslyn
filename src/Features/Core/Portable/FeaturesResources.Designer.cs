@@ -125,20 +125,20 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Add argument name &apos;{0}&apos;.
+        ///   Looks up a localized string similar to Add argument name.
         /// </summary>
-        internal static string Add_argument_name_0 {
+        internal static string Add_argument_name {
             get {
-                return ResourceManager.GetString("Add_argument_name_0", resourceCulture);
+                return ResourceManager.GetString("Add_argument_name", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Add argument name &apos;{0}&apos; (including trailing arguments).
+        ///   Looks up a localized string similar to Add argument name (including trailing arguments).
         /// </summary>
-        internal static string Add_argument_name_0_including_trailing_arguments {
+        internal static string Add_argument_name_including_trailing_arguments {
             get {
-                return ResourceManager.GetString("Add_argument_name_0_including_trailing_arguments", resourceCulture);
+                return ResourceManager.GetString("Add_argument_name_including_trailing_arguments", resourceCulture);
             }
         }
         
@@ -3364,29 +3364,29 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Replace &apos;{0}&apos; with method.
+        ///   Looks up a localized string similar to Replace method with property.
         /// </summary>
-        internal static string Replace_0_with_method {
+        internal static string Replace_method_with_property {
             get {
-                return ResourceManager.GetString("Replace_0_with_method", resourceCulture);
+                return ResourceManager.GetString("Replace_method_with_property", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Replace &apos;{0}&apos; with methods.
+        ///   Looks up a localized string similar to Replace property with method.
         /// </summary>
-        internal static string Replace_0_with_methods {
+        internal static string Replace_property_with_method {
             get {
-                return ResourceManager.GetString("Replace_0_with_methods", resourceCulture);
+                return ResourceManager.GetString("Replace_property_with_method", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Replace &apos;{0}&apos; with property.
+        ///   Looks up a localized string similar to Replace property with methods.
         /// </summary>
-        internal static string Replace_0_with_property {
+        internal static string Replace_property_with_methods {
             get {
-                return ResourceManager.GetString("Replace_0_with_property", resourceCulture);
+                return ResourceManager.GetString("Replace_property_with_methods", resourceCulture);
             }
         }
         
@@ -4575,6 +4575,15 @@ namespace Microsoft.CodeAnalysis {
         internal static string Variadic_SignatureHelpItem_must_have_at_least_one_parameter {
             get {
                 return ResourceManager.GetString("Variadic_SignatureHelpItem_must_have_at_least_one_parameter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to View all actions in this document....
+        /// </summary>
+        internal static string View_all_actions_in_this_document {
+            get {
+                return ResourceManager.GetString("View_all_actions_in_this_document", resourceCulture);
             }
         }
         

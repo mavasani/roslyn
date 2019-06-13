@@ -12,7 +12,8 @@ using Microsoft.CodeAnalysis.Shared.Extensions;
 
 namespace Microsoft.CodeAnalysis.UseNamedArguments
 {
-    internal abstract class AbstractUseNamedArgumentsCodeRefactoringProvider : CodeRefactoringProvider
+    internal abstract class AbstractUseNamedArgumentsCodeRefactoringProvider<TArgumentSyntax> : SyntaxBasedCodeRefactoringProvider<TArgumentSyntax>
+        where TArgumentSyntax : SyntaxNode
     {
         protected interface IAnalyzer
         {
@@ -122,26 +123,24 @@ namespace Microsoft.CodeAnalysis.UseNamedArguments
                     }
                 }
 
-                var argumentName = parameters[argumentIndex].Name;
-
                 if (this.SupportsNonTrailingNamedArguments(root.SyntaxTree.Options) &&
                     argumentIndex < argumentCount - 1)
                 {
                     context.RegisterRefactoring(
                         new MyCodeAction(
-                            string.Format(FeaturesResources.Add_argument_name_0, argumentName),
+                            FeaturesResources.Add_argument_name,
                             c => AddNamedArgumentsAsync(root, document, argument, parameters, argumentIndex, includingTrailingArguments: false)));
 
                     context.RegisterRefactoring(
                         new MyCodeAction(
-                            string.Format(FeaturesResources.Add_argument_name_0_including_trailing_arguments, argumentName),
+                            FeaturesResources.Add_argument_name_including_trailing_arguments,
                             c => AddNamedArgumentsAsync(root, document, argument, parameters, argumentIndex, includingTrailingArguments: true)));
                 }
                 else
                 {
                     context.RegisterRefactoring(
                         new MyCodeAction(
-                            string.Format(FeaturesResources.Add_argument_name_0, argumentName),
+                            FeaturesResources.Add_argument_name,
                             c => AddNamedArgumentsAsync(root, document, argument, parameters, argumentIndex, includingTrailingArguments: true)));
                 }
             }

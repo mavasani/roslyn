@@ -23,14 +23,14 @@ using static Microsoft.CodeAnalysis.Diagnostics.Analyzers.NamingStyles.SymbolSpe
 namespace Microsoft.CodeAnalysis.CSharp.ConvertAutoPropertyToFullProperty
 {
     [ExportCodeRefactoringProvider(LanguageNames.CSharp, Name = nameof(CSharpConvertAutoPropertyToFullPropertyCodeRefactoringProvider)), Shared]
-    internal class CSharpConvertAutoPropertyToFullPropertyCodeRefactoringProvider : AbstractConvertAutoPropertyToFullPropertyCodeRefactoringProvider
+    internal class CSharpConvertAutoPropertyToFullPropertyCodeRefactoringProvider : AbstractConvertAutoPropertyToFullPropertyCodeRefactoringProvider<PropertyDeclarationSyntax>
     {
         [ImportingConstructor]
         public CSharpConvertAutoPropertyToFullPropertyCodeRefactoringProvider()
         {
         }
 
-        internal override SyntaxNode GetProperty(SyntaxToken token)
+        internal override PropertyDeclarationSyntax GetProperty(SyntaxToken token)
         {
             var containingProperty = token.Parent.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
             if (containingProperty == null)

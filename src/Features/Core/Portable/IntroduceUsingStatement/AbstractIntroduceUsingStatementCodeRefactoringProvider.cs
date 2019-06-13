@@ -17,7 +17,8 @@ using static Microsoft.CodeAnalysis.CodeActions.CodeAction;
 
 namespace Microsoft.CodeAnalysis.IntroduceUsingStatement
 {
-    internal abstract class AbstractIntroduceUsingStatementCodeRefactoringProvider<TStatementSyntax, TLocalDeclarationSyntax> : CodeRefactoringProvider
+    internal abstract class AbstractIntroduceUsingStatementCodeRefactoringProvider<TStatementSyntax, TLocalDeclarationSyntax>
+        : SyntaxBasedCodeRefactoringProvider<TLocalDeclarationSyntax>
         where TStatementSyntax : SyntaxNode
         where TLocalDeclarationSyntax : TStatementSyntax
     {

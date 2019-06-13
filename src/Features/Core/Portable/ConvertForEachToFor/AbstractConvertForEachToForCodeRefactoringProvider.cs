@@ -22,7 +22,7 @@ using Roslyn.Utilities;
 namespace Microsoft.CodeAnalysis.ConvertForEachToFor
 {
     internal abstract class AbstractConvertForEachToForCodeRefactoringProvider<TForEachStatement> :
-        CodeRefactoringProvider
+        SyntaxBasedCodeRefactoringProvider<TForEachStatement>
             where TForEachStatement : SyntaxNode
     {
         private const string get_Count = nameof(get_Count);
@@ -40,9 +40,6 @@ namespace Microsoft.CodeAnalysis.ConvertForEachToFor
         protected abstract (SyntaxNode start, SyntaxNode end) GetForEachBody(TForEachStatement foreachStatement);
         protected abstract void ConvertToForStatement(
             SemanticModel model, ForEachInfo info, SyntaxEditor editor, CancellationToken cancellationToken);
-
-        internal override bool IsSupportedSyntaxNode(SyntaxNode node)
-            => node is TForEachStatement;
 
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {

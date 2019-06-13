@@ -22,7 +22,6 @@ using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Text.Shared.Extensions;
 using Microsoft.VisualStudio.Language.Intellisense;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Roslyn.Utilities;
@@ -32,10 +31,9 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
 {
     internal partial class SuggestedActionsSourceProvider
     {
-        private sealed partial class SuggestedActionsSource : ForegroundThreadAffinitizedObject, ISuggestedActionsSource2
+        private class SuggestedActionsSource : ForegroundThreadAffinitizedObject, ISuggestedActionsSource2
         {
             private readonly ISuggestedActionCategoryRegistryService _suggestedActionCategoryRegistry;
-            private readonly IVsUIShell _uiShell;
 
             // state that will be only reset when source is disposed.
             private SuggestedActionsSourceProvider _owner;
@@ -55,13 +53,11 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
                 SuggestedActionsSourceProvider owner,
                 ITextView textView,
                 ITextBuffer textBuffer,
-                ISuggestedActionCategoryRegistryService suggestedActionCategoryRegistry,
-                IVsUIShell uiShell)
+                ISuggestedActionCategoryRegistryService suggestedActionCategoryRegistry)
                 : base(threadingContext)
             {
                 _owner = owner;
                 _textView = textView;
-                _uiShell = uiShell;
                 _textView.Closed += OnTextViewClosed;
                 _subjectBuffer = textBuffer;
                 _suggestedActionCategoryRegistry = suggestedActionCategoryRegistry;
@@ -647,8 +643,6 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
             {
                 this.AssertIsForeground();
 
-                UpdateAvailableActions(supportsFeatureService, requestedActionCategories, workspace, document, selectionOpt, cancellationToken);
-
                 if (!selectionOpt.HasValue)
                 {
                     // this is here to fail test and see why it is failed.
@@ -658,7 +652,10 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
 
                 var selection = selectionOpt.Value;
 
-                if (SupportsRefactoring(supportsFeatureService, requestedActionCategories, workspace))
+                if (workspace.Options.GetOption(EditorComponentOnOffOptions.CodeRefactorings) &&
+                    _owner._codeRefactoringService != null &&
+                    supportsFeatureService.SupportsRefactorings(_subjectBuffer) &&
+                    requestedActionCategories.Contains(PredefinedSuggestedActionCategoryNames.Refactoring))
                 {
                     // It may seem strange that we kick off a task, but then immediately 'Wait' on 
                     // it. However, it's deliberate.  We want to make sure that the code runs on 
@@ -676,17 +673,6 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
                 }
 
                 return ImmutableArray<SuggestedActionSet>.Empty;
-            }
-
-            private bool SupportsRefactoring(
-                ITextBufferSupportsFeatureService supportsFeatureService,
-                ISuggestedActionCategorySet requestedActionCategories,
-                Workspace workspace)
-            {
-                return workspace.Options.GetOption(EditorComponentOnOffOptions.CodeRefactorings) &&
-                    _owner._codeRefactoringService != null &&
-                    supportsFeatureService.SupportsRefactorings(_subjectBuffer) &&
-                    requestedActionCategories.Contains(PredefinedSuggestedActionCategoryNames.Refactoring);
             }
 
             /// <summary>

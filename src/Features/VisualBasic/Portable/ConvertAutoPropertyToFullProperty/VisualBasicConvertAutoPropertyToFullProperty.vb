@@ -11,7 +11,7 @@ Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 Namespace Microsoft.CodeAnalysis.VisualBasic.ConvertAutoPropertyToFullProperty
     <ExportCodeRefactoringProvider(LanguageNames.VisualBasic, Name:=NameOf(VisualBasicConvertAutoPropertyToFullPropertyCodeRefactoringProvider)), [Shared]>
     Friend Class VisualBasicConvertAutoPropertyToFullPropertyCodeRefactoringProvider
-        Inherits AbstractConvertAutoPropertyToFullPropertyCodeRefactoringProvider
+        Inherits AbstractConvertAutoPropertyToFullPropertyCodeRefactoringProvider(Of PropertyStatementSyntax)
 
         Private Const Underscore As String = "_"
 
@@ -19,7 +19,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ConvertAutoPropertyToFullProperty
         Public Sub New()
         End Sub
 
-        Friend Overrides Function GetProperty(token As SyntaxToken) As SyntaxNode
+        Friend Overrides Function GetProperty(token As SyntaxToken) As PropertyStatementSyntax
             Dim containingProperty = token.Parent.FirstAncestorOrSelf(Of PropertyStatementSyntax)
             If containingProperty Is Nothing Then
                 Return Nothing

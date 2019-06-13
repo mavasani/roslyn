@@ -246,6 +246,9 @@
     <Page Include="Implementation\PullMemberUp\WarningDialog\PullMemberUpWarningDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Implementation\Suggestions\AvailableCodeActionsControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Implementation\Workspace\DetailedErrorInfoDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

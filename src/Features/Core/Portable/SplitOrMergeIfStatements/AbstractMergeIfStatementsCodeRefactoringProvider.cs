@@ -14,7 +14,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Microsoft.CodeAnalysis.SplitOrMergeIfStatements
 {
-    internal abstract class AbstractMergeIfStatementsCodeRefactoringProvider : CodeRefactoringProvider
+    internal abstract class AbstractMergeIfStatementsCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
         protected abstract bool IsApplicableSpan(SyntaxNode node, TextSpan span, out SyntaxNode ifOrElseIf);
 
@@ -28,6 +28,9 @@ namespace Microsoft.CodeAnalysis.SplitOrMergeIfStatements
             Document document, SyntaxNode ifOrElseIf, CancellationToken cancellationToken, out SyntaxNode lowerIfOrElseIf);
 
         protected abstract SyntaxNode GetChangedRoot(Document document, SyntaxNode root, SyntaxNode upperIfOrElseIf, SyntaxNode lowerIfOrElseIf);
+
+        internal override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellation)
+            => IsApplicableSpan(node, node.Span, out _);
 
         public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {

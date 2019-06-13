@@ -61,15 +61,6 @@ namespace Microsoft.CodeAnalysis.Editor {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Available Code Actions.
-        /// </summary>
-        internal static string Available_Code_Actions {
-            get {
-                return ResourceManager.GetString("Available_Code_Actions", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Downloading index failed.
         /// </summary>
         internal static string Downloading_index_failed {

@@ -18,7 +18,8 @@ using System.Collections.Generic;
 
 namespace Microsoft.CodeAnalysis.ConvertToInterpolatedString
 {
-    internal abstract class AbstractConvertPlaceholderToInterpolatedStringRefactoringProvider<TInvocationExpressionSyntax, TExpressionSyntax, TArgumentSyntax, TLiteralExpressionSyntax> : CodeRefactoringProvider
+    internal abstract class AbstractConvertPlaceholderToInterpolatedStringRefactoringProvider<TInvocationExpressionSyntax, TExpressionSyntax, TArgumentSyntax, TLiteralExpressionSyntax>
+        : SyntaxBasedCodeRefactoringProvider<TInvocationExpressionSyntax>
         where TExpressionSyntax : SyntaxNode
         where TInvocationExpressionSyntax : TExpressionSyntax
         where TArgumentSyntax : SyntaxNode

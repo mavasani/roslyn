@@ -17,7 +17,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseExpressionBodyForLambda
 
     [ExportCodeRefactoringProvider(LanguageNames.CSharp,
         Name = PredefinedCodeRefactoringProviderNames.UseExpressionBody), Shared]
-    internal sealed class UseExpressionBodyForLambdaCodeRefactoringProvider : CodeRefactoringProvider
+    internal sealed class UseExpressionBodyForLambdaCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider<LambdaExpressionSyntax>
     {
         [ImportingConstructor]
         public UseExpressionBodyForLambdaCodeRefactoringProvider()

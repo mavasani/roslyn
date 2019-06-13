@@ -18,13 +18,20 @@ namespace Microsoft.CodeAnalysis.ReplaceMethodWithProperty
 {
     [ExportCodeRefactoringProvider(LanguageNames.CSharp, LanguageNames.VisualBasic,
         Name = nameof(ReplaceMethodWithPropertyCodeRefactoringProvider)), Shared]
-    internal class ReplaceMethodWithPropertyCodeRefactoringProvider : CodeRefactoringProvider
+    internal class ReplaceMethodWithPropertyCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
         private const string GetPrefix = "Get";
 
         [ImportingConstructor]
         public ReplaceMethodWithPropertyCodeRefactoringProvider()
         {
+        }
+
+        internal override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+        {
+            var firstToken = node.GetFirstToken();
+            var service = document.GetLanguageService<IReplaceMethodWithPropertyService>();
+            return firstToken != default && service?.GetMethodDeclaration(firstToken) != null;
         }
 
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
@@ -73,7 +80,7 @@ namespace Microsoft.CodeAnalysis.ReplaceMethodWithProperty
 
             // Looks good!
             context.RegisterRefactoring(new ReplaceMethodWithPropertyCodeAction(
-                string.Format(FeaturesResources.Replace_0_with_property, methodName),
+                FeaturesResources.Replace_method_with_property,
                 c => ReplaceMethodsWithProperty(context.Document, propertyName, nameChanged, methodSymbol, setMethod: null, cancellationToken: c),
                 methodName));
 

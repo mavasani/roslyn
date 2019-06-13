@@ -2,6 +2,16 @@
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
   <file datatype="xml" source-language="en" target-language="ja" original="../FeaturesResources.resx">
     <body>
+      <trans-unit id="Add_argument_name">
+        <source>Add argument name</source>
+        <target state="new">Add argument name</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Add_argument_name_including_trailing_arguments">
+        <source>Add argument name (including trailing arguments)</source>
+        <target state="new">Add argument name (including trailing arguments)</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Add_member_name">
         <source>Add member name</source>
         <target state="translated">メンバー名を追加します</target>
@@ -377,6 +387,21 @@
         <target state="translated">'{0}' を '{1}' に置き換える</target>
         <note />
       </trans-unit>
+      <trans-unit id="Replace_method_with_property">
+        <source>Replace method with property</source>
+        <target state="new">Replace method with property</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Replace_property_with_method">
+        <source>Replace property with method</source>
+        <target state="new">Replace property with method</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Replace_property_with_methods">
+        <source>Replace property with methods</source>
+        <target state="new">Replace property with methods</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Split_into_consecutive_0_statements">
         <source>Split into consecutive '{0}' statements</source>
         <target state="new">Split into consecutive '{0}' statements</target>
@@ -510,6 +535,11 @@
       <trans-unit id="Use_simple_using_statement">
         <source>Use simple 'using' statement</source>
         <target state="new">Use simple 'using' statement</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="View_all_actions_in_this_document">
+        <source>View all actions in this document...</source>
+        <target state="new">View all actions in this document...</target>
         <note />
       </trans-unit>
       <trans-unit id="Warning_colon_changing_namespace_may_produce_invalid_code_and_change_code_meaning">
@@ -1653,11 +1683,6 @@ Do you want to continue?</source>
         <target state="translated">{0}' および '{1}' をプロパティと置換する</target>
         <note />
       </trans-unit>
-      <trans-unit id="Replace_0_with_property">
-        <source>Replace '{0}' with property</source>
-        <target state="translated">{0}' をプロパティを置換する</target>
-        <note />
-      </trans-unit>
       <trans-unit id="Method_referenced_implicitly">
         <source>Method referenced implicitly</source>
         <target state="translated">暗黙的に参照されたメソッド</target>
@@ -1878,16 +1903,6 @@ This version used in: {2}</source>
       <trans-unit id="Add_braces">
         <source>Add braces</source>
         <target state="translated">波かっこを追加します</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Replace_0_with_method">
-        <source>Replace '{0}' with method</source>
-        <target state="translated">{0}' をメソッドに置換します</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Replace_0_with_methods">
-        <source>Replace '{0}' with methods</source>
-        <target state="translated">{0}' をメソッドに置換します</target>
         <note />
       </trans-unit>
       <trans-unit id="Property_referenced_implicitly">
@@ -2138,11 +2153,6 @@ This version used in: {2}</source>
       <trans-unit id="Add_document_0">
         <source>Add document '{0}'</source>
         <target state="translated">ドキュメント '{0}' の追加</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Add_argument_name_0">
-        <source>Add argument name '{0}'</source>
-        <target state="translated">引数名 '{0}' を追加する</target>
         <note />
       </trans-unit>
       <trans-unit id="Take_0">
@@ -2418,11 +2428,6 @@ This version used in: {2}</source>
       <trans-unit id="Variable_declaration_can_be_deconstructed">
         <source>Variable declaration can be deconstructed</source>
         <target state="translated">変数の宣言を分解できます</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Add_argument_name_0_including_trailing_arguments">
-        <source>Add argument name '{0}' (including trailing arguments)</source>
-        <target state="translated">引数の名前 '{0}' を追加します (末尾の引数を含む)</target>
         <note />
       </trans-unit>
       <trans-unit id="Using_readonly_structs_will_prevent_the_debug_session_from_continuing">

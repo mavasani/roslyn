@@ -13,7 +13,7 @@ using Microsoft.CodeAnalysis.Shared.Extensions;
 namespace Microsoft.CodeAnalysis.CSharp.ConvertIfToSwitch
 {
     [ExportCodeRefactoringProvider(LanguageNames.CSharp, Name = nameof(CSharpConvertIfToSwitchCodeRefactoringProvider)), Shared]
-    internal sealed partial class CSharpConvertIfToSwitchCodeRefactoringProvider : AbstractConvertIfToSwitchCodeRefactoringProvider
+    internal sealed partial class CSharpConvertIfToSwitchCodeRefactoringProvider : AbstractConvertIfToSwitchCodeRefactoringProvider<IfStatementSyntax>
     {
         [ImportingConstructor]
         public CSharpConvertIfToSwitchCodeRefactoringProvider()
@@ -23,7 +23,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertIfToSwitch
         protected override IAnalyzer CreateAnalyzer(ISyntaxFactsService syntaxFacts, SemanticModel semanticModel)
             => new CSharpAnalyzer(syntaxFacts, semanticModel);
 
-        private sealed class CSharpAnalyzer : Analyzer<StatementSyntax, IfStatementSyntax, ExpressionSyntax, CasePatternSwitchLabelSyntax>
+        private sealed class CSharpAnalyzer : Analyzer<StatementSyntax, ExpressionSyntax, CasePatternSwitchLabelSyntax>
         {
             public CSharpAnalyzer(ISyntaxFactsService syntaxFacts, SemanticModel semanticModel)
                 : base(syntaxFacts, semanticModel)

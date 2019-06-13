@@ -16,7 +16,7 @@ Imports Microsoft.CodeAnalysis.VisualBasic.Utilities
 Namespace Microsoft.CodeAnalysis.VisualBasic.CodeRefactorings.InlineTemporary
     <ExportCodeRefactoringProvider(LanguageNames.VisualBasic, Name:=PredefinedCodeRefactoringProviderNames.InlineTemporary), [Shared]>
     Partial Friend Class InlineTemporaryCodeRefactoringProvider
-        Inherits CodeRefactoringProvider
+        Inherits SyntaxBasedCodeRefactoringProvider(Of ModifiedIdentifierSyntax)
 
         <ImportingConstructor>
         Public Sub New()

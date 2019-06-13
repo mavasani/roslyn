@@ -13,7 +13,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Microsoft.CodeAnalysis.ConvertLinq
 {
-    internal abstract class AbstractConvertLinqQueryToForEachProvider<TQueryExpression, TStatement> : CodeRefactoringProvider
+    internal abstract class AbstractConvertLinqQueryToForEachProvider<TQueryExpression, TStatement> : SyntaxBasedCodeRefactoringProvider<TQueryExpression>
         where TQueryExpression : SyntaxNode
         where TStatement : SyntaxNode
     {

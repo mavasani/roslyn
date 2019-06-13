@@ -13,8 +13,10 @@ using Microsoft.CodeAnalysis.CodeRefactorings;
 
 namespace Microsoft.CodeAnalysis.ConvertNumericLiteral
 {
-    internal abstract class AbstractConvertNumericLiteralCodeRefactoringProvider : CodeRefactoringProvider
+    internal abstract class AbstractConvertNumericLiteralCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
+        internal sealed override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+            => document.GetLanguageService<ISyntaxFactsService>().IsNumericLiteralExpression(node);
         public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             var document = context.Document;

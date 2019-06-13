@@ -11,7 +11,7 @@ Imports Microsoft.CodeAnalysis.VisualBasic.CodeGeneration
 Namespace Microsoft.CodeAnalysis.VisualBasic.ConvertIfToSwitch
     <ExportCodeRefactoringProvider(LanguageNames.VisualBasic, Name:=NameOf(VisualBasicConvertIfToSwitchCodeRefactoringProvider)), [Shared]>
     Partial Friend NotInheritable Class VisualBasicConvertIfToSwitchCodeRefactoringProvider
-        Inherits AbstractConvertIfToSwitchCodeRefactoringProvider
+        Inherits AbstractConvertIfToSwitchCodeRefactoringProvider(Of ExecutableStatementSyntax)
 
         <ImportingConstructor>
         Public Sub New()
@@ -22,7 +22,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ConvertIfToSwitch
         End Function
 
         Private NotInheritable Class VisualBasicAnalyzer
-            Inherits Analyzer(Of SyntaxList(Of StatementSyntax), ExecutableStatementSyntax, ExpressionSyntax, CaseClauseSyntax)
+            Inherits Analyzer(Of SyntaxList(Of StatementSyntax), ExpressionSyntax, CaseClauseSyntax)
 
             Public Sub New(syntaxFacts As ISyntaxFactsService, semanticModel As SemanticModel)
                 MyBase.New(syntaxFacts, semanticModel)

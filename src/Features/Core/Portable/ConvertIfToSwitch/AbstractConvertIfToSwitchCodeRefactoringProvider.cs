@@ -14,7 +14,8 @@ using Microsoft.CodeAnalysis.Formatting;
 
 namespace Microsoft.CodeAnalysis.ConvertIfToSwitch
 {
-    internal abstract class AbstractConvertIfToSwitchCodeRefactoringProvider : CodeRefactoringProvider
+    internal abstract class AbstractConvertIfToSwitchCodeRefactoringProvider<TIfStatementSyntax> : SyntaxBasedCodeRefactoringProvider<TIfStatementSyntax>
+        where TIfStatementSyntax : SyntaxNode
     {
         public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
@@ -44,9 +45,8 @@ namespace Microsoft.CodeAnalysis.ConvertIfToSwitch
 
         protected abstract IAnalyzer CreateAnalyzer(ISyntaxFactsService syntaxFacts, SemanticModel semanticModel);
 
-        protected abstract class Analyzer<TStatementSyntax, TIfStatementSyntax, TExpressionSyntax, TSwitchLabelSyntax> : IAnalyzer
+        protected abstract class Analyzer<TStatementSyntax, TExpressionSyntax, TSwitchLabelSyntax> : IAnalyzer
             where TExpressionSyntax : SyntaxNode
-            where TIfStatementSyntax : SyntaxNode
             where TSwitchLabelSyntax : SyntaxNode
         {
             protected readonly ISyntaxFactsService _syntaxFacts;

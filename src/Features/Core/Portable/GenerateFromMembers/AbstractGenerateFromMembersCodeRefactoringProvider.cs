@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeGeneration;
 using Microsoft.CodeAnalysis.CodeRefactorings;
+using Microsoft.CodeAnalysis.CodeStyle;
 using Microsoft.CodeAnalysis.LanguageServices;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Shared.Extensions;
@@ -14,10 +15,18 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.GenerateFromMembers
 {
-    internal abstract partial class AbstractGenerateFromMembersCodeRefactoringProvider : CodeRefactoringProvider
+    internal abstract partial class AbstractGenerateFromMembersCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
         protected AbstractGenerateFromMembersCodeRefactoringProvider()
         {
+        }
+
+        internal sealed override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+        {
+            var root = document.GetSyntaxRootSynchronously(cancellationToken);
+            var syntaxFacts = document.GetLanguageService<ISyntaxFactsService>();
+            var selectedMembers = syntaxFacts.GetSelectedFieldsAndProperties(root, node.Span, allowPartialSelection: false);
+            return !selectedMembers.IsDefaultOrEmpty;
         }
 
         /// <summary>

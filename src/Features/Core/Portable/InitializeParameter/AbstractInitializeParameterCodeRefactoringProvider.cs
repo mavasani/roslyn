@@ -17,7 +17,7 @@ namespace Microsoft.CodeAnalysis.InitializeParameter
     internal abstract partial class AbstractInitializeParameterCodeRefactoringProvider<
         TParameterSyntax,
         TStatementSyntax,
-        TExpressionSyntax> : CodeRefactoringProvider
+        TExpressionSyntax> : SyntaxBasedCodeRefactoringProvider<TParameterSyntax>
         where TParameterSyntax : SyntaxNode
         where TStatementSyntax : SyntaxNode
         where TExpressionSyntax : SyntaxNode

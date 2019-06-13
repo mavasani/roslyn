@@ -15,11 +15,17 @@ namespace Microsoft.CodeAnalysis.MoveDeclarationNearReference
 {
     [ExportCodeRefactoringProvider(LanguageNames.CSharp, LanguageNames.VisualBasic, Name = PredefinedCodeRefactoringProviderNames.MoveDeclarationNearReference), Shared]
     [ExtensionOrder(After = PredefinedCodeRefactoringProviderNames.InlineTemporary)]
-    internal sealed class MoveDeclarationNearReferenceCodeRefactoringProvider : CodeRefactoringProvider
+    internal sealed class MoveDeclarationNearReferenceCodeRefactoringProvider : SyntaxBasedCodeRefactoringProvider
     {
         [ImportingConstructor]
         public MoveDeclarationNearReferenceCodeRefactoringProvider()
         {
+        }
+
+        internal override bool IsRefactoringCandidate(SyntaxNode node, Document document, CancellationToken cancellationToken)
+        {
+            var syntaxFacts = document.GetLanguageService<ISyntaxFactsService>();
+            return syntaxFacts.IsLocalDeclarationStatement(node);
         }
 
         public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)

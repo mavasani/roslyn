@@ -19,7 +19,7 @@ using Roslyn.Utilities;
 namespace Microsoft.CodeAnalysis.InvertIf
 {
     internal abstract partial class AbstractInvertIfCodeRefactoringProvider<
-        TIfStatementSyntax, TStatementSyntax, TEmbeddedStatement> : CodeRefactoringProvider
+        TIfStatementSyntax, TStatementSyntax, TEmbeddedStatement> : SyntaxBasedCodeRefactoringProvider<TIfStatementSyntax>
         where TIfStatementSyntax : class, TStatementSyntax
         where TStatementSyntax : SyntaxNode
     {

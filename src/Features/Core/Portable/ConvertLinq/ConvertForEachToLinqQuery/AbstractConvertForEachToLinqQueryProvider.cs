@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.Editing;
 
 namespace Microsoft.CodeAnalysis.ConvertLinq.ConvertForEachToLinqQuery
 {
-    internal abstract class AbstractConvertForEachToLinqQueryProvider<TForEachStatement, TStatement> : CodeRefactoringProvider
+    internal abstract class AbstractConvertForEachToLinqQueryProvider<TForEachStatement, TStatement> : SyntaxBasedCodeRefactoringProvider<TForEachStatement>
         where TForEachStatement : TStatement
         where TStatement : SyntaxNode
     {

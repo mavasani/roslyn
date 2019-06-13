@@ -3,12 +3,13 @@
 Imports System.Composition
 Imports Microsoft.CodeAnalysis.AddFileBanner
 Imports Microsoft.CodeAnalysis.CodeRefactorings
+Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 
 Namespace Microsoft.CodeAnalysis.VisualBasic.AddFileBanner
     <ExportCodeRefactoringProvider(LanguageNames.VisualBasic,
         Name:=PredefinedCodeRefactoringProviderNames.AddFileBanner), [Shared]>
     Friend Class VisualBasicAddFileBannerCodeRefactoringProvider
-        Inherits AbstractAddFileBannerCodeRefactoringProvider
+        Inherits AbstractAddFileBannerCodeRefactoringProvider(Of CompilationUnitSyntax)
 
         <ImportingConstructor>
         Public Sub New()
