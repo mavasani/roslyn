@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Test.Utilities;
+using Roslyn.Test.Utilities;
 using Xunit;
 
 namespace Microsoft.CodeAnalysis.CSharp.UnitTests.Editing
@@ -309,6 +310,79 @@ public class C
 public class C
 {
     public bool Z;
+}");
+        }
+
+        [Fact, WorkItem(37226, "https://github.com/dotnet/roslyn/issues/37226")]
+        public void TestReplaceAndSwapWithTracking()
+        {
+            var code = @"
+class C
+{
+    void M(int x, int y) { }
+}";
+
+            var cu = SyntaxFactory.ParseCompilationUnit(code);
+
+            var editor = GetEditor(cu);
+
+            var cls = cu.Members[0];
+            var methodM = (MethodDeclarationSyntax)editor.Generator.GetMembers(cls)[0];
+            var parameterX = methodM.ParameterList.Parameters[0];
+            var parameterY = methodM.ParameterList.Parameters[1];
+            editor.ReplaceNode(parameterX, parameterY);
+            editor.ReplaceNode(parameterY, parameterX);
+
+            var newRoot = editor.GetChangedRoot();
+            VerifySyntax<CompilationUnitSyntax>(
+                newRoot,
+                @"
+class C
+{
+    void M(int y, int x) { }
+}");
+        }
+
+        [Fact, WorkItem(37226, "https://github.com/dotnet/roslyn/issues/37226")]
+        public void TestReplaceAndSwapWithTracking_02()
+        {
+            var code = @"
+class C
+{
+    void M(int x, int y) { }
+}";
+
+            var cu = SyntaxFactory.ParseCompilationUnit(code);
+
+            var editor = GetEditor(cu);
+
+            var cls = cu.Members[0];
+            var methodM = (MethodDeclarationSyntax)editor.Generator.GetMembers(cls)[0];
+            var parameterX = methodM.ParameterList.Parameters[0];
+            var parameterY = methodM.ParameterList.Parameters[1];
+
+            var newParameterZ = editor.Generator.ParameterDeclaration("z", editor.Generator.TypeExpression(SpecialType.System_Int32));
+            editor.ReplaceNode(parameterY, newParameterZ);
+
+            var newRoot = editor.GetChangedRoot();
+            VerifySyntax<CompilationUnitSyntax>(
+                newRoot,
+                @"
+class C
+{
+    void M(int x, int z) { }
+}");
+
+            editor.ReplaceNode(parameterX, newParameterZ);
+            editor.ReplaceNode(newParameterZ, parameterX);
+
+            newRoot = editor.GetChangedRoot();
+            VerifySyntax<CompilationUnitSyntax>(
+                newRoot,
+                @"
+class C
+{
+    void M(int z, int x) { }
 }");
         }
 
