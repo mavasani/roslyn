@@ -2,13 +2,12 @@
 
 using Microsoft.VisualStudio.Shell.Interop;
 
-namespace Microsoft.VisualStudio.LanguageServices.Implementation.Suppression
+namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource.Configuration
 {
     /// <summary>
-    /// Service to allow adding or removing bulk suppressions (in source or suppressions file).
+    /// Service to allow adding or removing bulk configurations or suppressions (in source or suppressions file).
     /// </summary>
-    /// <remarks>*** NOTE: These internal APIs are used in the VSO repo in Microsoft.VisualStudio.CodeAnalysis.MenuHandlers ***</remarks>
-    internal interface IVisualStudioSuppressionFixService
+    internal interface IVisualStudioConfigurationFixService
     {
         /// <summary>
         /// Adds source suppressions for all the diagnostics in the error list, i.e. baseline all active issues.

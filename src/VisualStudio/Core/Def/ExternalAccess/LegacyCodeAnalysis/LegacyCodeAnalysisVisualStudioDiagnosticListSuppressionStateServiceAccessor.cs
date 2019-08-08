@@ -4,7 +4,7 @@ using System;
 using System.Composition;
 using Microsoft.CodeAnalysis.ExternalAccess.LegacyCodeAnalysis.Api;
 using Microsoft.CodeAnalysis.Host.Mef;
-using Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource;
+using Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource.Configuration;
 
 namespace Microsoft.CodeAnalysis.ExternalAccess.LegacyCodeAnalysis
 {
@@ -13,11 +13,11 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.LegacyCodeAnalysis
     internal sealed class LegacyCodeAnalysisVisualStudioDiagnosticListSuppressionStateServiceAccessor
         : ILegacyCodeAnalysisVisualStudioDiagnosticListSuppressionStateServiceAccessor
     {
-        private readonly IVisualStudioDiagnosticListSuppressionStateService _implementation;
+        private readonly IVisualStudioDiagnosticListConfigurationStateService _implementation;
 
         [ImportingConstructor]
         [Obsolete(MefConstruction.ImportingConstructorMessage, error: true)]
-        public LegacyCodeAnalysisVisualStudioDiagnosticListSuppressionStateServiceAccessor(IVisualStudioDiagnosticListSuppressionStateService implementation)
+        public LegacyCodeAnalysisVisualStudioDiagnosticListSuppressionStateServiceAccessor(IVisualStudioDiagnosticListConfigurationStateService implementation)
         {
             _implementation = implementation;
         }

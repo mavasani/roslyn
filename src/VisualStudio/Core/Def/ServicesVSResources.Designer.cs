@@ -362,20 +362,11 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Applying remove suppressions fix....
+        ///   Looks up a localized string similar to Applying fix....
         /// </summary>
-        internal static string Applying_remove_suppressions_fix {
+        internal static string Applying_fix {
             get {
-                return ResourceManager.GetString("Applying_remove_suppressions_fix", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Applying suppressions fix....
-        /// </summary>
-        internal static string Applying_suppressions_fix {
-            get {
-                return ResourceManager.GetString("Applying_suppressions_fix", resourceCulture);
+                return ResourceManager.GetString("Applying_fix", resourceCulture);
             }
         }
         
@@ -688,20 +679,29 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Computing remove suppressions fix....
+        ///   Looks up a localized string similar to Computing diagnostics....
         /// </summary>
-        internal static string Computing_remove_suppressions_fix {
+        internal static string Computing_diagnostics {
             get {
-                return ResourceManager.GetString("Computing_remove_suppressions_fix", resourceCulture);
+                return ResourceManager.GetString("Computing_diagnostics", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Computing suppressions fix....
+        ///   Looks up a localized string similar to Computing fix....
         /// </summary>
-        internal static string Computing_suppressions_fix {
+        internal static string Computing_fix {
             get {
-                return ResourceManager.GetString("Computing_suppressions_fix", resourceCulture);
+                return ResourceManager.GetString("Computing_fix", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Configure severity.
+        /// </summary>
+        internal static string Configure_severity {
+            get {
+                return ResourceManager.GetString("Configure_severity", resourceCulture);
             }
         }
         

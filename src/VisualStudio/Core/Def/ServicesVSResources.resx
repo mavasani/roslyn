@@ -489,20 +489,20 @@ Use the dropdown to view and switch to other projects this file may belong to.</
   <data name="Suppress_diagnostics" xml:space="preserve">
     <value>Suppress diagnostics</value>
   </data>
-  <data name="Computing_suppressions_fix" xml:space="preserve">
-    <value>Computing suppressions fix...</value>
-  </data>
-  <data name="Applying_suppressions_fix" xml:space="preserve">
-    <value>Applying suppressions fix...</value>
-  </data>
   <data name="Remove_suppressions" xml:space="preserve">
     <value>Remove suppressions</value>
   </data>
-  <data name="Computing_remove_suppressions_fix" xml:space="preserve">
-    <value>Computing remove suppressions fix...</value>
+  <data name="Configure_severity" xml:space="preserve">
+    <value>Configure severity</value>
   </data>
-  <data name="Applying_remove_suppressions_fix" xml:space="preserve">
-    <value>Applying remove suppressions fix...</value>
+  <data name="Computing_diagnostics" xml:space="preserve">
+    <value>Computing diagnostics...</value>
+  </data>
+  <data name="Computing_fix" xml:space="preserve">
+    <value>Computing fix...</value>
+  </data>
+  <data name="Applying_fix" xml:space="preserve">
+    <value>Applying fix...</value>
   </data>
   <data name="This_workspace_only_supports_opening_documents_on_the_UI_thread" xml:space="preserve">
     <value>This workspace only supports opening documents on the UI thread.</value>

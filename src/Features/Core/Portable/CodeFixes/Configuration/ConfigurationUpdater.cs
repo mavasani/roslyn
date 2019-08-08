@@ -105,6 +105,20 @@ namespace Microsoft.CodeAnalysis.CodeFixes.Configuration
         }
 
         /// <summary>
+        /// Updates or adds one or more .editorconfig <see cref="AnalyzerConfigDocument"/> files
+        /// so that the severity of the given <paramref name="diagnostics"/> is configured to be the given
+        /// <paramref name="severity"/>.
+        /// </summary>
+        public static Task<Solution> ConfigureSeverityAsync(
+            ReportDiagnostic severity,
+            IEnumerable<DiagnosticData> diagnostics,
+            Solution solution,
+            CancellationToken cancellationToken)
+        {
+            
+        }
+
+        /// <summary>
         /// Updates or adds an .editorconfig <see cref="AnalyzerConfigDocument"/> to the given <paramref name="project"/>
         /// so that the given <paramref name="optionName"/> is configured to have the given <paramref name="optionValue"/>.
         /// </summary>

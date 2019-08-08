@@ -1,13 +1,17 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
-namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
+namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource.Configuration
 {
     /// <summary>
-    /// Service to maintain information about the suppression state of specific set of items in the error list.
+    /// Service to maintain information about the configuration state of specific set of items in the error list.
     /// </summary>
-    /// <remarks>TODO: Move to the core platform layer.</remarks>
-    internal interface IVisualStudioDiagnosticListSuppressionStateService
+    internal interface IVisualStudioDiagnosticListConfigurationStateService
     {
+        /// <summary>
+        /// Indicates if the top level "Configure Severity" menu should be visible for the current error list selection.
+        /// </summary>
+        bool CanConfigureSelectedEntries { get; }
+
         /// <summary>
         /// Indicates if the top level "Suppress" menu should be visible for the current error list selection.
         /// </summary>
