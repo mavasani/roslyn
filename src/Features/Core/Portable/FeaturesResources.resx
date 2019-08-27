@@ -1394,6 +1394,9 @@ This version used in: {2}</value>
   <data name="Remove_unused_member" xml:space="preserve">
     <value>Remove unused member</value>
   </data>
+  <data name="Member_0_is_unused" xml:space="preserve">
+    <value>Member '{0}' is unused.</value>
+  </data>
   <data name="Private_member_0_is_unused" xml:space="preserve">
     <value>Private member '{0}' is unused.</value>
   </data>

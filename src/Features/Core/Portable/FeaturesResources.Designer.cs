@@ -2463,6 +2463,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Member &apos;{0}&apos; is unused..
+        /// </summary>
+        internal static string Member_0_is_unused {
+            get {
+                return ResourceManager.GetString("Member_0_is_unused", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Member name can be simplified.
         /// </summary>
         internal static string Member_name_can_be_simplified {

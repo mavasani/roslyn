@@ -21,7 +21,8 @@ namespace Microsoft.CodeAnalysis.Remote
         {
             return RunServiceAsync(async () =>
             {
-                using (UserOperationBooster.Boost())
+                // if this analysis is explicitly asked by user, boost priority of this request
+                using (options.IsUserInvoked ? UserOperationBooster.Boost() : default)
                 {
                     var solution = await GetSolutionAsync(cancellationToken).ConfigureAwait(false);
 

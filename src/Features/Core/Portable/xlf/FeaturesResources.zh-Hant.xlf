@@ -272,6 +272,11 @@
         <target state="translated">將區域函式設為 'static'</target>
         <note />
       </trans-unit>
+      <trans-unit id="Member_0_is_unused">
+        <source>Member '{0}' is unused.</source>
+        <target state="new">Member '{0}' is unused.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Merge_with_nested_0_statement">
         <source>Merge with nested '{0}' statement</source>
         <target state="translated">與巢狀 '{0}' 陳述式合併</target>

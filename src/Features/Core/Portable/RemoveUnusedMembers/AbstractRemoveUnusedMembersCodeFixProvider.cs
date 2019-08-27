@@ -21,7 +21,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedMembers
         where TFieldDeclarationSyntax : SyntaxNode
     {
         public override ImmutableArray<string> FixableDiagnosticIds
-            => ImmutableArray.Create(IDEDiagnosticIds.RemoveUnusedMembersDiagnosticId);
+            => ImmutableArray.Create(IDEDiagnosticIds.RemoveUnusedMembersDiagnosticId, IDEDiagnosticIds.RemoveUnusedNonPrivateMembersDiagnosticId);
 
         internal sealed override CodeFixCategory CodeFixCategory => CodeFixCategory.CodeQuality;
 

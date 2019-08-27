@@ -272,6 +272,11 @@
         <target state="translated">Сделать локальную функцию статической</target>
         <note />
       </trans-unit>
+      <trans-unit id="Member_0_is_unused">
+        <source>Member '{0}' is unused.</source>
+        <target state="new">Member '{0}' is unused.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Merge_with_nested_0_statement">
         <source>Merge with nested '{0}' statement</source>
         <target state="translated">Объединить с вложенным оператором "{0}"</target>

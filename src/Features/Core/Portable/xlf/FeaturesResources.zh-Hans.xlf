@@ -272,6 +272,11 @@
         <target state="translated">使本地函数成为静态函数</target>
         <note />
       </trans-unit>
+      <trans-unit id="Member_0_is_unused">
+        <source>Member '{0}' is unused.</source>
+        <target state="new">Member '{0}' is unused.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Merge_with_nested_0_statement">
         <source>Merge with nested '{0}' statement</source>
         <target state="translated">与嵌套的 "{0}" 语句合并</target>

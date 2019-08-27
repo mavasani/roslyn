@@ -10,7 +10,7 @@ namespace Microsoft.CodeAnalysis.FindSymbols
     internal class FindReferencesSearchOptions
     {
         public static readonly FindReferencesSearchOptions Default =
-            new FindReferencesSearchOptions(associatePropertyReferencesWithSpecificAccessor: false);
+            new FindReferencesSearchOptions(associatePropertyReferencesWithSpecificAccessor: false, isUserInvoked: true);
 
         /// <summary>
         /// When searching for property, associate specific references we find to the relevant
@@ -26,16 +26,25 @@ namespace Microsoft.CodeAnalysis.FindSymbols
         /// </summary>
         public bool AssociatePropertyReferencesWithSpecificAccessor { get; }
 
+        public bool IsUserInvoked { get; }
+
         public FindReferencesSearchOptions(
-            bool associatePropertyReferencesWithSpecificAccessor)
+            bool associatePropertyReferencesWithSpecificAccessor, bool isUserInvoked)
         {
             AssociatePropertyReferencesWithSpecificAccessor = associatePropertyReferencesWithSpecificAccessor;
+            IsUserInvoked = isUserInvoked;
         }
 
         public FindReferencesSearchOptions WithAssociatePropertyReferencesWithSpecificAccessor(
             bool associatePropertyReferencesWithSpecificAccessor)
         {
-            return new FindReferencesSearchOptions(associatePropertyReferencesWithSpecificAccessor);
+            return new FindReferencesSearchOptions(associatePropertyReferencesWithSpecificAccessor, IsUserInvoked);
+        }
+
+        public FindReferencesSearchOptions WithIsUserInvoked(
+            bool isUserInvoked)
+        {
+            return new FindReferencesSearchOptions(AssociatePropertyReferencesWithSpecificAccessor, isUserInvoked);
         }
 
         /// <summary>
@@ -45,7 +54,7 @@ namespace Microsoft.CodeAnalysis.FindSymbols
         /// </summary>
         public static FindReferencesSearchOptions GetFeatureOptionsForStartingSymbol(ISymbol symbol)
             => symbol.IsPropertyAccessor()
-                ? new FindReferencesSearchOptions(associatePropertyReferencesWithSpecificAccessor: true)
-                : FindReferencesSearchOptions.Default;
+                ? new FindReferencesSearchOptions(associatePropertyReferencesWithSpecificAccessor: true, isUserInvoked: true)
+                : Default;
     }
 }
