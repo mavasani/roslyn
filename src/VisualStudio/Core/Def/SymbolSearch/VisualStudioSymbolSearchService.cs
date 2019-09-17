@@ -12,6 +12,7 @@ using Microsoft.CodeAnalysis.Editor.Shared.Utilities;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.Packaging;
 using Microsoft.CodeAnalysis.PooledObjects;
+using Microsoft.CodeAnalysis.Shared.Options;
 using Microsoft.CodeAnalysis.SymbolSearch;
 using Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem;
 using Microsoft.VisualStudio.Settings;
@@ -49,7 +50,7 @@ namespace Microsoft.VisualStudio.LanguageServices.SymbolSearch
             IThreadingContext threadingContext,
             VisualStudioWorkspaceImpl workspace,
             VSShell.SVsServiceProvider serviceProvider)
-            : base(threadingContext, workspace, SymbolSearchOptions.Enabled,
+            : base(threadingContext, workspace, ServiceFeatureOnOffOptions.IsSuggestUsingsFromNuGetPackagesAndFrameworkAssembliesDisabled,
                               SymbolSearchOptions.SuggestForTypesInReferenceAssemblies,
                               SymbolSearchOptions.SuggestForTypesInNuGetPackages)
         {

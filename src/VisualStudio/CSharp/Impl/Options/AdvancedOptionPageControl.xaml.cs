@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.ExtractMethod;
 using Microsoft.CodeAnalysis.Fading;
 using Microsoft.CodeAnalysis.ImplementType;
 using Microsoft.CodeAnalysis.Options.EditorConfig;
+using Microsoft.CodeAnalysis.Shared.Options;
 using Microsoft.CodeAnalysis.Structure;
 using Microsoft.CodeAnalysis.SymbolSearch;
 using Microsoft.CodeAnalysis.ValidateFormatString;
@@ -26,6 +27,10 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
             BindToOption(Enable_navigation_to_decompiled_sources, FeatureOnOffOptions.NavigateToDecompiledSources);
             BindTristateToOption(Enable_use_nullable_reference_types, FeatureOnOffOptions.UseNullableReferenceTypeAnalysis);
             BindToOption(Use_editorconfig_compatibility_mode, EditorConfigDocumentOptionsProviderFactory.UseLegacyEditorConfigSupport);
+
+            BindToOption(EnablePowerSaveMode, ServiceFeatureOnOffOptions.PowerSaveMode, LanguageNames.CSharp);
+            BindToOption(DisableAnalyzerExecution, ServiceFeatureOnOffOptions.PowerSaveMode_DisableAnalyzerExecution, LanguageNames.CSharp);
+            BindToOption(DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies, ServiceFeatureOnOffOptions.PowerSaveMode_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies, LanguageNames.CSharp);
 
             BindToOption(PlaceSystemNamespaceFirst, GenerationOptions.PlaceSystemNamespaceFirst, LanguageNames.CSharp);
             BindToOption(SeparateImportGroups, GenerationOptions.SeparateImportDirectiveGroups, LanguageNames.CSharp);

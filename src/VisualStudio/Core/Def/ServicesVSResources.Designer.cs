@@ -861,6 +861,25 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Disable IDE code style suggestions and third party analyzer execution.
+        /// </summary>
+        internal static string Disable_ide_code_style_suggestions_and_third_party_analyzer_execution {
+            get {
+                return ResourceManager.GetString("Disable_ide_code_style_suggestions_and_third_party_analyzer_execution", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Disable suggest usings for types from NuGet packages and .NET Framework assemblies (needs restart).
+        /// </summary>
+        internal static string Disable_suggest_usings_for_types_from_nuget_packages_and_net_framework_assemblies {
+            get {
+                return ResourceManager.GetString("Disable_suggest_usings_for_types_from_nuget_packages_and_net_framework_assemblies" +
+                        "", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to DocumentPath is illegal.
         /// </summary>
         internal static string DocumentPath_is_illegal {
@@ -929,6 +948,15 @@ namespace Microsoft.VisualStudio.LanguageServices {
         internal static string Enable_nullable_reference_analysis_IDE_features {
             get {
                 return ResourceManager.GetString("Enable_nullable_reference_analysis_IDE_features", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Enable power save mode.
+        /// </summary>
+        internal static string Enable_power_save_mode {
+            get {
+                return ResourceManager.GetString("Enable_power_save_mode", resourceCulture);
             }
         }
         
@@ -2278,6 +2306,15 @@ namespace Microsoft.VisualStudio.LanguageServices {
         internal static string Pick_members {
             get {
                 return ResourceManager.GetString("Pick_members", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Power save mode.
+        /// </summary>
+        internal static string Power_save_mode {
+            get {
+                return ResourceManager.GetString("Power_save_mode", resourceCulture);
             }
         }
         

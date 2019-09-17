@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.ErrorReporting;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.Notification;
 using Microsoft.CodeAnalysis.Packaging;
+using Microsoft.CodeAnalysis.Shared.Options;
 using Microsoft.CodeAnalysis.Shared.Utilities;
 using Microsoft.CodeAnalysis.SymbolSearch;
 using Microsoft.VisualStudio.ComponentModelHost;
@@ -78,7 +79,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Packaging
             [Import(AllowDefault = true)] Lazy<IVsPackageInstaller2> packageInstaller,
             [Import(AllowDefault = true)] Lazy<IVsPackageUninstaller> packageUninstaller,
             [Import(AllowDefault = true)] Lazy<IVsPackageSourceProvider> packageSourceProvider)
-            : base(threadingContext, workspace, SymbolSearchOptions.Enabled,
+            : base(threadingContext, workspace, ServiceFeatureOnOffOptions.IsSuggestUsingsFromNuGetPackagesAndFrameworkAssembliesDisabled,
                               SymbolSearchOptions.SuggestForTypesInReferenceAssemblies,
                               SymbolSearchOptions.SuggestForTypesInNuGetPackages)
         {

@@ -26,6 +26,20 @@
                               Content="{x:Static local:AdvancedOptionPageStrings.Option_use_editorconfig_compatibility_mode}" />
                 </StackPanel>
             </GroupBox>
+            <GroupBox x:Uid="PowerSaveModeGroupBox"
+                      Header="{x:Static local:AdvancedOptionPageStrings.Option_PowerSaveMode}">
+                <StackPanel>
+                    <CheckBox x:Name="EnablePowerSaveMode"
+                              Content="{x:Static local:AdvancedOptionPageStrings.Option_EnablePowerSaveMode}" />
+
+                    <StackPanel Margin="10,0,6,0" IsEnabled="{Binding ElementName=EnablePowerSaveMode, Path=IsChecked}">
+                        <CheckBox x:Name="DisableAnalyzerExecution"
+                              Content="{x:Static local:AdvancedOptionPageStrings.Option_DisableAnalyzerExecution}" />
+                        <CheckBox x:Name="DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies"
+                              Content="{x:Static local:AdvancedOptionPageStrings.Option_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies}" />
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
             <GroupBox x:Uid="UsingDirectivesGroupBox"
                       Header="{x:Static local:AdvancedOptionPageStrings.Option_Using_Directives}">
                 <StackPanel>

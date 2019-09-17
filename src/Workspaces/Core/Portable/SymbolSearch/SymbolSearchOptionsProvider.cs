@@ -16,7 +16,6 @@ namespace Microsoft.CodeAnalysis.SymbolSearch
         }
 
         public ImmutableArray<IOption> Options { get; } = ImmutableArray.Create<IOption>(
-            SymbolSearchOptions.Enabled,
             SymbolSearchOptions.SuggestForTypesInReferenceAssemblies,
             SymbolSearchOptions.SuggestForTypesInNuGetPackages);
     }

@@ -35,5 +35,25 @@ namespace Microsoft.CodeAnalysis.Shared.Options
 
             return option.Value;
         }
+
+        public static readonly PerLanguageOption<bool> PowerSaveMode = new PerLanguageOption<bool>(
+            nameof(ServiceFeatureOnOffOptions), nameof(PowerSaveMode), defaultValue: false,
+            storageLocations: new RoamingProfileStorageLocation($"TextEditor.%LANGUAGE%.Specific.PowerSaveMode"));
+
+        public static readonly PerLanguageOption<bool> PowerSaveMode_DisableAnalyzerExecution = new PerLanguageOption<bool>(
+            nameof(ServiceFeatureOnOffOptions), nameof(PowerSaveMode_DisableAnalyzerExecution), defaultValue: true,
+            storageLocations: new RoamingProfileStorageLocation($"TextEditor.%LANGUAGE%.Specific.PowerSaveMode_DisableAnalyzerExecution"));
+
+        public static readonly PerLanguageOption<bool> PowerSaveMode_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies = new PerLanguageOption<bool>(
+            nameof(ServiceFeatureOnOffOptions), nameof(PowerSaveMode_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies), defaultValue: true,
+            storageLocations: new RoamingProfileStorageLocation($"TextEditor.%LANGUAGE%.Specific.PowerSaveMode_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies"));
+
+        public static bool IsAnalyzerExecutionDisabled(OptionSet options, string languageName)
+            => options.GetOption(PowerSaveMode, languageName) &&
+               options.GetOption(PowerSaveMode_DisableAnalyzerExecution, languageName);
+
+        public static bool IsSuggestUsingsFromNuGetPackagesAndFrameworkAssembliesDisabled(OptionSet options, string languageName)
+            => options.GetOption(PowerSaveMode, languageName) &&
+               options.GetOption(PowerSaveMode_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies, languageName);
     }
 }

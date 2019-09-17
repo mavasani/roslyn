@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis.Diagnostics.Log;
+using Microsoft.CodeAnalysis.Shared.Options;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Diagnostics
@@ -163,6 +164,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             if (options == null || IsCompilerDiagnosticAnalyzer(project.Language, analyzer))
             {
                 return false;
+            }
+
+            if (ServiceFeatureOnOffOptions.IsAnalyzerExecutionDisabled(project.Solution.Options, project.Language) &&
+                GetDiagnosticDescriptors(analyzer).All(d => d.Category != DiagnosticCategory.Compiler))
+            {
+                return true;
             }
 
             // don't capture project

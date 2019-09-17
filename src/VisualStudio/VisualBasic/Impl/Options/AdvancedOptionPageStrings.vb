@@ -23,6 +23,14 @@ Namespace Microsoft.VisualStudio.LanguageServices.VisualBasic.Options
 
         Public ReadOnly Property Option_use_editorconfig_compatibility_mode As String = ServicesVSResources.Use_editorconfig_compatibility_mode
 
+        Public ReadOnly Property Option_PowerSaveMode As String = ServicesVSResources.Power_save_mode
+
+        Public ReadOnly Property Option_EnablePowerSaveMode As String = ServicesVSResources.Enable_power_save_mode
+
+        Public ReadOnly Property Option_DisableAnalyzerExecution As String = ServicesVSResources.Disable_ide_code_style_suggestions_and_third_party_analyzer_execution
+
+        Public ReadOnly Property Option_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies As String = ServicesVSResources.Disable_suggest_usings_for_types_from_nuget_packages_and_net_framework_assemblies
+
         Public ReadOnly Property Option_DisplayLineSeparators As String
             Get
                 Return BasicVSResources.Show_procedure_line_separators

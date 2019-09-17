@@ -8,6 +8,7 @@ Imports Microsoft.CodeAnalysis.ExtractMethod
 Imports Microsoft.CodeAnalysis.Fading
 Imports Microsoft.CodeAnalysis.ImplementType
 Imports Microsoft.CodeAnalysis.Options.EditorConfig
+Imports Microsoft.CodeAnalysis.Shared.Options
 Imports Microsoft.CodeAnalysis.Structure
 Imports Microsoft.CodeAnalysis.SymbolSearch
 Imports Microsoft.CodeAnalysis.ValidateFormatString
@@ -23,6 +24,10 @@ Namespace Microsoft.VisualStudio.LanguageServices.VisualBasic.Options
 
             BindToFullSolutionAnalysisOption(Enable_full_solution_analysis, LanguageNames.VisualBasic)
             BindToOption(Use_editorconfig_compatibility_mode, EditorConfigDocumentOptionsProviderFactory.UseLegacyEditorConfigSupport)
+
+            BindToOption(EnablePowerSaveMode, ServiceFeatureOnOffOptions.PowerSaveMode, LanguageNames.VisualBasic)
+            BindToOption(DisableAnalyzerExecution, ServiceFeatureOnOffOptions.PowerSaveMode_DisableAnalyzerExecution, LanguageNames.VisualBasic)
+            BindToOption(DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies, ServiceFeatureOnOffOptions.PowerSaveMode_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies, LanguageNames.VisualBasic)
 
             BindToOption(PlaceSystemNamespaceFirst, GenerationOptions.PlaceSystemNamespaceFirst, LanguageNames.VisualBasic)
             BindToOption(SeparateImportGroups, GenerationOptions.SeparateImportDirectiveGroups, LanguageNames.VisualBasic)

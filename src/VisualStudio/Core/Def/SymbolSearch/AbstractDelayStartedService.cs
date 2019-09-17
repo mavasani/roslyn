@@ -24,8 +24,8 @@ namespace Microsoft.VisualStudio.LanguageServices.SymbolSearch
 
         protected readonly Workspace Workspace;
 
-        // Option that controls if this service is enabled or not (regardless of language).
-        private readonly Option<bool> _serviceOnOffOption;
+        // Gets the option value that controls if this service is disabled or not.
+        private readonly Func<OptionSet, string, bool> _getIsServiceDisabled;
 
         // Options that control if this service is enabled or not for a particular language.
         private readonly ImmutableArray<PerLanguageOption<bool>> _perLanguageOptions;
@@ -35,12 +35,12 @@ namespace Microsoft.VisualStudio.LanguageServices.SymbolSearch
         protected AbstractDelayStartedService(
             IThreadingContext threadingContext,
             Workspace workspace,
-            Option<bool> onOffOption,
+            Func<OptionSet, string, bool> getIsServiceDisabled,
             params PerLanguageOption<bool>[] perLanguageOptions)
             : base(threadingContext)
         {
             Workspace = workspace;
-            _serviceOnOffOption = onOffOption;
+            _getIsServiceDisabled = getIsServiceDisabled;
             _perLanguageOptions = perLanguageOptions.ToImmutableArray();
         }
 
@@ -52,10 +52,9 @@ namespace Microsoft.VisualStudio.LanguageServices.SymbolSearch
         {
             this.AssertIsForeground();
 
-            var options = Workspace.Options;
-            if (!options.GetOption(_serviceOnOffOption))
+            if (_getIsServiceDisabled(Workspace.Options, languageName))
             {
-                // Feature is totally disabled.  Do nothing.
+                // Service is totally disabled.  Do nothing.
                 return;
             }
 

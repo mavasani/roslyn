@@ -24,6 +24,18 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
         public static string Option_use_editorconfig_compatibility_mode
             => ServicesVSResources.Use_editorconfig_compatibility_mode;
 
+        public static string Option_PowerSaveMode
+            => ServicesVSResources.Power_save_mode;
+
+        public static string Option_EnablePowerSaveMode
+            => ServicesVSResources.Enable_power_save_mode;
+
+        public static string Option_DisableAnalyzerExecution
+            => ServicesVSResources.Disable_ide_code_style_suggestions_and_third_party_analyzer_execution;
+
+        public static string Option_DisableSuggestUsingsFromNuGetPackagesAndFrameworkAssemblies
+            => ServicesVSResources.Disable_suggest_usings_for_types_from_nuget_packages_and_net_framework_assemblies;
+
         public static string Option_RenameTrackingPreview => CSharpVSResources.Show_preview_for_rename_tracking;
         public static string Option_Split_string_literals_on_enter => CSharpVSResources.Split_string_literals_on_enter;
 
