@@ -66,8 +66,8 @@ namespace Microsoft.VisualStudio.LanguageServices.FindUsages
                             definitionBucket,
                             sourceSpan,
                             HighlightSpanKind.Definition,
-                            propertiesWithMultipleValuesMapOpt: null,
-                            additionalProperties: ImmutableArray<FindUsageProperty>.Empty)
+                            symbolUsageInfo: SymbolUsageInfo.None,
+                            additionalProperties: definition.DisplayableProperties)
                                 .ConfigureAwait(false);
                         entries.AddIfNotNull(entry);
                     }

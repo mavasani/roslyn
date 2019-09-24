@@ -95,9 +95,7 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.LiveShare.References
                     continue;
                 }
 
-#pragma warning disable CS0612 // Type or member is obsolete.  TODO.
-                await context.OnReferenceFoundAsync(new SourceReferenceItem(dummyDef, documentSpan.Value, isWrittenTo: false)).ConfigureAwait(false);
-#pragma warning restore CS0612 // Type or member is obsolete
+                await context.OnReferenceFoundAsync(new SourceReferenceItem(dummyDef, documentSpan.Value)).ConfigureAwait(false);
             }
         }
     }
