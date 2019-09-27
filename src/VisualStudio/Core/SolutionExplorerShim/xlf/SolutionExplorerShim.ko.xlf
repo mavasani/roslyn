@@ -7,6 +7,16 @@
         <target state="translated">분석기</target>
         <note />
       </trans-unit>
+      <trans-unit id="File_could_not_be_opened">
+        <source>File could not be opened.</source>
+        <target state="new">File could not be opened.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="File_could_not_be_updated">
+        <source>File could not be updated.</source>
+        <target state="new">File could not be updated.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Folder_Properties">
         <source>Folder Properties</source>
         <target state="translated">폴더 속성</target>
@@ -32,21 +42,6 @@
         <target state="translated">진단 속성</target>
         <note />
       </trans-unit>
-      <trans-unit id="No_rule_set_file_is_specified_or_the_file_does_not_exist">
-        <source>No rule set file is specified, or the file does not exist.</source>
-        <target state="translated">규칙 설정 파일을 지정하지 않았거나 파일이 없습니다.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="The_rule_set_file_could_not_be_opened">
-        <source>The rule set file could not be opened.</source>
-        <target state="translated">규칙 설정 파일을 열 수 없습니다.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="The_rule_set_file_could_not_be_updated">
-        <source>The rule set file could not be updated.</source>
-        <target state="translated">규칙 집합 파일을 업데이트할 수 없습니다.</target>
-        <note />
-      </trans-unit>
       <trans-unit id="Could_not_create_a_rule_set_for_project_0">
         <source>Could not create a rule set for project {0}.</source>
         <target state="translated">{0} 프로젝트에 대한 규칙 집합을 만들 수 없습니다.</target>
@@ -60,6 +55,11 @@
       <trans-unit id="Error_">
         <source>Error</source>
         <target state="translated">오류</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="No_file_is_specified_or_the_file_does_not_exist">
+        <source>No file is specified, or the file does not exist.</source>
+        <target state="new">No file is specified, or the file does not exist.</target>
         <note />
       </trans-unit>
       <trans-unit id="Warning">

@@ -7,6 +7,16 @@
         <target state="translated">Analizzatori</target>
         <note />
       </trans-unit>
+      <trans-unit id="File_could_not_be_opened">
+        <source>File could not be opened.</source>
+        <target state="new">File could not be opened.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="File_could_not_be_updated">
+        <source>File could not be updated.</source>
+        <target state="new">File could not be updated.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Folder_Properties">
         <source>Folder Properties</source>
         <target state="translated">Proprietà cartelle</target>
@@ -32,21 +42,6 @@
         <target state="translated">Proprietà diagnostica</target>
         <note />
       </trans-unit>
-      <trans-unit id="No_rule_set_file_is_specified_or_the_file_does_not_exist">
-        <source>No rule set file is specified, or the file does not exist.</source>
-        <target state="translated">Il file del set di regole non è stato specificato oppure non esiste.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="The_rule_set_file_could_not_be_opened">
-        <source>The rule set file could not be opened.</source>
-        <target state="translated">Non è stato possibile aprire il file del set di regole.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="The_rule_set_file_could_not_be_updated">
-        <source>The rule set file could not be updated.</source>
-        <target state="translated">Non è stato possibile aggiornare il file del set di regole.</target>
-        <note />
-      </trans-unit>
       <trans-unit id="Could_not_create_a_rule_set_for_project_0">
         <source>Could not create a rule set for project {0}.</source>
         <target state="translated">Non è stato possibile creare un set di regole per il progetto {0}.</target>
@@ -60,6 +55,11 @@
       <trans-unit id="Error_">
         <source>Error</source>
         <target state="translated">Errore</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="No_file_is_specified_or_the_file_does_not_exist">
+        <source>No file is specified, or the file does not exist.</source>
+        <target state="new">No file is specified, or the file does not exist.</target>
         <note />
       </trans-unit>
       <trans-unit id="Warning">

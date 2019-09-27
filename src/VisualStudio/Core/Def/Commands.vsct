@@ -158,8 +158,19 @@
           <CommandName>RemoveAnalyzer</CommandName>
         </Strings>
       </Button>
-      <Button guid="guidRoslynGrpId" id="cmdidOpenRuleSet" priority="200" type="Button">
+      <Button guid="guidRoslynGrpId" id="cmdidOpenEditorconfig" priority="200" type="Button">
         <Parent guid="guidRoslynGrpId" id="grpAnalyzerFolderContextMenu" />
+        <Strings>
+          <ButtonText>&amp;Open or create .editorconfig</ButtonText>
+          <CanonicalName>OpenActiveEditorconfig</CanonicalName>
+          <LocCanonicalName>OpenActiveEditorconfig</LocCanonicalName>
+          <CommandName>OpenActiveEditorconfig</CommandName>
+        </Strings>
+      </Button>
+      <Button guid="guidRoslynGrpId" id="cmdidOpenRuleSet" priority="300" type="Button">
+        <Parent guid="guidRoslynGrpId" id="grpAnalyzerFolderContextMenu" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>&amp;Open Active Rule Set</ButtonText>
           <CanonicalName>OpenActiveRuleSet</CanonicalName>
@@ -546,6 +557,7 @@
       <IDSymbol name="cmdidErrorListSetSeverityNone"           value="0x0128" />
       <IDSymbol name="cmdidErrorListSetSeverityDefault"        value="0x0129" />
       <IDSymbol name="grpErrorListDiagnosticSeverityItems"     value="0x012a" />
+      <IDSymbol name="cmdidOpenEditorconfig"               value="0x012b" />
 
       <IDSymbol name="cmdidGoToImplementation"        value="0x0200" />
     </GuidSymbol>

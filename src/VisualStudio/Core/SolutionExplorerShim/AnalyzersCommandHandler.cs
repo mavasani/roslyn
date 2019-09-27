@@ -8,6 +8,7 @@ using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using EnvDTE;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
@@ -43,6 +44,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
 
         // Analyzers folder context menu items
         private MenuCommand _addMenuItem;
+        private MenuCommand _openEditorconfigMenuItem;
         private MenuCommand _openRuleSetMenuItem;
 
         // Analyzer context menu items
@@ -90,6 +92,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
             {
                 // Analyzers folder context menu items
                 _addMenuItem = AddCommandHandler(menuCommandService, ID.RoslynCommands.AddAnalyzer, AddAnalyzerHandler);
+                _openEditorconfigMenuItem = AddCommandHandler(menuCommandService, ID.RoslynCommands.OpenEditorconfig, OpenEditorconfigHandler);
                 _openRuleSetMenuItem = AddCommandHandler(menuCommandService, ID.RoslynCommands.OpenRuleSet, OpenRuleSetHandler);
 
                 // Analyzer context menu items
@@ -236,6 +239,8 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
             _setActiveRuleSetMenuItem.Visible = selectedProjectSupportsAnalyzers &&
                                                 _tracker.SelectedHierarchy.TryGetItemName(_tracker.SelectedItemId, out var itemName) &&
                                                 Path.GetExtension(itemName).Equals(".ruleset", StringComparison.OrdinalIgnoreCase);
+            _openRuleSetMenuItem.Visible = selectedProjectSupportsAnalyzers &&
+                                           ShouldShowOpenRuleSetCommand();
         }
 
         private void UpdateOtherMenuItemsEnabled()
@@ -345,6 +350,22 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
                    project.Object is VSProject3;
         }
 
+        private bool ProjectHasRuleset(EnvDTE.Project project)
+        {
+            if (project != null)
+            {
+                foreach (ProjectItem item in project.ProjectItems)
+                {
+                    if (FileNameUtilities.GetExtension(item.Name) == ".ruleset")
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Handler for "Add Analyzer..." context menu on Analyzers folder node.
         /// </summary>
@@ -369,6 +390,25 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
             }
         }
 
+        private bool ShouldShowOpenRuleSetCommand()
+        {
+            Debug.Assert(SelectedProjectSupportsAnalyzers());
+
+            if (_tracker.SelectedFolder != null &&
+                _serviceProvider != null)
+            {
+                var workspace = _tracker.SelectedFolder.Workspace as VisualStudioWorkspace;
+                if (workspace != null)
+                {
+                    var ruleSetFile = workspace.TryGetRuleSetPathForProject(_tracker.SelectedFolder.ProjectId);
+                    return ruleSetFile != null &&
+                        !SdkUiUtilities.IsBuiltInRuleSet(ruleSetFile, _serviceProvider);
+                }
+            }
+
+            return false;
+        }
+
         internal void OpenRuleSetHandler(object sender, EventArgs args)
         {
             if (_tracker.SelectedFolder != null &&
@@ -382,7 +422,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
 
                     if (ruleSetFile == null)
                     {
-                        SendUnableToOpenRuleSetNotification(workspace, SolutionExplorerShim.No_rule_set_file_is_specified_or_the_file_does_not_exist);
+                        SendUnableToOpenFileNotification(workspace, SolutionExplorerShim.No_file_is_specified_or_the_file_does_not_exist);
                         return;
                     }
 
@@ -393,8 +433,42 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
                     }
                     catch (Exception e)
                     {
-                        SendUnableToOpenRuleSetNotification(workspace, e.Message);
+                        SendUnableToOpenFileNotification(workspace, e.Message);
                     }
+                }
+            }
+        }
+
+        internal void OpenEditorconfigHandler(object sender, EventArgs args)
+        {
+            if (_tracker.SelectedFolder != null &&
+                _serviceProvider != null)
+            {
+                var workspace = _tracker.SelectedFolder.Workspace as VisualStudioWorkspace;
+                var projectId = _tracker.SelectedFolder.ProjectId;
+                if (workspace != null)
+                {
+                    var project = workspace.CurrentSolution.GetProject(projectId);
+                    if (project != null)
+                    {
+                        var pathToAnalyzerConfigDoc = project.TryGetAnalyzerConfigPathForProjectConfiguration();
+                        if (pathToAnalyzerConfigDoc != null)
+                        {
+                            try
+                            {
+                                var dte = (EnvDTE.DTE)_serviceProvider.GetService(typeof(EnvDTE.DTE));
+                                dte.ItemOperations.OpenFile(pathToAnalyzerConfigDoc);
+                                return;
+                            }
+                            catch (Exception e)
+                            {
+                                SendUnableToOpenFileNotification(workspace, e.Message);
+                            }
+                        }
+                    }
+
+                    SendUnableToOpenFileNotification(workspace, SolutionExplorerShim.No_file_is_specified_or_the_file_does_not_exist);
+                    return;
                 }
             }
         }
@@ -426,7 +500,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
 
                 if (pathToRuleSet == null && pathToAnalyzerConfigDoc == null)
                 {
-                    SendUnableToUpdateRuleSetNotification(workspace, SolutionExplorerShim.No_rule_set_file_is_specified_or_the_file_does_not_exist);
+                    SendUnableToUpdateFileNotification(workspace, SolutionExplorerShim.No_file_is_specified_or_the_file_does_not_exist);
                     continue;
                 }
 
@@ -464,14 +538,14 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
                         // Otherwise, fall back to using ruleset.
                         if (pathToRuleSet == null)
                         {
-                            SendUnableToUpdateRuleSetNotification(workspace, SolutionExplorerShim.No_rule_set_file_is_specified_or_the_file_does_not_exist);
+                            SendUnableToUpdateFileNotification(workspace, SolutionExplorerShim.No_file_is_specified_or_the_file_does_not_exist);
                             continue;
                         }
 
                         pathToRuleSet = CreateCopyOfRuleSetForProject(pathToRuleSet, envDteProject);
                         if (pathToRuleSet == null)
                         {
-                            SendUnableToUpdateRuleSetNotification(workspace, string.Format(SolutionExplorerShim.Could_not_create_a_rule_set_for_project_0, envDteProject.Name));
+                            SendUnableToUpdateFileNotification(workspace, string.Format(SolutionExplorerShim.Could_not_create_a_rule_set_for_project_0, envDteProject.Name));
                             continue;
                         }
 
@@ -495,7 +569,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
                 }
                 catch (Exception e)
                 {
-                    SendUnableToUpdateRuleSetNotification(workspace, e.Message);
+                    SendUnableToUpdateFileNotification(workspace, e.Message);
                 }
             }
         }
@@ -631,19 +705,19 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
             return selectedAction;
         }
 
-        private void SendUnableToOpenRuleSetNotification(Workspace workspace, string message)
+        private void SendUnableToOpenFileNotification(Workspace workspace, string message)
         {
             SendErrorNotification(
                 workspace,
-                SolutionExplorerShim.The_rule_set_file_could_not_be_opened,
+                SolutionExplorerShim.File_could_not_be_opened,
                 message);
         }
 
-        private void SendUnableToUpdateRuleSetNotification(Workspace workspace, string message)
+        private void SendUnableToUpdateFileNotification(Workspace workspace, string message)
         {
             SendErrorNotification(
                 workspace,
-                SolutionExplorerShim.The_rule_set_file_could_not_be_updated,
+                SolutionExplorerShim.File_could_not_be_updated,
                 message);
         }
 

@@ -42,6 +42,8 @@ namespace Microsoft.VisualStudio.LanguageServices
             public const int ErrorListSetSeverityNone = 0x0128;
             public const int ErrorListSetSeverityDefault = 0x0129;
 
+            public const int OpenEditorconfig = 0x012b;
+
             public const int GoToImplementation = 0x0200;
         }
     }

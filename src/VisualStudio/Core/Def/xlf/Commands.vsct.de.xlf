@@ -137,6 +137,21 @@
         <target state="new">Warning</target>
         <note />
       </trans-unit>
+      <trans-unit id="cmdidOpenEditorconfig|ButtonText">
+        <source>&amp;Open or create .editorconfig</source>
+        <target state="new">&amp;Open or create .editorconfig</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="cmdidOpenEditorconfig|CommandName">
+        <source>OpenActiveEditorconfig</source>
+        <target state="new">OpenActiveEditorconfig</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="cmdidOpenEditorconfig|LocCanonicalName">
+        <source>OpenActiveEditorconfig</source>
+        <target state="new">OpenActiveEditorconfig</target>
+        <note />
+      </trans-unit>
       <trans-unit id="cmdidProjectContextAddAnalyzer|ButtonText">
         <source>&amp;Analyzer...</source>
         <target state="translated">&amp;Analysetool...</target>

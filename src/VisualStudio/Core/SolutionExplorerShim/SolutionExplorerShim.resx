@@ -135,14 +135,14 @@
   <data name="Diagnostic_Properties" xml:space="preserve">
     <value>Diagnostic Properties</value>
   </data>
-  <data name="No_rule_set_file_is_specified_or_the_file_does_not_exist" xml:space="preserve">
-    <value>No rule set file is specified, or the file does not exist.</value>
+  <data name="No_file_is_specified_or_the_file_does_not_exist" xml:space="preserve">
+    <value>No file is specified, or the file does not exist.</value>
   </data>
-  <data name="The_rule_set_file_could_not_be_opened" xml:space="preserve">
-    <value>The rule set file could not be opened.</value>
+  <data name="File_could_not_be_opened" xml:space="preserve">
+    <value>File could not be opened.</value>
   </data>
-  <data name="The_rule_set_file_could_not_be_updated" xml:space="preserve">
-    <value>The rule set file could not be updated.</value>
+  <data name="File_could_not_be_updated" xml:space="preserve">
+    <value>File could not be updated.</value>
   </data>
   <data name="Could_not_create_a_rule_set_for_project_0" xml:space="preserve">
     <value>Could not create a rule set for project {0}.</value>

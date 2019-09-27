@@ -7,6 +7,16 @@
         <target state="translated">分析器</target>
         <note />
       </trans-unit>
+      <trans-unit id="File_could_not_be_opened">
+        <source>File could not be opened.</source>
+        <target state="new">File could not be opened.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="File_could_not_be_updated">
+        <source>File could not be updated.</source>
+        <target state="new">File could not be updated.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Folder_Properties">
         <source>Folder Properties</source>
         <target state="translated">文件夹属性</target>
@@ -32,21 +42,6 @@
         <target state="translated">诊断属性</target>
         <note />
       </trans-unit>
-      <trans-unit id="No_rule_set_file_is_specified_or_the_file_does_not_exist">
-        <source>No rule set file is specified, or the file does not exist.</source>
-        <target state="translated">未指定任何规则集文件，或文件不存在。</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="The_rule_set_file_could_not_be_opened">
-        <source>The rule set file could not be opened.</source>
-        <target state="translated">无法打开规则集文件。</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="The_rule_set_file_could_not_be_updated">
-        <source>The rule set file could not be updated.</source>
-        <target state="translated">无法更新规则集文件。</target>
-        <note />
-      </trans-unit>
       <trans-unit id="Could_not_create_a_rule_set_for_project_0">
         <source>Could not create a rule set for project {0}.</source>
         <target state="translated">无法为项目 {0} 创建规则集。</target>
@@ -60,6 +55,11 @@
       <trans-unit id="Error_">
         <source>Error</source>
         <target state="translated">错误</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="No_file_is_specified_or_the_file_does_not_exist">
+        <source>No file is specified, or the file does not exist.</source>
+        <target state="new">No file is specified, or the file does not exist.</target>
         <note />
       </trans-unit>
       <trans-unit id="Warning">

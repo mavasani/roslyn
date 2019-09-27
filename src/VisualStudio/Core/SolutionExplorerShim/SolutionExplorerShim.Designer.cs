@@ -187,6 +187,24 @@ namespace Microsoft.VisualStudio.LanguageServices.SolutionExplorer {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to File could not be opened..
+        /// </summary>
+        internal static string File_could_not_be_opened {
+            get {
+                return ResourceManager.GetString("File_could_not_be_opened", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to File could not be updated..
+        /// </summary>
+        internal static string File_could_not_be_updated {
+            get {
+                return ResourceManager.GetString("File_could_not_be_updated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Folder Properties.
         /// </summary>
         internal static string Folder_Properties {
@@ -250,11 +268,11 @@ namespace Microsoft.VisualStudio.LanguageServices.SolutionExplorer {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to No rule set file is specified, or the file does not exist..
+        ///   Looks up a localized string similar to No file is specified, or the file does not exist..
         /// </summary>
-        internal static string No_rule_set_file_is_specified_or_the_file_does_not_exist {
+        internal static string No_file_is_specified_or_the_file_does_not_exist {
             get {
-                return ResourceManager.GetString("No_rule_set_file_is_specified_or_the_file_does_not_exist", resourceCulture);
+                return ResourceManager.GetString("No_file_is_specified_or_the_file_does_not_exist", resourceCulture);
             }
         }
         
@@ -291,24 +309,6 @@ namespace Microsoft.VisualStudio.LanguageServices.SolutionExplorer {
         internal static string Tags {
             get {
                 return ResourceManager.GetString("Tags", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The rule set file could not be opened..
-        /// </summary>
-        internal static string The_rule_set_file_could_not_be_opened {
-            get {
-                return ResourceManager.GetString("The_rule_set_file_could_not_be_opened", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The rule set file could not be updated..
-        /// </summary>
-        internal static string The_rule_set_file_could_not_be_updated {
-            get {
-                return ResourceManager.GetString("The_rule_set_file_could_not_be_updated", resourceCulture);
             }
         }
         
