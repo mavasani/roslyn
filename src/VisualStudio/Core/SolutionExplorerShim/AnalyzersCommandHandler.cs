@@ -344,10 +344,23 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.SolutionExplore
 
         private bool SelectedProjectSupportsAnalyzers()
         {
-            return _tracker != null &&
-                   _tracker.SelectedHierarchy != null &&
-                   _tracker.SelectedHierarchy.TryGetProject(out var project) &&
-                   project.Object is VSProject3;
+            if (_tracker != null &&
+                _tracker.SelectedHierarchy != null &&
+                _tracker.SelectedHierarchy.TryGetProject(out var project))
+            {
+                if (project.Object is VSProject3)
+                {
+                    return true;
+                }
+
+                if (_tracker.SelectedHierarchy.IsCapabilityMatch("(CSharp | VB)") &&
+                    _tracker.SelectedHierarchy.IsCapabilityMatch("DependenciesTree"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool ProjectHasRuleset(EnvDTE.Project project)
