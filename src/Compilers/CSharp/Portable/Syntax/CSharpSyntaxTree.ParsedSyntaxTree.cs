@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 
@@ -34,6 +35,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 CSharpSyntaxNode root,
                 Syntax.InternalSyntax.DirectiveStack directives,
                 ImmutableDictionary<string, ReportDiagnostic> diagnosticOptions,
+                AnalyzerConfigOptions configOptions,
                 bool cloneRoot = true)
             {
                 Debug.Assert(root != null);

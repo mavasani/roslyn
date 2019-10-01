@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 
@@ -79,6 +80,15 @@ namespace Microsoft.CodeAnalysis
         /// </returns>
         public virtual ImmutableDictionary<string, ReportDiagnostic> DiagnosticOptions
             => EmptyDiagnosticOptions;
+
+        /// <summary>
+        /// User specified analyzer configuration options for this tree.
+        /// </summary>
+        /// <returns>
+        /// A map from option name to option value.
+        /// </returns>
+        public virtual AnalyzerConfigOptions AnalyzerConfigOptions
+            => CompilerAnalyzerConfigOptions.Empty;
 
         /// <summary>
         /// The length of the text of the syntax tree.

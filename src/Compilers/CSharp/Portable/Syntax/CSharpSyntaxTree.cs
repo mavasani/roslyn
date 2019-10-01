@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
@@ -308,7 +309,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             CSharpParseOptions options = null,
             string path = "",
             Encoding encoding = null,
-            ImmutableDictionary<string, ReportDiagnostic> diagnosticOptions = null)
+            ImmutableDictionary<string, ReportDiagnostic> diagnosticOptions = null,
+            AnalyzerConfigOptions configOptions = null)
         {
             if (root == null)
             {
@@ -327,7 +329,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 options: options ?? CSharpParseOptions.Default,
                 root: root,
                 directives: directives,
-                diagnosticOptions);
+                diagnosticOptions,
+                configOptions);
         }
 
         /// <summary>
@@ -362,6 +365,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 root: root,
                 directives: InternalSyntax.DirectiveStack.Empty,
                 diagnosticOptions: null,
+                configOptions: null,
                 cloneRoot: false);
         }
 
@@ -374,9 +378,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             string path = "",
             Encoding encoding = null,
             ImmutableDictionary<string, ReportDiagnostic> diagnosticOptions = null,
+            AnalyzerConfigOptions configOptions = null,
             CancellationToken cancellationToken = default)
         {
-            return ParseText(SourceText.From(text, encoding), options, path, diagnosticOptions, cancellationToken);
+            return ParseText(SourceText.From(text, encoding), options, path, diagnosticOptions, configOptions, cancellationToken);
         }
 
         /// <summary>
@@ -387,6 +392,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             CSharpParseOptions options = null,
             string path = "",
             ImmutableDictionary<string, ReportDiagnostic> diagnosticOptions = null,
+            AnalyzerConfigOptions configOptions = null,
             CancellationToken cancellationToken = default)
         {
             if (text == null)
@@ -409,7 +415,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                         options,
                         compilationUnit,
                         parser.Directives,
-                        diagnosticOptions: diagnosticOptions);
+                        diagnosticOptions: diagnosticOptions,
+                        configOptions: configOptions);
                     tree.VerifySource();
                     return tree;
                 }
@@ -477,7 +484,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     Options,
                     compilationUnit,
                     parser.Directives,
-                    DiagnosticOptions);
+                    DiagnosticOptions,
+                    AnalyzerConfigOptions);
                 tree.VerifySource(changes);
                 return tree;
             }
@@ -651,6 +659,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Create the generated code status on demand
                 bool isGenerated = GeneratedCodeUtilities.IsGeneratedCode(
                            this,
+                           AnalyzerConfigOptions,
                            isComment: trivia => trivia.Kind() == SyntaxKind.SingleLineCommentTrivia || trivia.Kind() == SyntaxKind.MultiLineCommentTrivia,
                            cancellationToken: default);
 
@@ -819,6 +828,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             CancellationToken cancellationToken)
             => ParseText(text, options, path, diagnosticOptions: null, cancellationToken);
 
+        // 3.3 BACK COMPAT OVERLOAD -- DO NOT MODIFY
+        public static SyntaxTree ParseText(
+            SourceText text,
+            CSharpParseOptions options,
+            string path,
+            ImmutableDictionary<string, ReportDiagnostic> diagnosticOptions,
+            CancellationToken cancellationToken)
+            => ParseText(text, options, path, diagnosticOptions, configOptions: null, cancellationToken);
+
         // 2.8 BACK COMPAT OVERLOAD -- DO NOT MODIFY
         public static SyntaxTree ParseText(
             string text,
@@ -828,9 +846,24 @@ namespace Microsoft.CodeAnalysis.CSharp
             CancellationToken cancellationToken)
             => ParseText(text, options, path, encoding, diagnosticOptions: null, cancellationToken);
 
+        // 3.3 BACK COMPAT OVERLOAD -- DO NOT MODIFY
+        public static SyntaxTree ParseText(
+            string text,
+            CSharpParseOptions options,
+            string path,
+            Encoding encoding,
+            ImmutableDictionary<string, ReportDiagnostic> diagnosticOptions,
+            CancellationToken cancellationToken)
+            => ParseText(text, options, path, encoding, diagnosticOptions, configOptions: null, cancellationToken);
+
         // 2.8 BACK COMPAT OVERLOAD -- DO NOT MODIFY
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static SyntaxTree Create(CSharpSyntaxNode root, CSharpParseOptions options, string path, Encoding encoding)
             => Create(root, options, path, encoding, diagnosticOptions: null);
+
+        // 3.3 BACK COMPAT OVERLOAD -- DO NOT MODIFY
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static SyntaxTree Create(CSharpSyntaxNode root, CSharpParseOptions options, string path, Encoding encoding, ImmutableDictionary<string, ReportDiagnostic> diagnosticOptions)
+            => Create(root, options, path, encoding, diagnosticOptions, configOptions: null);
     }
 }
