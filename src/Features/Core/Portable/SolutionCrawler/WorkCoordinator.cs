@@ -397,7 +397,8 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                 // call to this method is serialized. and only this method does the writing.
                 _documentAndProjectWorkerProcessor.Enqueue(
                     new WorkItem(document.Id, document.Project.Language, invocationReasons,
-                    isLowPriority, currentMember, _listener.BeginAsyncOperation("WorkItem")));
+                        isLowPriority, currentMember, _listener.BeginAsyncOperation("WorkItem")),
+                    document.Project.Solution.Options);
 
                 // enqueue semantic work planner
                 if (invocationReasons.Contains(PredefinedInvocationReasons.SemanticChanged))
@@ -447,7 +448,8 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
 
                 _documentAndProjectWorkerProcessor.Enqueue(
                     new WorkItem(document.Id, document.Project.Language, invocationReasons,
-                    isLowPriority, analyzer, _listener.BeginAsyncOperation("WorkItem")));
+                        isLowPriority, analyzer, _listener.BeginAsyncOperation("WorkItem")),
+                    document.Project.Solution.Options);
             }
 
             private async Task EnqueueWorkItemAsync(Solution oldSolution, Solution newSolution)

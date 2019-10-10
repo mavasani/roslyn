@@ -13,7 +13,9 @@ using Microsoft.CodeAnalysis.Host;
 using Microsoft.CodeAnalysis.Internal.Log;
 using Microsoft.CodeAnalysis.LanguageServices;
 using Microsoft.CodeAnalysis.Notification;
+using Microsoft.CodeAnalysis.Options;
 using Microsoft.CodeAnalysis.Shared.Extensions;
+using Microsoft.CodeAnalysis.Shared.Options;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Roslyn.Utilities;
 
@@ -96,9 +98,19 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                     return orderedAnalyzers;
                 }
 
-                public void Enqueue(WorkItem item)
+                public void Enqueue(WorkItem item, OptionSet options)
                 {
                     Contract.ThrowIfNull(item.DocumentId);
+
+                    if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(options))
+                    {
+                        // Only process active document when background analysis is disabled.
+                        var activeDocumentId = _documentTracker.TryGetActiveDocument();
+                        if (item.DocumentId != activeDocumentId)
+                        {
+                            return;
+                        }
+                    }
 
                     _highPriorityProcessor.Enqueue(item);
                     _normalPriorityProcessor.Enqueue(item);

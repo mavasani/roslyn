@@ -50,7 +50,7 @@ namespace Microsoft.CodeAnalysis.Remote.Telemetry
 
             public async Task AnalyzeProjectAsync(Project project, bool semanticsChanged, InvocationReasons reasons, CancellationToken cancellationToken)
             {
-                if (ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(project))
+                if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(project))
                 {
                     return;
                 }

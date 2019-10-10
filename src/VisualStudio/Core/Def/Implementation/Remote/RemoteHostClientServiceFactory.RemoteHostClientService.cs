@@ -60,9 +60,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
 
             private void OnOptionChanged(object sender, OptionChangedEventArgs e)
             {
-                if (e.Option == ServiceFeatureOnOffOptions.PowerSaveMode)
+                if (e.Option == ServiceFeatureOnOffOptions.BackgroundAnalysisMode)
                 {
-                    if (ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(_optionService.GetOptions()))
+                    if (ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(_optionService.GetOptions()))
                     {
                         Disable();
                     }
@@ -76,7 +76,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
             private static bool IsDisabledWithOptions(OptionSet options)
             {
                 // Remote host service is disabled under power save mode.
-                if (ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(options))
+                if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(options))
                 {
                     return true;
                 }

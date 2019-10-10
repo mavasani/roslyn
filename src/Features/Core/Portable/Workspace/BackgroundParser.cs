@@ -80,7 +80,7 @@ namespace Microsoft.CodeAnalysis.Host
                     // this consumed around 2%-3% of the trace after some other optimizations I did. Most of that
                     // was actually walking the documents list since this was causing all the Documents to be realized.
                     // Since this is on the UI thread, it's best just to not do the work if we don't need it.
-                    if (!ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(newProject) &&
+                    if (!ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(newProject) &&
                         oldProject.SupportsCompilation &&
                         !object.Equals(oldProject.ParseOptions, newProject.ParseOptions))
                     {
@@ -154,7 +154,7 @@ namespace Microsoft.CodeAnalysis.Host
 
         public void Parse(Document document)
         {
-            if (document != null && !ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(document.Project))
+            if (document != null && !ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(document.Project))
             {
                 lock (_parseGate)
                 {

@@ -164,7 +164,8 @@ namespace Microsoft.CodeAnalysis.IncrementalCaches
 
             public override async Task AnalyzeDocumentAsync(Document document, SyntaxNode bodyOpt, InvocationReasons reasons, CancellationToken cancellationToken)
             {
-                if (!SupportAnalysis(document.Project))
+                if (!SupportAnalysis(document.Project) ||
+                    ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(document.Project))
                 {
                     return;
                 }
@@ -191,7 +192,8 @@ namespace Microsoft.CodeAnalysis.IncrementalCaches
 
             public override Task AnalyzeProjectAsync(Project project, bool semanticsChanged, InvocationReasons reasons, CancellationToken cancellationToken)
             {
-                if (!SupportAnalysis(project))
+                if (!SupportAnalysis(project) ||
+                    ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(project))
                 {
                     return Task.CompletedTask;
                 }
@@ -321,7 +323,7 @@ namespace Microsoft.CodeAnalysis.IncrementalCaches
                 }
 
                 return RemoteFeatureOptions.ShouldComputeIndex(project.Solution.Workspace) &&
-                    !ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(project);
+                    !ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(project);
             }
         }
     }

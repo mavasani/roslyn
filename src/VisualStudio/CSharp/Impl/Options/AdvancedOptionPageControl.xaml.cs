@@ -23,8 +23,9 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
         {
             InitializeComponent();
 
-            BindToOption(Enable_power_save_mode, ServiceFeatureOnOffOptions.PowerSaveMode);
-            BindToOption(Disable_analyzers, ServiceFeatureOnOffOptions.DisableAnalyzers);
+            BindToOption(Default_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.Default);
+            BindToOption(Power_save_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.PowerSave);
+            BindToOption(Lightweight_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.Lightweight);
             BindToFullSolutionAnalysisOption(Enable_full_solution_analysis, LanguageNames.CSharp);
             BindToOption(Enable_navigation_to_decompiled_sources, FeatureOnOffOptions.NavigateToDecompiledSources);
             BindTristateToOption(Enable_use_nullable_reference_types, FeatureOnOffOptions.UseNullableReferenceTypeAnalysis);

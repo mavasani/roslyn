@@ -17,7 +17,7 @@ namespace Microsoft.CodeAnalysis.Shared.Options
 
         public ImmutableArray<IOption> Options { get; } = ImmutableArray.Create<IOption>(
             ServiceFeatureOnOffOptions.ClosedFileDiagnostic,
-            ServiceFeatureOnOffOptions.PowerSaveMode,
+            ServiceFeatureOnOffOptions.BackgroundAnalysisMode,
             ServiceFeatureOnOffOptions.DisableAnalyzers);
     }
 }

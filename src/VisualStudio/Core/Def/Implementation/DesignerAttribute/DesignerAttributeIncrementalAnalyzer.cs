@@ -77,7 +77,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.DesignerAttribu
             cancellationToken.ThrowIfCancellationRequested();
 
             if (!document.Project.Solution.Workspace.Options.GetOption(InternalFeatureOnOffOptions.DesignerAttributes) ||
-                ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(document.Project))
+                ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(document.Project))
             {
                 return;
             }

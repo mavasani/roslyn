@@ -99,7 +99,7 @@ namespace Microsoft.CodeAnalysis.Host
                 // build the current compilations without rebuilding the entire DeclarationTable
                 CancelBuild(releasePreviousCompilations: false);
 
-                if (ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(solution.Options))
+                if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(solution.Options))
                 {
                     return;
                 }

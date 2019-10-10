@@ -44,25 +44,41 @@ namespace Microsoft.CodeAnalysis.Shared.Options
             storageLocations: new RoamingProfileStorageLocation($"Options.DisableAnalyzers"));
 
         /// <summary>
-        /// Option to turn off all background analysis to improve performance.
+        /// Option to turn configure background analysis mode.
         /// </summary>
-        public static readonly Option<bool> PowerSaveMode = new Option<bool>(
-            nameof(ServiceFeatureOnOffOptions), nameof(PowerSaveMode), defaultValue: false,
-            storageLocations: new RoamingProfileStorageLocation($"Options.PowerSaveMode"));
+        public static readonly Option<AnalysisMode> BackgroundAnalysisMode = new Option<AnalysisMode>(
+            nameof(ServiceFeatureOnOffOptions), nameof(BackgroundAnalysisMode), defaultValue: AnalysisMode.Default,
+            storageLocations: new RoamingProfileStorageLocation($"Options.BackgroundAnalysisMode"));
 
         /// <summary>
-        /// Enables forced power save mode when low VM is detected to improve performance.
+        /// Enables forced <see cref="AnalysisMode.Lightweight"/> mode when low VM is detected to improve performance.
         /// </summary>
-        public static bool LowMemoryForcedPowerSaveMode = false;
+        public static bool LowMemoryForcedLightweightMode = false;
 
-        public static bool IsPowerSaveModeEnabled(Project project)
-            => IsPowerSaveModeEnabled(project.Solution.Options);
+        public static bool IsLightweightAnalysisModeEnabled(Project project)
+            => IsLightweightAnalysisModeEnabled(project.Solution.Options);
 
-        public static bool IsPowerSaveModeEnabled(OptionSet options)
-            => options.GetOption(PowerSaveMode) || LowMemoryForcedPowerSaveMode;
+        public static bool IsLightweightAnalysisModeEnabled(OptionSet options)
+            => options.GetOption(BackgroundAnalysisMode) == AnalysisMode.Lightweight ||
+               LowMemoryForcedLightweightMode;
+
+        public static bool IsBackgroundAnalysisDisabled(Project project)
+            => IsBackgroundAnalysisDisabled(project.Solution.Options);
+
+        public static bool IsBackgroundAnalysisDisabled(OptionSet options)
+            => IsBackgroundAnalysisDisabledByUserOption(options) ||
+               LowMemoryForcedLightweightMode;
+
+        private static bool IsBackgroundAnalysisDisabledByUserOption(OptionSet options)
+            => options.GetOption(BackgroundAnalysisMode) switch
+            {
+                AnalysisMode.Lightweight => true,
+                AnalysisMode.PowerSave => true,
+                _ => false
+            };
 
         public static bool IsAnalyzerExecutionDisabled(Project project)
-            => IsPowerSaveModeEnabled(project) ||
+            => IsLightweightAnalysisModeEnabled(project) ||
                project.Solution.Options.GetOption(DisableAnalyzers);
     }
 }

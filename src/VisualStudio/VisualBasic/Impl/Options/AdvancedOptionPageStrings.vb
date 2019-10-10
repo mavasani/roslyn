@@ -18,9 +18,17 @@ Namespace Microsoft.VisualStudio.LanguageServices.VisualBasic.Options
         Public ReadOnly Property Option_Analysis As String =
             ServicesVSResources.Analysis
 
-        Public ReadOnly Property Option_Enable_power_save_mode As String = ServicesVSResources.Enable_power_save_mode
+        Public ReadOnly Property Option_Background_analysis_mode As String =
+            ServicesVSResources.Background_analysis_mode_colon
 
-        Public ReadOnly Property Option_Disable_analyzers As String = ServicesVSResources.Disable_analyzers
+        Public ReadOnly Property Option_Default_analysis_mode As String =
+            ServicesVSResources.Default_
+
+        Public ReadOnly Property Option_Power_save_analysis_mode As String =
+            ServicesVSResources.Power_save
+
+        Public ReadOnly Property Option_Lightweight_analysis_mode As String =
+            ServicesVSResources.Lightweight
 
         Public ReadOnly Property Option_Enable_full_solution_analysis As String =
             ServicesVSResources.Enable_full_solution_analysis

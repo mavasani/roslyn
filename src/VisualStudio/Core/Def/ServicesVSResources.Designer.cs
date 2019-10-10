@@ -425,6 +425,15 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Background analysis mode:.
+        /// </summary>
+        internal static string Background_analysis_mode_colon {
+            get {
+                return ResourceManager.GetString("Background_analysis_mode_colon", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Base Types.
         /// </summary>
         internal static string Base_Types {
@@ -891,15 +900,6 @@ namespace Microsoft.VisualStudio.LanguageServices {
         internal static string Enable_nullable_reference_analysis_IDE_features {
             get {
                 return ResourceManager.GetString("Enable_nullable_reference_analysis_IDE_features", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Enable power save mode (disables all background analysis).
-        /// </summary>
-        internal static string Enable_power_save_mode {
-            get {
-                return ResourceManager.GetString("Enable_power_save_mode", resourceCulture);
             }
         }
         
@@ -1438,6 +1438,15 @@ namespace Microsoft.VisualStudio.LanguageServices {
         internal static string Learn_more {
             get {
                 return ResourceManager.GetString("Learn_more", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Lightweight (disables background analysis, remote process and some expensive features, to save memory and CPU cycles).
+        /// </summary>
+        internal static string Lightweight {
+            get {
+                return ResourceManager.GetString("Lightweight", resourceCulture);
             }
         }
         
@@ -2231,6 +2240,15 @@ namespace Microsoft.VisualStudio.LanguageServices {
         internal static string Pick_members {
             get {
                 return ResourceManager.GetString("Pick_members", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Power save (disables background analysis to save CPU cycles).
+        /// </summary>
+        internal static string Power_save {
+            get {
+                return ResourceManager.GetString("Power_save", resourceCulture);
             }
         }
         

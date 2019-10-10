@@ -57,6 +57,11 @@
         <target state="translated">后退</target>
         <note />
       </trans-unit>
+      <trans-unit id="Background_analysis_mode_colon">
+        <source>Background analysis mode:</source>
+        <target state="new">Background analysis mode:</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Build_plus_live_analysis_NuGet_package">
         <source>Build + live analysis (NuGet package)</source>
         <target state="translated">生成 + 实时分析(NuGet 包)</target>
@@ -102,11 +107,6 @@
         <target state="translated">启用可为 null 的引用分析 IDE 功能</target>
         <note />
       </trans-unit>
-      <trans-unit id="Enable_power_save_mode">
-        <source>Enable power save mode (disables all background analysis)</source>
-        <target state="new">Enable power save mode (disables all background analysis)</target>
-        <note />
-      </trans-unit>
       <trans-unit id="Evaluating_0_tasks_in_queue">
         <source>Evaluating ({0} tasks in queue)</source>
         <target state="translated">正在评估(队列中有 {0} 个任务)</target>
@@ -150,6 +150,11 @@
       <trans-unit id="Kind">
         <source>Kind</source>
         <target state="translated">种类</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Lightweight">
+        <source>Lightweight (disables background analysis, remote process and some expensive features, to save memory and CPU cycles)</source>
+        <target state="new">Lightweight (disables background analysis, remote process and some expensive features, to save memory and CPU cycles)</target>
         <note />
       </trans-unit>
       <trans-unit id="Live_analysis_VSIX_extension">
@@ -360,6 +365,11 @@
       <trans-unit id="Paused_0_tasks_in_queue">
         <source>Paused ({0} tasks in queue)</source>
         <target state="translated">已暂停(队列中有 {0} 个任务)</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Power_save">
+        <source>Power save (disables background analysis to save CPU cycles)</source>
+        <target state="new">Power save (disables background analysis to save CPU cycles)</target>
         <note />
       </trans-unit>
       <trans-unit id="Prefer_compound_assignments">

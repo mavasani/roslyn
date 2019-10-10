@@ -22,8 +22,9 @@ Namespace Microsoft.VisualStudio.LanguageServices.VisualBasic.Options
 
             InitializeComponent()
 
-            BindToOption(Enable_power_save_mode, ServiceFeatureOnOffOptions.PowerSaveMode)
-            BindToOption(Disable_analyzers, ServiceFeatureOnOffOptions.DisableAnalyzers)
+            BindToOption(Default_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.Default)
+            BindToOption(Power_save_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.PowerSave)
+            BindToOption(Lightweight_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.Lightweight)
             BindToFullSolutionAnalysisOption(Enable_full_solution_analysis, LanguageNames.VisualBasic)
             BindToOption(Use_editorconfig_compatibility_mode, EditorConfigDocumentOptionsProviderFactory.UseLegacyEditorConfigSupport)
 

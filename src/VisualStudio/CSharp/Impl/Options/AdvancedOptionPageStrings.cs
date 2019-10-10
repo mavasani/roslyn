@@ -12,11 +12,17 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
         public static string Option_Analysis
             => ServicesVSResources.Analysis;
 
-        public static string Option_Enable_power_save_mode
-            => ServicesVSResources.Enable_power_save_mode;
+        public static string Option_Background_analysis_mode
+            => ServicesVSResources.Background_analysis_mode_colon;
 
-        public static string Option_Disable_analyzers
-            => ServicesVSResources.Disable_analyzers;
+        public static string Option_Default_analysis_mode
+            => ServicesVSResources.Default_;
+
+        public static string Option_Power_save_analysis_mode
+            => ServicesVSResources.Power_save;
+
+        public static string Option_Lightweight_analysis_mode
+            => ServicesVSResources.Lightweight;
 
         public static string Option_Enable_full_solution_analysis
             => ServicesVSResources.Enable_full_solution_analysis;

@@ -118,27 +118,27 @@ namespace Microsoft.VisualStudio.LanguageServices
         {
             // conditions
             // 1. Available memory is less than the threshold and 
-            // 2. Power save mode is not already enabled and
+            // 2. Lightweight mode is not already enabled and
             // 3. Background analysis memory monitor is on (user can set it off using registry to prevent turning off background analysis)
 
             return availableMemory < MemoryThreshold &&
-                !ServiceFeatureOnOffOptions.IsPowerSaveModeEnabled(_workspace.Options) &&
+                !ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(_workspace.Options) &&
                 _workspace.Options.GetOption(InternalFeatureOnOffOptions.BackgroundAnalysisMemoryMonitor);
         }
 
         private void DisableBackgroundAnalysis()
         {
-            // Turn on forced power save mode, which disables all background analysis for the current VS session.
+            // Turn on forced lightweight mode, which disables all background analysis for the current VS session.
             // Also disable the remote host service to reduce memory consumption.
-            ServiceFeatureOnOffOptions.LowMemoryForcedPowerSaveMode = true;
+            ServiceFeatureOnOffOptions.LowMemoryForcedLightweightMode = true;
             _remoteHostService?.Disable();
         }
 
         private void RenableBackgroundAnalysis()
         {
-            // Turn off forced power save mode, which re-enables all background analysis for the current VS session.
+            // Turn off forced lightweight mode, which re-enables all background analysis for the current VS session.
             // Also re-enable the remote host service which was disabled earlier.
-            ServiceFeatureOnOffOptions.LowMemoryForcedPowerSaveMode = false;
+            ServiceFeatureOnOffOptions.LowMemoryForcedLightweightMode = false;
             _remoteHostService?.Enable();
         }
 
