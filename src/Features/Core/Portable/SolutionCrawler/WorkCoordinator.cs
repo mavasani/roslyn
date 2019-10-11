@@ -3,12 +3,14 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Internal.Log;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.CodeAnalysis.Shared.Extensions;
+using Microsoft.CodeAnalysis.Shared.Options;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Roslyn.Utilities;
 
@@ -25,6 +27,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
             private readonly LogAggregator _logAggregator;
             private readonly IAsynchronousOperationListener _listener;
             private readonly IOptionService _optionService;
+            private readonly IDocumentTrackingService _documentTrackingService;
 
             private readonly CancellationTokenSource _shutdownNotificationSource;
             private readonly CancellationToken _shutdownToken;
@@ -46,6 +49,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
 
                 _listener = listener;
                 _optionService = _registration.GetService<IOptionService>();
+                _documentTrackingService = _registration.GetService<IDocumentTrackingService>();
 
                 // event and worker queues
                 _shutdownNotificationSource = new CancellationTokenSource();
@@ -77,6 +81,12 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                 // subscribe to option changed event after all required fields are set
                 // otherwise, we can get null exception when running OnOptionChanged handler
                 _optionService.OptionChanged += OnOptionChanged;
+
+                // subscribe to active document changed event for disabled background analysis mode.
+                if (_documentTrackingService != null)
+                {
+                    _documentTrackingService.ActiveDocumentChanged += OnActiveDocumentChanged;
+                }
             }
 
             public int CorrelationId => _registration.CorrelationId;
@@ -94,6 +104,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
             public void Shutdown(bool blockingShutdown)
             {
                 _optionService.OptionChanged -= OnOptionChanged;
+                _documentTrackingService.ActiveDocumentChanged -= OnActiveDocumentChanged;
 
                 // detach from the workspace
                 _registration.Workspace.WorkspaceChanged -= OnWorkspaceChanged;
@@ -125,6 +136,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
 
             private void OnOptionChanged(object sender, OptionChangedEventArgs e)
             {
+                var forceReanalysis = false;
                 // if solution crawler got turned off or on.
                 if (e.Option == InternalSolutionCrawlerOptions.SolutionCrawler)
                 {
@@ -145,12 +157,28 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                     SolutionCrawlerLogger.LogOptionChanged(CorrelationId, value);
                     return;
                 }
+                else if (e.Option == ServiceFeatureOnOffOptions.BackgroundAnalysisMode)
+                {
+                    forceReanalysis = true;
+                }
 
-                ReanalyzeOnOptionChange(sender, e);
+                ReanalyzeIfRequired(sender, e, forceReanalysis);
             }
 
-            private void ReanalyzeOnOptionChange(object sender, OptionChangedEventArgs e)
+            private void OnActiveDocumentChanged(object sender, DocumentId activeDocument)
             {
+                if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(_registration.Workspace.Options) &&
+                    activeDocument != null)
+                {
+                    ReanalyzeIfRequired(sender, null, forceReanalysis: true,
+                        overriddenAnalysisScope: new ReanalyzeScope(documentIds: SpecializedCollections.SingletonEnumerable(activeDocument)));
+                }
+            }
+
+            private void ReanalyzeIfRequired(object sender, OptionChangedEventArgs e, bool forceReanalysis, ReanalyzeScope? overriddenAnalysisScope = null)
+            {
+                Debug.Assert(forceReanalysis || e != null);
+
                 // get off from option changed event handler since it runs on UI thread
                 // getting analyzer can be slow for the very first time since it is lazily initialized
                 var asyncToken = _listener.BeginAsyncOperation("ReanalyzeOnOptionChange");
@@ -159,9 +187,9 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                     // let each analyzer decide what they want on option change
                     foreach (var analyzer in _documentAndProjectWorkerProcessor.Analyzers)
                     {
-                        if (analyzer.NeedsReanalysisOnOptionChanged(sender, e))
+                        if (forceReanalysis || analyzer.NeedsReanalysisOnOptionChanged(sender, e))
                         {
-                            var scope = new ReanalyzeScope(_registration.CurrentSolution.Id);
+                            var scope = overriddenAnalysisScope ?? new ReanalyzeScope(_registration.CurrentSolution.Id);
                             Reanalyze(analyzer, scope);
                         }
                     }
@@ -397,8 +425,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                 // call to this method is serialized. and only this method does the writing.
                 _documentAndProjectWorkerProcessor.Enqueue(
                     new WorkItem(document.Id, document.Project.Language, invocationReasons,
-                        isLowPriority, currentMember, _listener.BeginAsyncOperation("WorkItem")),
-                    document.Project.Solution.Options);
+                        isLowPriority, currentMember, _listener.BeginAsyncOperation("WorkItem")));
 
                 // enqueue semantic work planner
                 if (invocationReasons.Contains(PredefinedInvocationReasons.SemanticChanged))
@@ -448,8 +475,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
 
                 _documentAndProjectWorkerProcessor.Enqueue(
                     new WorkItem(document.Id, document.Project.Language, invocationReasons,
-                        isLowPriority, analyzer, _listener.BeginAsyncOperation("WorkItem")),
-                    document.Project.Solution.Options);
+                        isLowPriority, analyzer, _listener.BeginAsyncOperation("WorkItem")));
             }
 
             private async Task EnqueueWorkItemAsync(Solution oldSolution, Solution newSolution)

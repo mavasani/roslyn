@@ -98,11 +98,11 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                     return orderedAnalyzers;
                 }
 
-                public void Enqueue(WorkItem item, OptionSet options)
+                public void Enqueue(WorkItem item)
                 {
                     Contract.ThrowIfNull(item.DocumentId);
 
-                    if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(options))
+                    if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(_registration.Workspace.Options))
                     {
                         // Only process active document when background analysis is disabled.
                         var activeDocumentId = _documentTracker.TryGetActiveDocument();

@@ -1442,7 +1442,7 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Lightweight (disables background analysis, remote process and some expensive features, to save memory and CPU cycles).
+        ///   Looks up a localized string similar to Lightweight mode (CPU and memory saver with reduced feature set).
         /// </summary>
         internal static string Lightweight {
             get {
@@ -2244,7 +2244,7 @@ namespace Microsoft.VisualStudio.LanguageServices {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Power save (disables background analysis to save CPU cycles).
+        ///   Looks up a localized string similar to Power save mode (CPU saver).
         /// </summary>
         internal static string Power_save {
             get {

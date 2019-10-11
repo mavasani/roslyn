@@ -76,7 +76,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
             private static bool IsDisabledWithOptions(OptionSet options)
             {
                 // Remote host service is disabled under power save mode.
-                if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(options))
+                if (ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(options))
                 {
                     return true;
                 }

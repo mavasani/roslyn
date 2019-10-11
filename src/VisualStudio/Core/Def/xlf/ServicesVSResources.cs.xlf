@@ -153,8 +153,8 @@
         <note />
       </trans-unit>
       <trans-unit id="Lightweight">
-        <source>Lightweight (disables background analysis, remote process and some expensive features, to save memory and CPU cycles)</source>
-        <target state="new">Lightweight (disables background analysis, remote process and some expensive features, to save memory and CPU cycles)</target>
+        <source>Lightweight mode (CPU and memory saver with reduced feature set)</source>
+        <target state="new">Lightweight mode (CPU and memory saver with reduced feature set)</target>
         <note />
       </trans-unit>
       <trans-unit id="Live_analysis_VSIX_extension">
@@ -368,8 +368,8 @@
         <note />
       </trans-unit>
       <trans-unit id="Power_save">
-        <source>Power save (disables background analysis to save CPU cycles)</source>
-        <target state="new">Power save (disables background analysis to save CPU cycles)</target>
+        <source>Power save mode (CPU saver)</source>
+        <target state="new">Power save mode (CPU saver)</target>
         <note />
       </trans-unit>
       <trans-unit id="Prefer_compound_assignments">

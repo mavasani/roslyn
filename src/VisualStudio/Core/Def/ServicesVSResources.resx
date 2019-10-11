@@ -1324,10 +1324,10 @@ I agree to all of the foregoing:</value>
     <value>Background analysis mode:</value>
   </data>
   <data name="Power_save" xml:space="preserve">
-    <value>Power save (disables background analysis to save CPU cycles)</value>
+    <value>Power save mode (CPU saver)</value>
   </data>
   <data name="Lightweight" xml:space="preserve">
-    <value>Lightweight (disables background analysis, remote process and some expensive features, to save memory and CPU cycles)</value>
+    <value>Lightweight mode (CPU and memory saver with reduced feature set)</value>
   </data>
   <data name="Disable_analyzers" xml:space="preserve">
     <value>Disable analyzers</value>
