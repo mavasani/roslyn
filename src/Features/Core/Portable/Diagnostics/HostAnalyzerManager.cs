@@ -168,7 +168,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             // If user has disabled analyzer execution through options, we only want to execute required analyzers
             // that report diagnostics with category "Compiler".
-            if (ServiceFeatureOnOffOptions.IsAnalyzerExecutionDisabled(project) &&
+            if (ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(project) == BackgroundAnalysisScope.None &&
                 GetDiagnosticDescriptors(analyzer).All(d => d.Category != DiagnosticCategory.Compiler))
             {
                 return true;

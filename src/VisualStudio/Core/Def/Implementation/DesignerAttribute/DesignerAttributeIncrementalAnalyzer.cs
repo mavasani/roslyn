@@ -77,7 +77,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.DesignerAttribu
             cancellationToken.ThrowIfCancellationRequested();
 
             if (!document.Project.Solution.Workspace.Options.GetOption(InternalFeatureOnOffOptions.DesignerAttributes) ||
-                ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(document.Project))
+                ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(document.Project) <= BackgroundAnalysisScope.ActiveFile)
             {
                 return;
             }

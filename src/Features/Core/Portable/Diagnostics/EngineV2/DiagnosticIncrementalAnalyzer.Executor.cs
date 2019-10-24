@@ -384,7 +384,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
 
                 if (!ServiceFeatureOnOffOptions.IsClosedFileDiagnosticsEnabled(project) ||
                     !project.Solution.Options.GetOption(RuntimeOptions.FullSolutionAnalysis) ||
-                    ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(project))
+                    ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(project) == BackgroundAnalysisScope.None)
                 {
                     return false;
                 }

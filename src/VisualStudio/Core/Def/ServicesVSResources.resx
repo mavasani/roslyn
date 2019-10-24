@@ -933,9 +933,6 @@ Additional information: {1}</value>
   <data name="Analysis" xml:space="preserve">
     <value>Analysis</value>
   </data>
-  <data name="Enable_full_solution_analysis" xml:space="preserve">
-    <value>Enable full solution _analysis</value>
-  </data>
   <data name="Fade_out_unreachable_code" xml:space="preserve">
     <value>Fade out unreachable code</value>
   </data>
@@ -1320,17 +1317,20 @@ I agree to all of the foregoing:</value>
   <data name="Naming_rules" xml:space="preserve">
     <value>Naming rules</value>
   </data>
-  <data name="Background_analysis_mode_colon" xml:space="preserve">
-    <value>Background analysis mode:</value>
+  <data name="Background_analysis_scope_colon" xml:space="preserve">
+    <value>Background analysis scope:</value>
   </data>
-  <data name="Power_save" xml:space="preserve">
-    <value>Power save mode (CPU saver)</value>
+  <data name="None" xml:space="preserve">
+    <value>None</value>
   </data>
-  <data name="Lightweight" xml:space="preserve">
-    <value>Lightweight mode (CPU and memory saver with reduced feature set)</value>
+  <data name="Active_file" xml:space="preserve">
+    <value>Active file</value>
   </data>
-  <data name="Disable_analyzers" xml:space="preserve">
-    <value>Disable analyzers</value>
+  <data name="Open_files" xml:space="preserve">
+    <value>Open files</value>
+  </data>
+  <data name="Full_solution" xml:space="preserve">
+    <value>Full solution</value>
   </data>
   <data name="Updating_severity" xml:space="preserve">
     <value>Updating severity</value>

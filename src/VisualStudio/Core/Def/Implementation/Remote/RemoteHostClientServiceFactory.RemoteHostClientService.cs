@@ -31,7 +31,6 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
             private readonly IAsynchronousOperationListener _listener;
             private readonly Workspace _workspace;
             private readonly IDiagnosticAnalyzerService _analyzerService;
-            private readonly IOptionService _optionService;
 
             private readonly object _gate;
 
@@ -51,36 +50,13 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
                 _listener = listener;
                 _workspace = workspace;
                 _analyzerService = analyzerService;
-                _optionService = workspace.Services.GetService<IOptionService>();
-                _optionService.OptionChanged += OnOptionChanged;
             }
 
             public Workspace Workspace => _workspace;
             public IAsynchronousOperationListener Listener => _listener;
 
-            private void OnOptionChanged(object sender, OptionChangedEventArgs e)
-            {
-                if (e.Option == ServiceFeatureOnOffOptions.BackgroundAnalysisMode)
-                {
-                    if (ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(_optionService.GetOptions()))
-                    {
-                        Disable();
-                    }
-                    else
-                    {
-                        Enable();
-                    }
-                }
-            }
-
             private static bool IsDisabledWithOptions(OptionSet options)
             {
-                // Remote host service is disabled under power save mode.
-                if (ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(options))
-                {
-                    return true;
-                }
-
                 // We enable the remote host if either RemoteHostTest or RemoteHost are on.
                 return !options.GetOption(RemoteHostOptions.RemoteHostTest) &&
                     !options.GetOption(RemoteHostOptions.RemoteHost);
@@ -96,7 +72,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Remote
                         return;
                     }
 
-                    // We enable the remote host if either RemoteHostTest or RemoteHost are on and PowerSaveMode is off.
+                    // We enable the remote host if either RemoteHostTest or RemoteHost are on.
                     if (IsDisabledWithOptions(_workspace.Options))
                     {
                         // not turned on

@@ -102,24 +102,34 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                 {
                     Contract.ThrowIfNull(item.DocumentId);
 
+                    if (ShouldEnqueue(item))
+                    {
+                        _highPriorityProcessor.Enqueue(item);
+                        _normalPriorityProcessor.Enqueue(item);
+                        _lowPriorityProcessor.Enqueue(item);
+
+                        ReportPendingWorkItemCount();
+                    }
+                }
+
+                private bool ShouldEnqueue(WorkItem item)
+                {
+                    var analysisScope = ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(_registration.Workspace.Options);
+
                     var reasons = item.InvocationReasons;
-                    if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(_registration.Workspace.Options) &&
+                    if (analysisScope <= BackgroundAnalysisScope.ActiveFile &&
                         !reasons.Contains(PredefinedInvocationReasons.DocumentClosed) &&
                         !reasons.Contains(PredefinedInvocationReasons.DocumentRemoved))
                     {
-                        // Only process active/closed/removed documents when background analysis is disabled.
+                        // Only process active/closed/removed documents for active file analysis.
                         var activeDocumentId = _documentTracker.TryGetActiveDocument();
                         if (item.DocumentId != activeDocumentId)
                         {
-                            return;
+                            return false;
                         }
                     }
 
-                    _highPriorityProcessor.Enqueue(item);
-                    _normalPriorityProcessor.Enqueue(item);
-                    _lowPriorityProcessor.Enqueue(item);
-
-                    ReportPendingWorkItemCount();
+                    return true;
                 }
 
                 public void AddAnalyzer(IIncrementalAnalyzer analyzer, bool highPriorityForActiveFile)

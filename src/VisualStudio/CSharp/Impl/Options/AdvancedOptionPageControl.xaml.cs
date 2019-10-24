@@ -23,10 +23,10 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
         {
             InitializeComponent();
 
-            BindToOption(Default_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.Default);
-            BindToOption(Power_save_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.PowerSave);
-            BindToOption(Lightweight_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.Lightweight);
-            BindToFullSolutionAnalysisOption(Enable_full_solution_analysis, LanguageNames.CSharp);
+            BindToOption(Background_analysis_scope_none, ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption, BackgroundAnalysisScope.None);
+            BindToOption(Background_analysis_scope_active_file, ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption, BackgroundAnalysisScope.ActiveFile);
+            BindToOption(Background_analysis_scope_open_files, ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption, BackgroundAnalysisScope.OpenFiles);
+            BindToOption(Background_analysis_scope_full_solution, ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption, BackgroundAnalysisScope.FullSolution);
             BindToOption(Enable_navigation_to_decompiled_sources, FeatureOnOffOptions.NavigateToDecompiledSources);
             BindTristateToOption(Enable_use_nullable_reference_types, FeatureOnOffOptions.UseNullableReferenceTypeAnalysis);
             BindToOption(Use_editorconfig_compatibility_mode, EditorConfigDocumentOptionsProviderFactory.UseLegacyEditorConfigSupport);

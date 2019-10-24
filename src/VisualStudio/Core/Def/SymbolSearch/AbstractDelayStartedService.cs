@@ -20,7 +20,7 @@ namespace Microsoft.VisualStudio.LanguageServices.SymbolSearch
     /// dlls unnecessarily and bloating the VS memory space.
     /// </summary>
     /// <remarks>
-    /// NOTE: Current implementation turns off this service if <see cref="ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(OptionSet)"/> is <code>true</code>
+    /// NOTE: Current implementation turns off this service if <see cref="ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption"/> is <see cref="BackgroundAnalysisScope.None"/>
     ///       when <see cref="Connect(string)"/> is invoked for a specific language.
     /// </remarks>
     internal abstract class AbstractDelayStartedService : ForegroundThreadAffinitizedObject
@@ -59,7 +59,7 @@ namespace Microsoft.VisualStudio.LanguageServices.SymbolSearch
 
             var options = Workspace.Options;
             if (!options.GetOption(_serviceOnOffOption) ||
-                ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(options))
+                ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(options) == BackgroundAnalysisScope.None)
             {
                 // Feature is totally disabled.  Do nothing.
                 return;

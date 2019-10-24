@@ -52,8 +52,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.TodoComments
             // but, can be called concurrently for different documents in future if we choose to.
             Contract.ThrowIfFalse(document.IsFromPrimaryBranch());
 
-            if (!document.Project.Solution.Options.GetOption(InternalFeatureOnOffOptions.TodoComments) ||
-                ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(document.Project))
+            if (!document.Project.Solution.Options.GetOption(InternalFeatureOnOffOptions.TodoComments))
             {
                 return;
             }

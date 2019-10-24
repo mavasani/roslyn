@@ -37,48 +37,29 @@ namespace Microsoft.CodeAnalysis.Shared.Options
         }
 
         /// <summary>
-        /// Option to disable analyzer execution during live analysis.
+        /// Option to turn configure background analysis scope.
         /// </summary>
-        public static readonly Option<bool> DisableAnalyzers = new Option<bool>(
-            nameof(ServiceFeatureOnOffOptions), nameof(DisableAnalyzers), defaultValue: false,
-            storageLocations: new RoamingProfileStorageLocation($"Options.DisableAnalyzers"));
+        public static readonly Option<BackgroundAnalysisScope> BackgroundAnalysisScopeOption = new Option<BackgroundAnalysisScope>(
+            nameof(ServiceFeatureOnOffOptions), nameof(BackgroundAnalysisScopeOption), defaultValue: BackgroundAnalysisScope.ActiveFile,
+            storageLocations: new RoamingProfileStorageLocation($"Options.BackgroundAnalysisScopeOption"));
 
         /// <summary>
-        /// Option to turn configure background analysis mode.
+        /// Enables forced <see cref="BackgroundAnalysisScope.None"/> scope when low VM is detected to improve performance.
         /// </summary>
-        public static readonly Option<AnalysisMode> BackgroundAnalysisMode = new Option<AnalysisMode>(
-            nameof(ServiceFeatureOnOffOptions), nameof(BackgroundAnalysisMode), defaultValue: AnalysisMode.Default,
-            storageLocations: new RoamingProfileStorageLocation($"Options.BackgroundAnalysisMode"));
+        public static bool LowMemoryForcedDisableBackgroundAnalysis = false;
 
-        /// <summary>
-        /// Enables forced <see cref="AnalysisMode.Lightweight"/> mode when low VM is detected to improve performance.
-        /// </summary>
-        public static bool LowMemoryForcedLightweightMode = false;
+        public static BackgroundAnalysisScope GetBackgroundAnalysisScope(Project project)
+            => GetBackgroundAnalysisScope(project.Solution.Options);
 
-        public static bool IsLightweightAnalysisModeEnabled(Project project)
-            => IsLightweightAnalysisModeEnabled(project.Solution.Options);
-
-        public static bool IsLightweightAnalysisModeEnabled(OptionSet options)
-            => options.GetOption(BackgroundAnalysisMode) == AnalysisMode.Lightweight ||
-               LowMemoryForcedLightweightMode;
-
-        public static bool IsBackgroundAnalysisDisabled(Project project)
-            => IsBackgroundAnalysisDisabled(project.Solution.Options);
-
-        public static bool IsBackgroundAnalysisDisabled(OptionSet options)
-            => IsBackgroundAnalysisDisabledByUserOption(options) ||
-               LowMemoryForcedLightweightMode;
-
-        private static bool IsBackgroundAnalysisDisabledByUserOption(OptionSet options)
-            => options.GetOption(BackgroundAnalysisMode) switch
+        public static BackgroundAnalysisScope GetBackgroundAnalysisScope(OptionSet options)
+        {
+            if (LowMemoryForcedDisableBackgroundAnalysis)
             {
-                AnalysisMode.Lightweight => true,
-                AnalysisMode.PowerSave => true,
-                _ => false
-            };
+                return BackgroundAnalysisScope.None;
+            }
 
-        public static bool IsAnalyzerExecutionDisabled(Project project)
-            => IsLightweightAnalysisModeEnabled(project) ||
-               project.Solution.Options.GetOption(DisableAnalyzers);
+            return options.GetOption(BackgroundAnalysisScopeOption);
+        }
+
     }
 }

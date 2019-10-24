@@ -22,10 +22,10 @@ Namespace Microsoft.VisualStudio.LanguageServices.VisualBasic.Options
 
             InitializeComponent()
 
-            BindToOption(Default_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.Default)
-            BindToOption(Power_save_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.PowerSave)
-            BindToOption(Lightweight_analysis_mode, ServiceFeatureOnOffOptions.BackgroundAnalysisMode, AnalysisMode.Lightweight)
-            BindToFullSolutionAnalysisOption(Enable_full_solution_analysis, LanguageNames.VisualBasic)
+            BindToOption(Background_analysis_scope_none, ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption, BackgroundAnalysisScope.None)
+            BindToOption(Background_analysis_scope_active_file, ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption, BackgroundAnalysisScope.ActiveFile)
+            BindToOption(Background_analysis_scope_open_files, ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption, BackgroundAnalysisScope.OpenFiles)
+            BindToOption(Background_analysis_scope_full_solution, ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption, BackgroundAnalysisScope.FullSolution)
             BindToOption(Use_editorconfig_compatibility_mode, EditorConfigDocumentOptionsProviderFactory.UseLegacyEditorConfigSupport)
 
             BindToOption(PlaceSystemNamespaceFirst, GenerationOptions.PlaceSystemNamespaceFirst, LanguageNames.VisualBasic)

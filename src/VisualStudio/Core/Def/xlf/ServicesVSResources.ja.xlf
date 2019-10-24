@@ -7,6 +7,11 @@
         <target state="translated">新しい名前空間が作成されます</target>
         <note />
       </trans-unit>
+      <trans-unit id="Active_file">
+        <source>Active file</source>
+        <target state="new">Active file</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Add_to_current_file">
         <source>Add to _current file</source>
         <target state="translated">現在のファイルに追加(_C)</target>
@@ -57,9 +62,9 @@
         <target state="translated">戻る</target>
         <note />
       </trans-unit>
-      <trans-unit id="Background_analysis_mode_colon">
-        <source>Background analysis mode:</source>
-        <target state="new">Background analysis mode:</target>
+      <trans-unit id="Background_analysis_scope_colon">
+        <source>Background analysis scope:</source>
+        <target state="new">Background analysis scope:</target>
         <note />
       </trans-unit>
       <trans-unit id="Build_plus_live_analysis_NuGet_package">
@@ -92,11 +97,6 @@
         <target state="new">Containing Type</target>
         <note />
       </trans-unit>
-      <trans-unit id="Disable_analyzers">
-        <source>Disable analyzers</source>
-        <target state="new">Disable analyzers</target>
-        <note />
-      </trans-unit>
       <trans-unit id="Element_is_not_valid">
         <source>Element is not valid.</source>
         <target state="translated">要素が有効ではありません。</target>
@@ -115,6 +115,11 @@
       <trans-unit id="Finish">
         <source>Finish</source>
         <target state="translated">終了</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Full_solution">
+        <source>Full solution</source>
+        <target state="new">Full solution</target>
         <note />
       </trans-unit>
       <trans-unit id="Generate_dot_editorconfig_file_from_settings">
@@ -150,11 +155,6 @@
       <trans-unit id="Kind">
         <source>Kind</source>
         <target state="translated">種類</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Lightweight">
-        <source>Lightweight mode (CPU and memory saver with reduced feature set)</source>
-        <target state="new">Lightweight mode (CPU and memory saver with reduced feature set)</target>
         <note />
       </trans-unit>
       <trans-unit id="Live_analysis_VSIX_extension">
@@ -352,6 +352,16 @@
         <target state="translated">パブリックでないメソッド</target>
         <note />
       </trans-unit>
+      <trans-unit id="None">
+        <source>None</source>
+        <target state="new">None</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Open_files">
+        <source>Open files</source>
+        <target state="new">Open files</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Parameter_preferences_colon">
         <source>Parameter preferences:</source>
         <target state="translated">パラメーターの優先順位:</target>
@@ -365,11 +375,6 @@
       <trans-unit id="Paused_0_tasks_in_queue">
         <source>Paused ({0} tasks in queue)</source>
         <target state="translated">一時停止中 ({0} 個のタスクがキューにあります)</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Power_save">
-        <source>Power save mode (CPU saver)</source>
-        <target state="new">Power save mode (CPU saver)</target>
         <note />
       </trans-unit>
       <trans-unit id="Prefer_compound_assignments">
@@ -1866,11 +1871,6 @@ Additional information: {1}</source>
       <trans-unit id="Analysis">
         <source>Analysis</source>
         <target state="translated">解析</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="Enable_full_solution_analysis">
-        <source>Enable full solution _analysis</source>
-        <target state="translated">完全ソリューション解析を有効にする(_A)</target>
         <note />
       </trans-unit>
       <trans-unit id="Fade_out_unreachable_code">

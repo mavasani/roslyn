@@ -99,7 +99,7 @@ namespace Microsoft.CodeAnalysis.Host
                 // build the current compilations without rebuilding the entire DeclarationTable
                 CancelBuild(releasePreviousCompilations: false);
 
-                if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(solution.Options))
+                if (ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(solution.Options) <= BackgroundAnalysisScope.ActiveFile)
                 {
                     return;
                 }

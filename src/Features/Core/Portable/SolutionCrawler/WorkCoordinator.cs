@@ -157,7 +157,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                     SolutionCrawlerLogger.LogOptionChanged(CorrelationId, value);
                     return;
                 }
-                else if (e.Option == ServiceFeatureOnOffOptions.BackgroundAnalysisMode)
+                else if (e.Option == ServiceFeatureOnOffOptions.BackgroundAnalysisScopeOption)
                 {
                     forceReanalysis = true;
                 }
@@ -167,7 +167,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
 
             private void OnActiveDocumentChanged(object sender, DocumentId activeDocument)
             {
-                if (ServiceFeatureOnOffOptions.IsBackgroundAnalysisDisabled(_registration.Workspace.Options) &&
+                if (ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(_registration.Workspace.Options) <= BackgroundAnalysisScope.ActiveFile &&
                     activeDocument != null)
                 {
                     ReanalyzeIfRequired(sender, null, forceReanalysis: true,

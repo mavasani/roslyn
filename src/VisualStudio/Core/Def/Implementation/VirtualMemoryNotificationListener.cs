@@ -118,11 +118,11 @@ namespace Microsoft.VisualStudio.LanguageServices
         {
             // conditions
             // 1. Available memory is less than the threshold and 
-            // 2. Lightweight mode is not already enabled and
+            // 2. Background analysis is enabled and
             // 3. Background analysis memory monitor is on (user can set it off using registry to prevent turning off background analysis)
 
             return availableMemory < MemoryThreshold &&
-                !ServiceFeatureOnOffOptions.IsLightweightAnalysisModeEnabled(_workspace.Options) &&
+                ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(_workspace.Options) != BackgroundAnalysisScope.None &&
                 _workspace.Options.GetOption(InternalFeatureOnOffOptions.BackgroundAnalysisMemoryMonitor);
         }
 
@@ -130,7 +130,7 @@ namespace Microsoft.VisualStudio.LanguageServices
         {
             // Turn on forced lightweight mode, which disables all background analysis for the current VS session.
             // Also disable the remote host service to reduce memory consumption.
-            ServiceFeatureOnOffOptions.LowMemoryForcedLightweightMode = true;
+            ServiceFeatureOnOffOptions.LowMemoryForcedDisableBackgroundAnalysis = true;
             _remoteHostService?.Disable();
         }
 
@@ -138,7 +138,7 @@ namespace Microsoft.VisualStudio.LanguageServices
         {
             // Turn off forced lightweight mode, which re-enables all background analysis for the current VS session.
             // Also re-enable the remote host service which was disabled earlier.
-            ServiceFeatureOnOffOptions.LowMemoryForcedLightweightMode = false;
+            ServiceFeatureOnOffOptions.LowMemoryForcedDisableBackgroundAnalysis = false;
             _remoteHostService?.Enable();
         }
 
