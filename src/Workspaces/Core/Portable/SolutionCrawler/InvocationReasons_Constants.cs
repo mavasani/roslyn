@@ -80,5 +80,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
 
         public static readonly InvocationReasons ReanalyzeHighPriority =
             Reanalyze.With(PredefinedInvocationReasons.HighPriority);
+
+
     }
 }

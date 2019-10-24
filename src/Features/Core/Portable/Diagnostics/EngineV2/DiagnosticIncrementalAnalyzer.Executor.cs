@@ -382,14 +382,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                     return true;
                 }
 
-                if (!ServiceFeatureOnOffOptions.IsClosedFileDiagnosticsEnabled(project) ||
-                    !project.Solution.Options.GetOption(RuntimeOptions.FullSolutionAnalysis) ||
-                    ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(project) == BackgroundAnalysisScope.None)
-                {
-                    return false;
-                }
-
-                return true;
+                return ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(project) == BackgroundAnalysisScope.FullSolution;
             }
 
             private async Task<DiagnosticAnalysisResultMap<DiagnosticAnalyzer, DiagnosticAnalysisResult>> AnalyzeAsync(

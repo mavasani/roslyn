@@ -18,24 +18,6 @@ namespace Microsoft.CodeAnalysis.Shared.Options
             "ServiceFeaturesOnOff", "Closed File Diagnostic", defaultValue: null,
             storageLocations: new RoamingProfileStorageLocation("TextEditor.%LANGUAGE%.Specific.Closed File Diagnostic"));
 
-        public static bool IsClosedFileDiagnosticsEnabled(Project project)
-        {
-            return IsClosedFileDiagnosticsEnabled(project.Solution.Options, project.Language);
-        }
-
-        public static bool IsClosedFileDiagnosticsEnabled(OptionSet options, string language)
-        {
-            var option = options.GetOption(ClosedFileDiagnostic, language);
-            if (!option.HasValue)
-            {
-                return language == LanguageNames.CSharp ?
-                    CSharpClosedFileDiagnosticsEnabledByDefault :
-                    DefaultClosedFileDiagnosticsEnabledByDefault;
-            }
-
-            return option.Value;
-        }
-
         /// <summary>
         /// Option to turn configure background analysis scope.
         /// </summary>

@@ -335,7 +335,8 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                             {
                                 var document = solution.GetDocument(documentId);
 
-                                if (document != null)
+                                if (document != null &&
+                                    !workItem.InvocationReasons.Contains(PredefinedInvocationReasons.DocumentRemoved))
                                 {
                                     // if we are called because a document is opened, we invalidate the document so that
                                     // it can be re-analyzed. otherwise, since newly opened document has same version as before

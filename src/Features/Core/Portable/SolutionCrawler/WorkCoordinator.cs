@@ -37,6 +37,8 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
             private readonly IncrementalAnalyzerProcessor _documentAndProjectWorkerProcessor;
             private readonly SemanticChangeProcessor _semanticChangeProcessor;
 
+            private Document _lastActiveDocument;
+
             public WorkCoordinator(
                  IAsynchronousOperationListener listener,
                  IEnumerable<Lazy<IIncrementalAnalyzerProvider, IncrementalAnalyzerProviderMetadata>> analyzerProviders,
@@ -85,6 +87,7 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                 // subscribe to active document changed event for disabled background analysis mode.
                 if (_documentTrackingService != null)
                 {
+                    _lastActiveDocument = _documentTrackingService.GetActiveDocument(_registration.Workspace.CurrentSolution);
                     _documentTrackingService.ActiveDocumentChanged += OnActiveDocumentChanged;
                 }
             }
@@ -165,13 +168,24 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                 ReanalyzeIfRequired(sender, e, forceReanalysis);
             }
 
-            private void OnActiveDocumentChanged(object sender, DocumentId activeDocument)
+            private void OnActiveDocumentChanged(object sender, DocumentId activeDocumentId)
             {
                 if (ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(_registration.Workspace.Options) <= BackgroundAnalysisScope.ActiveFile &&
-                    activeDocument != null)
+                    activeDocumentId != null)
                 {
+                    var activeDocument = _registration.Workspace.CurrentSolution.GetDocument(activeDocumentId);
+                    if (activeDocument != null)
+                    {
+                        var lastActiveDocument = Interlocked.Exchange(ref _lastActiveDocument, activeDocument);
+                        if (lastActiveDocument != null)
+                        {
+                            var asyncToken = _listener.BeginAsyncOperation("OnDocumentRemoved");
+                            EnqueueEvent(lastActiveDocument.Project.Solution, lastActiveDocument.Id, InvocationReasons.DocumentRemoved, asyncToken);
+                        }
+                    }
+
                     ReanalyzeIfRequired(sender, null, forceReanalysis: true,
-                        overriddenAnalysisScope: new ReanalyzeScope(documentIds: SpecializedCollections.SingletonEnumerable(activeDocument)));
+                        overriddenAnalysisScope: new ReanalyzeScope(documentIds: SpecializedCollections.SingletonEnumerable(activeDocumentId)));
                 }
             }
 
