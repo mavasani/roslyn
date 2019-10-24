@@ -36,7 +36,6 @@ namespace Microsoft.VisualStudio.LanguageServices
 
         private readonly VisualStudioWorkspace _workspace;
         private readonly WorkspaceCacheService _workspaceCacheService;
-        private readonly RemoteHostClientService _remoteHostService;
 
         private bool _alreadyLogged;
 
@@ -50,7 +49,6 @@ namespace Microsoft.VisualStudio.LanguageServices
         {
             _workspace = workspace;
             _workspaceCacheService = workspace.Services.GetService<IWorkspaceCacheService>() as WorkspaceCacheService;
-            _remoteHostService = workspace.Services.GetService<IRemoteHostClientService>() as RemoteHostClientService;
 
             if (GCSettings.IsServerGC)
             {
@@ -131,7 +129,6 @@ namespace Microsoft.VisualStudio.LanguageServices
             // Turn on forced lightweight mode, which disables all background analysis for the current VS session.
             // Also disable the remote host service to reduce memory consumption.
             ServiceFeatureOnOffOptions.LowMemoryForcedDisableBackgroundAnalysis = true;
-            _remoteHostService?.Disable();
         }
 
         private void RenableBackgroundAnalysis()
@@ -139,7 +136,6 @@ namespace Microsoft.VisualStudio.LanguageServices
             // Turn off forced lightweight mode, which re-enables all background analysis for the current VS session.
             // Also re-enable the remote host service which was disabled earlier.
             ServiceFeatureOnOffOptions.LowMemoryForcedDisableBackgroundAnalysis = false;
-            _remoteHostService?.Enable();
         }
 
         private void ShowInfoBarIfRequired()

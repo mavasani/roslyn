@@ -50,6 +50,11 @@ namespace Microsoft.CodeAnalysis.Remote.Telemetry
 
             public async Task AnalyzeProjectAsync(Project project, bool semanticsChanged, InvocationReasons reasons, CancellationToken cancellationToken)
             {
+                if (ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(project) == BackgroundAnalysisScope.None)
+                {
+                    return;
+                }
+
                 lock (_reported)
                 {
                     // to make sure that we don't report while solution load, we do this heuristic.

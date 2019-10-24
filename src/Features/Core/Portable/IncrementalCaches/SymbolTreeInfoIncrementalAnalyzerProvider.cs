@@ -321,7 +321,7 @@ namespace Microsoft.CodeAnalysis.IncrementalCaches
                 }
 
                 return RemoteFeatureOptions.ShouldComputeIndex(project.Solution.Workspace) &&
-                    ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(project) == BackgroundAnalysisScope.None;
+                    ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(project) != BackgroundAnalysisScope.None;
             }
         }
     }

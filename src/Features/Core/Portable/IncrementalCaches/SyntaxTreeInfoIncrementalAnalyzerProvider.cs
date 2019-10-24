@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Remote;
+using Microsoft.CodeAnalysis.Shared.Options;
 using Microsoft.CodeAnalysis.SolutionCrawler;
 
 namespace Microsoft.CodeAnalysis.IncrementalCaches
@@ -26,9 +27,10 @@ namespace Microsoft.CodeAnalysis.IncrementalCaches
         {
             public override Task AnalyzeSyntaxAsync(Document document, InvocationReasons reasons, CancellationToken cancellationToken)
             {
-                if (!document.SupportsSyntaxTree)
+                if (!document.SupportsSyntaxTree ||
+                    ServiceFeatureOnOffOptions.GetBackgroundAnalysisScope(document.Project) == BackgroundAnalysisScope.None)
                 {
-                    // Not a language we can produce indices for (i.e. TypeScript).  Bail immediately.
+                    // Not a language we can produce indices for (i.e. TypeScript) or background analysis is disabled.  Bail immediately.
                     return Task.CompletedTask;
                 }
 
