@@ -203,5 +203,8 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
 
         public static INamedTypeSymbol? DisallowNullAttribute(this Compilation compilation)
             => compilation.GetTypeByMetadataName(typeof(DisallowNullAttribute).FullName);
+
+        public static INamedTypeSymbol? TimerType(this Compilation compilation)
+            => compilation.GetTypeByMetadataName(typeof(System.Threading.Timer).FullName);
     }
 }

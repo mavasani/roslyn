@@ -66,6 +66,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedMembers
             private readonly Dictionary<ISymbol, ValueUsageInfo> _symbolValueUsageStateMap;
             private readonly INamedTypeSymbol _taskType, _genericTaskType, _debuggerDisplayAttributeType, _structLayoutAttributeType;
             private readonly INamedTypeSymbol _eventArgsType;
+            private readonly INamedTypeSymbol _timerType;
             private readonly DeserializationConstructorCheck _deserializationConstructorCheck;
             private readonly ImmutableHashSet<INamedTypeSymbol> _attributeSetForMethodsToIgnore;
             private readonly AbstractRemoveUnusedMembersDiagnosticAnalyzer<TDocumentationCommentTriviaSyntax, TIdentifierNameSyntax> _analyzer;
@@ -85,6 +86,7 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedMembers
                 _debuggerDisplayAttributeType = compilation.DebuggerDisplayAttributeType();
                 _structLayoutAttributeType = compilation.StructLayoutAttributeType();
                 _eventArgsType = compilation.EventArgsType();
+                _timerType = compilation.TimerType();
                 _deserializationConstructorCheck = new DeserializationConstructorCheck(compilation);
                 _attributeSetForMethodsToIgnore = ImmutableHashSet.CreateRange(GetAttributesForMethodsToIgnore(compilation));
             }
@@ -675,10 +677,26 @@ namespace Microsoft.CodeAnalysis.RemoveUnusedMembers
                             }
 
                         case SymbolKind.Field:
-                            return ((IFieldSymbol)memberSymbol).AssociatedSymbol == null;
+                            var field = (IFieldSymbol)memberSymbol;
+                            if (field.Type.Equals(_timerType))
+                            {
+                                // Do not flag timer fields.
+                                // See https://github.com/dotnet/roslyn/issues/32956
+                                return false;
+                            }
+
+                            return field.AssociatedSymbol == null;
 
                         case SymbolKind.Property:
-                            return ((IPropertySymbol)memberSymbol).ExplicitInterfaceImplementations.IsEmpty;
+                            var property = (IPropertySymbol)memberSymbol;
+                            if (property.Type.Equals(_timerType))
+                            {
+                                // Do not flag timer properties.
+                                // See https://github.com/dotnet/roslyn/issues/32956
+                                return false;
+                            }
+
+                            return property.ExplicitInterfaceImplementations.IsEmpty;
 
                         case SymbolKind.Event:
                             return ((IEventSymbol)memberSymbol).ExplicitInterfaceImplementations.IsEmpty;

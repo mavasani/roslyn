@@ -2375,5 +2375,35 @@ public class MyClass
     private static void [|PrivateExtensionMethod|](this string s) { }
 }");
         }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedMembers)]
+        [WorkItem(32956, "https://github.com/dotnet/roslyn/issues/32956")]
+        public async Task DoNotFlagTimerField()
+        {
+            await TestDiagnosticMissingAsync(
+@"using System;
+using System.Threading;
+
+class C
+{
+    private readonly Timer [|_timer|]
+            = new Timer(_ => Console.WriteLine(""still running""), null, 0, 10_000);
+}");
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsRemoveUnusedMembers)]
+        [WorkItem(32956, "https://github.com/dotnet/roslyn/issues/32956")]
+        public async Task DoNotFlagTimerProperty()
+        {
+            await TestDiagnosticMissingAsync(
+@"using System;
+using System.Threading;
+
+class C
+{
+    private Timer [|Timer|] { get; }
+            = new Timer(_ => Console.WriteLine(""still running""), null, 0, 10_000);
+}");
+        }
     }
 }
