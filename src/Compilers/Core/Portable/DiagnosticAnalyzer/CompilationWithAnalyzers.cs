@@ -402,7 +402,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 var analyzerActionCounts = new Dictionary<DiagnosticAnalyzer, AnalyzerActionCounts>(analyzers.Length);
                 foreach (var analyzer in analyzers)
                 {
-                    var actionCounts = await driver.GetAnalyzerActionCountsAsync(analyzer, compilation.Options, cancellationToken).ConfigureAwait(false);
+                    var actionCounts = driver.GetAnalyzerActionCounts(analyzer, compilation.Options, cancellationToken);
                     analyzerActionCounts.Add(analyzer, actionCounts);
                 }
                 Func<DiagnosticAnalyzer, AnalyzerActionCounts> getAnalyzerActionCounts = analyzer => analyzerActionCounts[analyzer];
@@ -791,7 +791,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var compilationEvents = dequeueGeneratedCompilationEvents();
-                    await _analysisState.OnCompilationEventsGeneratedAsync(compilationEvents, driver, cancellationToken).ConfigureAwait(false);
+                    _analysisState.OnCompilationEventsGenerated(compilationEvents, driver, cancellationToken);
                 }
                 finally
                 {
@@ -1237,7 +1237,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 driver = await GetAnalyzerDriverAsync(cancellationToken).ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                return await _analysisState.GetOrComputeAnalyzerActionCountsAsync(analyzer, driver, cancellationToken).ConfigureAwait(false);
+                return _analysisState.GetOrComputeAnalyzerActionCounts(analyzer, driver, cancellationToken);
             }
             finally
             {

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Diagnostics
@@ -35,20 +36,20 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
 
             /// <summary>
-            /// Task to compute HostSessionStartAnalysisScope for session wide analyzer actions, i.e. AnalyzerActions registered by analyzer's Initialize method.
+            /// Lazily computed HostSessionStartAnalysisScope for session wide analyzer actions, i.e. AnalyzerActions registered by analyzer's Initialize method.
             /// These are run only once per every analyzer. 
             /// </summary>
-            private Task<HostSessionStartAnalysisScope> _lazySessionScopeTask;
+            private HostSessionStartAnalysisScope _lazySessionScope;
 
             /// <summary>
-            /// Task to compute HostCompilationStartAnalysisScope for per-compilation analyzer actions, i.e. AnalyzerActions registered by analyzer's CompilationStartActions.
+            /// Lazily computed HostCompilationStartAnalysisScope for per-compilation analyzer actions, i.e. AnalyzerActions registered by analyzer's CompilationStartActions.
             /// </summary>
-            private Task<HostCompilationStartAnalysisScope> _lazyCompilationScopeTask;
+            private HostCompilationStartAnalysisScope _lazyCompilationScope;
 
             /// <summary>
-            /// Task to compute HostSymbolStartAnalysisScope for per-symbol analyzer actions, i.e. AnalyzerActions registered by analyzer's SymbolStartActions.
+            /// HostSymbolStartAnalysisScope for per-symbol analyzer actions, i.e. AnalyzerActions registered by analyzer's SymbolStartActions.
             /// </summary>
-            private Dictionary<ISymbol, Task<HostSymbolStartAnalysisScope>> _lazySymbolScopeTasks;
+            private Dictionary<ISymbol, HostSymbolStartAnalysisScope> _lazySymbolScopes;
 
             /// <summary>
             /// Supported diagnostic descriptors for diagnostic analyzer, if any.
@@ -63,105 +64,81 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             [PerformanceSensitive(
                 "https://github.com/dotnet/roslyn/issues/26778",
                 AllowCaptures = false)]
-            public Task<HostSessionStartAnalysisScope> GetSessionAnalysisScopeAsync(AnalyzerExecutor analyzerExecutor)
+            public HostSessionStartAnalysisScope GetOrCreateSessionAnalysisScope(AnalyzerExecutor analyzerExecutor)
             {
                 lock (_gate)
                 {
-                    Task<HostSessionStartAnalysisScope> task;
-                    if (_lazySessionScopeTask != null)
-                    {
-                        return _lazySessionScopeTask;
-                    }
+                    return _lazySessionScope ??= getSessionAnalysisScope(this, analyzerExecutor);
 
-                    task = getSessionAnalysisScopeTaskSlow(this, analyzerExecutor);
-                    _lazySessionScopeTask = task;
-                    return task;
-
-                    static Task<HostSessionStartAnalysisScope> getSessionAnalysisScopeTaskSlow(AnalyzerExecutionContext context, AnalyzerExecutor executor)
+                    static HostSessionStartAnalysisScope getSessionAnalysisScope(AnalyzerExecutionContext context, AnalyzerExecutor executor)
                     {
-                        return Task.Run(() =>
-                        {
-                            var sessionScope = new HostSessionStartAnalysisScope();
-                            executor.ExecuteInitializeMethod(context._analyzer, sessionScope);
-                            return sessionScope;
-                        }, executor.CancellationToken);
+                        var sessionScope = new HostSessionStartAnalysisScope();
+                        executor.ExecuteInitializeMethod(context._analyzer, sessionScope);
+                        return sessionScope;
                     }
                 }
             }
 
-            public void ClearSessionScopeTask()
-            {
-                lock (_gate)
-                {
-                    _lazySessionScopeTask = null;
-                }
-            }
-
-            public Task<HostCompilationStartAnalysisScope> GetCompilationAnalysisScopeAsync(
+            [PerformanceSensitive(
+                "https://github.com/dotnet/roslyn/issues/26778",
+                AllowCaptures = false)]
+            public HostCompilationStartAnalysisScope GetOrCreateCompilationAnalysisScope(
                 HostSessionStartAnalysisScope sessionScope,
                 AnalyzerExecutor analyzerExecutor)
             {
                 lock (_gate)
                 {
-                    if (_lazyCompilationScopeTask == null)
+                    return _lazyCompilationScope ??= getCompilationAnalysisScope(this, sessionScope, analyzerExecutor);
+
+                    static HostCompilationStartAnalysisScope getCompilationAnalysisScope(
+                        AnalyzerExecutionContext context,
+                        HostSessionStartAnalysisScope sessionScope,
+                        AnalyzerExecutor analyzerExecutor)
                     {
-                        _lazyCompilationScopeTask = Task.Run(() =>
-                        {
-                            var compilationAnalysisScope = new HostCompilationStartAnalysisScope(sessionScope);
-                            analyzerExecutor.ExecuteCompilationStartActions(sessionScope.GetAnalyzerActions(_analyzer).CompilationStartActions, compilationAnalysisScope);
-                            return compilationAnalysisScope;
-                        }, analyzerExecutor.CancellationToken);
+                        var compilationAnalysisScope = new HostCompilationStartAnalysisScope(sessionScope);
+                        analyzerExecutor.ExecuteCompilationStartActions(sessionScope.GetAnalyzerActions(context._analyzer).CompilationStartActions, compilationAnalysisScope);
+                        return compilationAnalysisScope;
                     }
-
-                    return _lazyCompilationScopeTask;
                 }
             }
 
-            public void ClearCompilationScopeTask()
-            {
-                lock (_gate)
-                {
-                    _lazyCompilationScopeTask = null;
-                }
-            }
-
-            public Task<HostSymbolStartAnalysisScope> GetSymbolAnalysisScopeAsync(
+            public HostSymbolStartAnalysisScope GetOrCreateSymbolAnalysisScope(
                 ISymbol symbol,
                 ImmutableArray<SymbolStartAnalyzerAction> symbolStartActions,
                 AnalyzerExecutor analyzerExecutor)
             {
                 lock (_gate)
                 {
-                    _lazySymbolScopeTasks = _lazySymbolScopeTasks ?? new Dictionary<ISymbol, Task<HostSymbolStartAnalysisScope>>();
-                    if (!_lazySymbolScopeTasks.TryGetValue(symbol, out var symbolScopeTask))
+                    _lazySymbolScopes ??= new Dictionary<ISymbol, HostSymbolStartAnalysisScope>();
+                    if (!_lazySymbolScopes.TryGetValue(symbol, out var symbolScope))
                     {
-                        symbolScopeTask = Task.Run(() => getSymbolAnalysisScopeCore(), analyzerExecutor.CancellationToken);
-                        _lazySymbolScopeTasks.Add(symbol, symbolScopeTask);
+                        symbolScope = getSymbolAnalysisScopeCore();
+                        _lazySymbolScopes.Add(symbol, symbolScope);
                     }
 
-                    return symbolScopeTask;
+                    return symbolScope;
+                }
 
-                    HostSymbolStartAnalysisScope getSymbolAnalysisScopeCore()
+                HostSymbolStartAnalysisScope getSymbolAnalysisScopeCore()
+                {
+                    var symbolAnalysisScope = new HostSymbolStartAnalysisScope();
+                    analyzerExecutor.ExecuteSymbolStartActions(symbol, _analyzer, symbolStartActions, symbolAnalysisScope);
+
+                    var symbolEndActions = symbolAnalysisScope.GetAnalyzerActions(_analyzer);
+                    if (symbolEndActions.SymbolEndActionsCount > 0)
                     {
-                        var symbolAnalysisScope = new HostSymbolStartAnalysisScope();
-                        analyzerExecutor.ExecuteSymbolStartActions(symbol, _analyzer, symbolStartActions, symbolAnalysisScope);
-
-                        var symbolEndActions = symbolAnalysisScope.GetAnalyzerActions(_analyzer);
-                        if (symbolEndActions.SymbolEndActionsCount > 0)
+                        var dependentSymbols = getDependentSymbols();
+                        lock (_gate)
                         {
-                            var dependentSymbols = getDependentSymbols();
-                            lock (_gate)
-                            {
-                                _lazyPendingMemberSymbolsMapOpt = _lazyPendingMemberSymbolsMapOpt ?? new Dictionary<ISymbol, HashSet<ISymbol>>();
+                            _lazyPendingMemberSymbolsMapOpt = _lazyPendingMemberSymbolsMapOpt ?? new Dictionary<ISymbol, HashSet<ISymbol>>();
 
-                                // Guard against entry added from another thread.
-                                VerifyNewEntryForPendingMemberSymbolsMap(symbol, dependentSymbols);
-                                _lazyPendingMemberSymbolsMapOpt[symbol] = dependentSymbols;
-                            }
+                            // Guard against entry added from another thread.
+                            VerifyNewEntryForPendingMemberSymbolsMap(symbol, dependentSymbols);
+                            _lazyPendingMemberSymbolsMapOpt[symbol] = dependentSymbols;
                         }
-
-                        return symbolAnalysisScope;
                     }
+
+                    return symbolAnalysisScope;
                 }
 
                 HashSet<ISymbol> getDependentSymbols()
@@ -221,14 +198,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                         Debug.Assert(dependentSymbols != null);
                         Debug.Assert(dependentSymbols.SetEquals(existingDependentSymbols));
                     }
-                }
-            }
-
-            public void ClearSymbolScopeTask(ISymbol symbol)
-            {
-                lock (_gate)
-                {
-                    _lazySymbolScopeTasks?.Remove(symbol);
                 }
             }
 

@@ -49,100 +49,31 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private AnalyzerExecutionContext GetAnalyzerExecutionContext(DiagnosticAnalyzer analyzer) => _analyzerExecutionContextMap[analyzer];
 
-        [PerformanceSensitive(
-            "https://github.com/dotnet/roslyn/issues/26778",
-            OftenCompletesSynchronously = true)]
-        private async ValueTask<HostCompilationStartAnalysisScope> GetCompilationAnalysisScopeAsync(
+        private HostCompilationStartAnalysisScope GetCompilationAnalysisScope(
             DiagnosticAnalyzer analyzer,
             HostSessionStartAnalysisScope sessionScope,
             AnalyzerExecutor analyzerExecutor)
         {
             var analyzerExecutionContext = GetAnalyzerExecutionContext(analyzer);
-            return await GetCompilationAnalysisScopeCoreAsync(sessionScope, analyzerExecutor, analyzerExecutionContext).ConfigureAwait(false);
+            return analyzerExecutionContext.GetOrCreateCompilationAnalysisScope(sessionScope, analyzerExecutor);
         }
 
-        [PerformanceSensitive(
-            "https://github.com/dotnet/roslyn/issues/26778",
-            OftenCompletesSynchronously = true)]
-        private async ValueTask<HostCompilationStartAnalysisScope> GetCompilationAnalysisScopeCoreAsync(
-            HostSessionStartAnalysisScope sessionScope,
-            AnalyzerExecutor analyzerExecutor,
-            AnalyzerExecutionContext analyzerExecutionContext)
-        {
-            try
-            {
-                return await analyzerExecutionContext.GetCompilationAnalysisScopeAsync(sessionScope, analyzerExecutor).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // Task to compute the scope was cancelled.
-                // Clear the compilation scope for analyzer, so we can attempt a retry.
-                analyzerExecutionContext.ClearCompilationScopeTask();
-
-                analyzerExecutor.CancellationToken.ThrowIfCancellationRequested();
-                return await GetCompilationAnalysisScopeCoreAsync(sessionScope, analyzerExecutor, analyzerExecutionContext).ConfigureAwait(false);
-            }
-        }
-
-        private async Task<HostSymbolStartAnalysisScope> GetSymbolAnalysisScopeAsync(
+        private HostSymbolStartAnalysisScope GetSymbolAnalysisScope(
             ISymbol symbol,
             DiagnosticAnalyzer analyzer,
             ImmutableArray<SymbolStartAnalyzerAction> symbolStartActions,
             AnalyzerExecutor analyzerExecutor)
         {
             var analyzerExecutionContext = GetAnalyzerExecutionContext(analyzer);
-            return await GetSymbolAnalysisScopeCoreAsync(symbol, symbolStartActions, analyzerExecutor, analyzerExecutionContext).ConfigureAwait(false);
+            return analyzerExecutionContext.GetOrCreateSymbolAnalysisScope(symbol, symbolStartActions, analyzerExecutor);
         }
 
-        private async Task<HostSymbolStartAnalysisScope> GetSymbolAnalysisScopeCoreAsync(
-            ISymbol symbol,
-            ImmutableArray<SymbolStartAnalyzerAction> symbolStartActions,
-            AnalyzerExecutor analyzerExecutor,
-            AnalyzerExecutionContext analyzerExecutionContext)
-        {
-            try
-            {
-                return await analyzerExecutionContext.GetSymbolAnalysisScopeAsync(symbol, symbolStartActions, analyzerExecutor).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // Task to compute the scope was cancelled.
-                // Clear the symbol scope for analyzer, so we can attempt a retry.
-                analyzerExecutionContext.ClearSymbolScopeTask(symbol);
-
-                analyzerExecutor.CancellationToken.ThrowIfCancellationRequested();
-                return await GetSymbolAnalysisScopeCoreAsync(symbol, symbolStartActions, analyzerExecutor, analyzerExecutionContext).ConfigureAwait(false);
-            }
-        }
-
-        [PerformanceSensitive("https://github.com/dotnet/roslyn/issues/23582", OftenCompletesSynchronously = true)]
-        private async ValueTask<HostSessionStartAnalysisScope> GetSessionAnalysisScopeAsync(
+        private HostSessionStartAnalysisScope GetSessionAnalysisScope(
             DiagnosticAnalyzer analyzer,
             AnalyzerExecutor analyzerExecutor)
         {
             var analyzerExecutionContext = GetAnalyzerExecutionContext(analyzer);
-            return await GetSessionAnalysisScopeCoreAsync(analyzerExecutor, analyzerExecutionContext).ConfigureAwait(false);
-        }
-
-        [PerformanceSensitive("https://github.com/dotnet/roslyn/issues/23582", OftenCompletesSynchronously = true)]
-        private async ValueTask<HostSessionStartAnalysisScope> GetSessionAnalysisScopeCoreAsync(
-            AnalyzerExecutor analyzerExecutor,
-            AnalyzerExecutionContext analyzerExecutionContext)
-        {
-            try
-            {
-                var task = analyzerExecutionContext.GetSessionAnalysisScopeAsync(analyzerExecutor);
-                return await task.ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // Task to compute the scope was cancelled.
-                // Clear the entry in scope map for analyzer, so we can attempt a retry.
-                analyzerExecutionContext.ClearSessionScopeTask();
-
-                analyzerExecutor.CancellationToken.ThrowIfCancellationRequested();
-                return await GetSessionAnalysisScopeCoreAsync(analyzerExecutor, analyzerExecutionContext).ConfigureAwait(false);
-            }
+            return analyzerExecutionContext.GetOrCreateSessionAnalysisScope(analyzerExecutor);
         }
 
         /// <summary>
@@ -150,13 +81,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// The returned actions include the actions registered during <see cref="DiagnosticAnalyzer.Initialize(AnalysisContext)"/> method as well as
         /// the actions registered during <see cref="CompilationStartAnalyzerAction"/> for the given compilation.
         /// </summary>
-        [PerformanceSensitive("https://github.com/dotnet/roslyn/issues/23582", OftenCompletesSynchronously = true)]
-        public async ValueTask<AnalyzerActions> GetAnalyzerActionsAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+        [PerformanceSensitive("https://github.com/dotnet/roslyn/issues/23582")]
+        public AnalyzerActions GetAnalyzerActions(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
         {
-            var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            var sessionScope = GetSessionAnalysisScope(analyzer, analyzerExecutor);
             if (sessionScope.GetAnalyzerActions(analyzer).CompilationStartActionsCount > 0 && analyzerExecutor.Compilation != null)
             {
-                var compilationScope = await GetCompilationAnalysisScopeAsync(analyzer, sessionScope, analyzerExecutor).ConfigureAwait(false);
+                var compilationScope = GetCompilationAnalysisScope(analyzer, sessionScope, analyzerExecutor);
                 return compilationScope.GetAnalyzerActions(analyzer);
             }
 
@@ -167,16 +98,16 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Get the per-symbol analyzer actions to be executed by the given analyzer.
         /// These are the actions registered during the various RegisterSymbolStartAction method invocations for the given symbol on different analysis contexts.
         /// </summary>
-        [PerformanceSensitive("https://github.com/dotnet/roslyn/issues/23582", OftenCompletesSynchronously = true)]
-        public async ValueTask<AnalyzerActions> GetPerSymbolAnalyzerActionsAsync(ISymbol symbol, DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+        [PerformanceSensitive("https://github.com/dotnet/roslyn/issues/23582")]
+        public AnalyzerActions GetPerSymbolAnalyzerActions(ISymbol symbol, DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
         {
-            var analyzerActions = await GetAnalyzerActionsAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            var analyzerActions = GetAnalyzerActions(analyzer, analyzerExecutor);
             if (analyzerActions.SymbolStartActionsCount > 0)
             {
                 var filteredSymbolStartActions = getFilteredActionsByKind(analyzerActions.SymbolStartActions);
                 if (filteredSymbolStartActions.Length > 0)
                 {
-                    var symbolScope = await GetSymbolAnalysisScopeAsync(symbol, analyzer, filteredSymbolStartActions, analyzerExecutor).ConfigureAwait(false);
+                    var symbolScope = GetSymbolAnalysisScope(symbol, analyzer, filteredSymbolStartActions, analyzerExecutor);
                     return symbolScope.GetAnalyzerActions(analyzer);
                 }
             }
@@ -209,9 +140,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// <summary>
         /// Returns true if the given analyzer has enabled concurrent execution by invoking <see cref="AnalysisContext.EnableConcurrentExecution"/>.
         /// </summary>
-        public async Task<bool> IsConcurrentAnalyzerAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+        public bool IsConcurrentAnalyzer(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
         {
-            var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            var sessionScope = GetSessionAnalysisScope(analyzer, analyzerExecutor);
             return sessionScope.IsConcurrentAnalyzer(analyzer);
         }
 
@@ -219,9 +150,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Returns <see cref="GeneratedCodeAnalysisFlags"/> for the given analyzer.
         /// If an analyzer hasn't configured generated code analysis, returns <see cref="AnalyzerDriver.DefaultGeneratedCodeAnalysisFlags"/>.
         /// </summary>
-        public async Task<GeneratedCodeAnalysisFlags> GetGeneratedCodeAnalysisFlagsAsync(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
+        public GeneratedCodeAnalysisFlags GetGeneratedCodeAnalysisFlags(DiagnosticAnalyzer analyzer, AnalyzerExecutor analyzerExecutor)
         {
-            var sessionScope = await GetSessionAnalysisScopeAsync(analyzer, analyzerExecutor).ConfigureAwait(false);
+            var sessionScope = GetSessionAnalysisScope(analyzer, analyzerExecutor);
             return sessionScope.GetGeneratedCodeAnalysisFlags(analyzer);
         }
 

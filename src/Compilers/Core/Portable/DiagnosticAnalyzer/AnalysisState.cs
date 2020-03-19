@@ -99,11 +99,11 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             return _analyzerStates[index];
         }
 
-        public async Task OnCompilationEventsGeneratedAsync(ImmutableArray<CompilationEvent> compilationEvents, AnalyzerDriver driver, CancellationToken cancellationToken)
+        public void OnCompilationEventsGenerated(ImmutableArray<CompilationEvent> compilationEvents, AnalyzerDriver driver, CancellationToken cancellationToken)
         {
             try
             {
-                await EnsureAnalyzerActionCountsInitializedAsync(driver, cancellationToken).ConfigureAwait(false);
+                EnsureAnalyzerActionCountsInitialized(driver, cancellationToken);
 
                 using (_gate.DisposableWait(cancellationToken))
                 {
@@ -285,14 +285,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private async Task EnsureAnalyzerActionCountsInitializedAsync(AnalyzerDriver driver, CancellationToken cancellationToken)
+        private void EnsureAnalyzerActionCountsInitialized(AnalyzerDriver driver, CancellationToken cancellationToken)
         {
             if (_lazyAnalyzerActionCountsMap == null)
             {
                 var builder = ImmutableDictionary.CreateBuilder<DiagnosticAnalyzer, AnalyzerActionCounts>();
                 foreach (var (analyzer, _) in _analyzerStateMap)
                 {
-                    var actionCounts = await driver.GetAnalyzerActionCountsAsync(analyzer, _compilationOptions, cancellationToken).ConfigureAwait(false);
+                    var actionCounts = driver.GetAnalyzerActionCounts(analyzer, _compilationOptions, cancellationToken);
                     builder.Add(analyzer, actionCounts);
                 }
 
@@ -300,9 +300,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        internal async Task<AnalyzerActionCounts> GetOrComputeAnalyzerActionCountsAsync(DiagnosticAnalyzer analyzer, AnalyzerDriver driver, CancellationToken cancellationToken)
+        internal AnalyzerActionCounts GetOrComputeAnalyzerActionCounts(DiagnosticAnalyzer analyzer, AnalyzerDriver driver, CancellationToken cancellationToken)
         {
-            await EnsureAnalyzerActionCountsInitializedAsync(driver, cancellationToken).ConfigureAwait(false);
+            EnsureAnalyzerActionCountsInitialized(driver, cancellationToken);
             return _lazyAnalyzerActionCountsMap[analyzer];
         }
 
@@ -333,17 +333,17 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private async Task OnSymbolDeclaredEventProcessedAsync(
+        private void OnSymbolDeclaredEventProcessed(
             SymbolDeclaredCompilationEvent symbolDeclaredEvent,
             ImmutableArray<DiagnosticAnalyzer> analyzers,
-            Func<ISymbol, DiagnosticAnalyzer, Task> onSymbolAndMembersProcessedAsync)
+            Action<ISymbol, DiagnosticAnalyzer> onSymbolAndMembersProcessed)
         {
             foreach (var analyzer in analyzers)
             {
                 var analyzerState = GetAnalyzerState(analyzer);
                 if (analyzerState.OnSymbolDeclaredEventProcessed(symbolDeclaredEvent))
                 {
-                    await onSymbolAndMembersProcessedAsync(symbolDeclaredEvent.Symbol, analyzer).ConfigureAwait(false);
+                    onSymbolAndMembersProcessed(symbolDeclaredEvent.Symbol, analyzer);
                 }
             }
         }
@@ -352,13 +352,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Invoke this method at completion of event processing for the given analyzers.
         /// It updates the analysis state of this event for each analyzer and if the event has been fully processed for all analyzers, then removes it from our event cache.
         /// </summary>
-        public async Task OnCompilationEventProcessedAsync(CompilationEvent compilationEvent, ImmutableArray<DiagnosticAnalyzer> analyzers, Func<ISymbol, DiagnosticAnalyzer, Task> onSymbolAndMembersProcessedAsync)
+        public void OnCompilationEventProcessed(CompilationEvent compilationEvent, ImmutableArray<DiagnosticAnalyzer> analyzers, Action<ISymbol, DiagnosticAnalyzer> onSymbolAndMembersProcessed)
         {
             // Analyze if the symbol and all its declaring syntax references are analyzed.
             var symbolDeclaredEvent = compilationEvent as SymbolDeclaredCompilationEvent;
             if (symbolDeclaredEvent != null)
             {
-                await OnSymbolDeclaredEventProcessedAsync(symbolDeclaredEvent, analyzers, onSymbolAndMembersProcessedAsync).ConfigureAwait(false);
+                OnSymbolDeclaredEventProcessed(symbolDeclaredEvent, analyzers, onSymbolAndMembersProcessed);
             }
 
             // Check if event is fully analyzed for all analyzers.
