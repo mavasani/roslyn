@@ -328,7 +328,10 @@ namespace Microsoft.CodeAnalysis
         public abstract int WarningLevel { get; }
 
         /// <summary>
-        /// Returns true if the diagnostic has a source suppression, i.e. an attribute or a pragma suppression.
+        /// Returns true if the diagnostic has a source suppression, i.e. a suppression by any one of the following means:
+        ///  1. Pragma suppression
+        ///  2. Suppression by the '!' or suppression operator
+        ///  3. SuppressMessageAttribute suppression
         /// </summary>
         public abstract bool IsSuppressed { get; }
 
@@ -340,20 +343,31 @@ namespace Microsoft.CodeAnalysis
         {
             if (!IsSuppressed)
             {
+                Debug.Assert((this as DiagnosticWithInfo)?.IsNullableSuppression != true);
                 return null;
             }
 
             AttributeData? attribute;
-            var suppressMessageState = new SuppressMessageAttributeState(compilation);
-            if (!suppressMessageState.IsDiagnosticSuppressed(
-                    this,
-                    getSemanticModel: (compilation, tree) => compilation.GetSemanticModel(tree),
-                    out attribute))
+            bool isNullableSuppression;
+            if ((this as DiagnosticWithInfo)?.IsNullableSuppression == true)
             {
+                isNullableSuppression = true;
                 attribute = null;
             }
+            else
+            {
+                isNullableSuppression = false;
+                var suppressMessageState = new SuppressMessageAttributeState(compilation);
+                if (!suppressMessageState.IsDiagnosticSuppressed(
+                        this,
+                        getSemanticModel: (compilation, tree) => compilation.GetSemanticModel(tree),
+                        out attribute))
+                {
+                    attribute = null;
+                }
+            }
 
-            return new SuppressionInfo(this.Id, attribute);
+            return new SuppressionInfo(this.Id, attribute, isNullableSuppression);
         }
 
         /// <summary>

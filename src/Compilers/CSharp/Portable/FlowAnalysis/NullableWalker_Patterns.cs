@@ -590,7 +590,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 labelStateMap.TryGetValue(node.DefaultLabel, out var defaultLabelState) && defaultLabelState.believedReachable)
             {
                 SetState(defaultLabelState.state);
-                ReportDiagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, ((SwitchExpressionSyntax)node.Syntax).SwitchKeyword.GetLocation());
+                ReportDiagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, ((SwitchExpressionSyntax)node.Syntax).SwitchKeyword.GetLocation(), isSuppressed: false);
             }
 
             // collect expressions, conversions and result types
@@ -633,7 +633,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 var expression = expressions[i];
                 resultTypes[i] = VisitConversion(conversionOpt: null, expression, conversions[i], inferredTypeWithAnnotations, resultTypes[i], checkConversion: true,
-                    fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Assignment, reportRemainingWarnings: true, reportTopLevelWarnings: false);
+                    fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Assignment, reportRemainingWarnings: ReportWarningKind.True, reportTopLevelWarnings: ReportWarningKind.False);
             }
 
             var inferredState = BestTypeInferrer.GetNullableState(resultTypes);
@@ -650,7 +650,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var conversionOpt = node.SwitchArms[i].Value switch { BoundConversion c when c != nodeForSyntax => c, _ => null };
                 // Report top-level warnings
                 _ = VisitConversion(conversionOpt, conversionOperand: nodeForSyntax, conversions[i], targetTypeWithNullability: inferredTypeWithAnnotations, operandType: resultTypes[i],
-                    checkConversion: true, fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Assignment, reportRemainingWarnings: false, reportTopLevelWarnings: true);
+                    checkConversion: true, fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Assignment, reportRemainingWarnings: ReportWarningKind.False, reportTopLevelWarnings: ReportWarningKind.True);
             }
 
             conversions.Free();

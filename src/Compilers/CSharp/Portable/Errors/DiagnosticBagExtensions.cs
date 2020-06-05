@@ -4,6 +4,7 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -27,15 +28,22 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Add a diagnostic to the bag.
         /// </summary>
-        /// <param name="diagnostics"></param>
-        /// <param name="code"></param>
-        /// <param name="location"></param>
-        /// <param name="args"></param>
-        /// <returns></returns>
         internal static CSDiagnosticInfo Add(this DiagnosticBag diagnostics, ErrorCode code, Location location, params object[] args)
         {
             var info = new CSDiagnosticInfo(code, args);
             var diag = new CSDiagnostic(info, location);
+            diagnostics.Add(diag);
+            return info;
+        }
+
+        /// <summary>
+        /// Add a diagnostic to the bag.
+        /// </summary>
+        internal static CSDiagnosticInfo AddNullable(this DiagnosticBag diagnostics, ErrorCode code, Location location, bool isSuppressed, params object[] args)
+        {
+            Debug.Assert(ErrorFacts.NullableWarnings.Contains(MessageProvider.Instance.GetIdForErrorCode((int)code)));
+            var info = new CSDiagnosticInfo(code, args);
+            var diag = new CSDiagnostic(info, location, isSuppressed, isNullableSuppression: isSuppressed);
             diagnostics.Add(diag);
             return info;
         }

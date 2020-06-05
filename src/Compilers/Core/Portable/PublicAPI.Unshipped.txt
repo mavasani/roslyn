@@ -2,6 +2,8 @@ Microsoft.CodeAnalysis.Compilation.CreateFunctionPointerTypeSymbol(Microsoft.Cod
 Microsoft.CodeAnalysis.Compilation.CreateNativeIntegerTypeSymbol(bool signed) -> Microsoft.CodeAnalysis.INamedTypeSymbol
 Microsoft.CodeAnalysis.Diagnostics.AnalyzerFileReference.AssemblyLoader.get -> Microsoft.CodeAnalysis.IAnalyzerAssemblyLoader
 Microsoft.CodeAnalysis.Diagnostics.AnalyzerFileReference.Equals(Microsoft.CodeAnalysis.Diagnostics.AnalyzerFileReference other) -> bool
+Microsoft.CodeAnalysis.Diagnostics.SuppressionInfo.IsNullableSuppression.get -> bool
+Microsoft.CodeAnalysis.Diagnostics.SuppressionInfo.IsPragmaSuppression.get -> bool
 Microsoft.CodeAnalysis.IAssemblySymbol.GetForwardedTypes() -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.INamedTypeSymbol>
 Microsoft.CodeAnalysis.IFunctionPointerTypeSymbol
 Microsoft.CodeAnalysis.IFunctionPointerTypeSymbol.Signature.get -> Microsoft.CodeAnalysis.IMethodSymbol

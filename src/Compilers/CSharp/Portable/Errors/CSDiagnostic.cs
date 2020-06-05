@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -11,9 +12,11 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// </summary>
     internal sealed class CSDiagnostic : DiagnosticWithInfo
     {
-        internal CSDiagnostic(DiagnosticInfo info, Location location, bool isSuppressed = false)
-            : base(info, location, isSuppressed)
+        internal CSDiagnostic(DiagnosticInfo info, Location location, bool isSuppressed = false, bool isNullableSuppression = false)
+            : base(info, location, isSuppressed, isNullableSuppression)
         {
+            Debug.Assert(!isNullableSuppression || isSuppressed);
+            Debug.Assert(!isNullableSuppression || ErrorFacts.NullableWarnings.Contains(MessageProvider.Instance.GetIdForErrorCode(info.Code)));
         }
 
         public override string ToString()

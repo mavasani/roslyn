@@ -22,13 +22,15 @@ namespace Microsoft.CodeAnalysis
         private readonly Location _location;
         private readonly bool _isSuppressed;
 
-        internal DiagnosticWithInfo(DiagnosticInfo info, Location location, bool isSuppressed = false)
+        internal DiagnosticWithInfo(DiagnosticInfo info, Location location, bool isSuppressed = false, bool isNullableSuppression = false)
         {
             RoslynDebug.Assert(info != null);
             RoslynDebug.Assert(location != null);
+            RoslynDebug.Assert(!isNullableSuppression || isSuppressed);
             _info = info;
             _location = location;
             _isSuppressed = isSuppressed;
+            IsNullableSuppression = isNullableSuppression;
         }
 
         public override Location Location
@@ -93,6 +95,8 @@ namespace Microsoft.CodeAnalysis
         {
             get { return _isSuppressed; }
         }
+
+        internal bool IsNullableSuppression { get; }
 
         public sealed override int WarningLevel
         {
@@ -197,7 +201,7 @@ namespace Microsoft.CodeAnalysis
 
             if (location != _location)
             {
-                return new DiagnosticWithInfo(_info, location, _isSuppressed);
+                return new DiagnosticWithInfo(_info, location, _isSuppressed, IsNullableSuppression);
             }
 
             return this;
@@ -207,7 +211,7 @@ namespace Microsoft.CodeAnalysis
         {
             if (this.Severity != severity)
             {
-                return new DiagnosticWithInfo(this.Info.GetInstanceWithSeverity(severity), _location, _isSuppressed);
+                return new DiagnosticWithInfo(this.Info.GetInstanceWithSeverity(severity), _location, _isSuppressed, IsNullableSuppression);
             }
 
             return this;
@@ -217,7 +221,7 @@ namespace Microsoft.CodeAnalysis
         {
             if (this.IsSuppressed != isSuppressed)
             {
-                return new DiagnosticWithInfo(this.Info, _location, isSuppressed);
+                return new DiagnosticWithInfo(this.Info, _location, isSuppressed, IsNullableSuppression);
             }
 
             return this;

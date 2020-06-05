@@ -4,6 +4,8 @@
 
 #nullable enable
 
+using System.Diagnostics;
+
 namespace Microsoft.CodeAnalysis.Diagnostics
 {
     /// <summary>
@@ -22,10 +24,24 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// </summary>
         public AttributeData? Attribute { get; }
 
-        internal SuppressionInfo(string id, AttributeData? attribute)
+        /// <summary>
+        /// If the diagnostic was suppressed by the '!' or the nullable suppression operator.
+        /// </summary>
+        public bool IsNullableSuppression { get; }
+
+        /// <summary>
+        /// If the diagnostic was suppressed by a pragma suppression.
+        /// </summary>
+        public bool IsPragmaSuppression { get; }
+
+        internal SuppressionInfo(string id, AttributeData? attribute, bool isNullableSuppression)
         {
+            Debug.Assert(!isNullableSuppression || attribute == null);
             Id = id;
             Attribute = attribute;
+            IsNullableSuppression = isNullableSuppression;
+            IsPragmaSuppression = !isNullableSuppression && attribute == null;
+
         }
     }
 }

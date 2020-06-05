@@ -191,6 +191,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         private readonly bool _isSpeculative;
 
+        /// <summary>
+        /// True if we're analyzing a compilation with <see cref="CompilationOptions.ReportSuppressedDiagnostics"/> set to true
+        /// and need to report nullable diagnostics suppressed with '!' operator with <see cref="Diagnostic.IsSuppressed"/> set to true.
+        /// </summary>
+        private readonly bool _reportSuppressedDiagnostics;
+
 #if DEBUG
         /// <summary>
         /// Contains the expressions that should not be inserted into <see cref="_analyzedNullabilityMapOpt"/>.
@@ -386,6 +392,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             _returnTypesOpt = returnTypesOpt;
             _snapshotBuilderOpt = snapshotBuilderOpt;
             _isSpeculative = isSpeculative;
+            _reportSuppressedDiagnostics = compilation.Options.ReportSuppressedDiagnostics;
 
             if (initialState != null)
             {
@@ -736,7 +743,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 this.IsReachable())
             {
                 // A method marked [DoesNotReturn] should not return.
-                ReportDiagnostic(ErrorCode.WRN_ShouldNotReturn, syntaxOpt?.GetLocation() ?? methodMainNode.Syntax.GetLastToken().GetLocation());
+                ReportDiagnostic(ErrorCode.WRN_ShouldNotReturn, syntaxOpt?.GetLocation() ?? methodMainNode.Syntax.GetLastToken().GetLocation(), isSuppressed: false);
             }
         }
 
@@ -1405,6 +1412,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeWithAnnotations targetType,
             TypeWithState valueType,
             bool useLegacyWarnings,
+            bool isSuppressed,
             AssignmentKind assignmentKind = AssignmentKind.Assignment,
             ParameterSymbol parameterOpt = null,
             Location location = null)
@@ -1426,20 +1434,17 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             location ??= value.Syntax.GetLocation();
             var unwrappedValue = SkipReferenceConversions(value);
-            if (unwrappedValue.IsSuppressed)
-            {
-                return;
-            }
+            isSuppressed = isSuppressed || unwrappedValue.IsSuppressed;
 
             if (value.ConstantValue?.IsNull == true && !useLegacyWarnings)
             {
                 // Report warning converting null literal to non-nullable reference type.
                 // target (e.g.: `object x = null;` or calling `void F(object y)` with `F(null)`).
-                ReportDiagnostic(assignmentKind == AssignmentKind.Return ? ErrorCode.WRN_NullReferenceReturn : ErrorCode.WRN_NullAsNonNullable, location);
+                ReportDiagnostic(assignmentKind == AssignmentKind.Return ? ErrorCode.WRN_NullReferenceReturn : ErrorCode.WRN_NullAsNonNullable, location, isSuppressed);
             }
             else if (assignmentKind == AssignmentKind.Argument)
             {
-                ReportDiagnostic(ErrorCode.WRN_NullReferenceArgument, location,
+                ReportDiagnostic(ErrorCode.WRN_NullReferenceArgument, location, isSuppressed,
                     GetParameterAsDiagnosticArgument(parameterOpt),
                     GetContainingSymbolAsDiagnosticArgument(parameterOpt));
             }
@@ -1451,11 +1456,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // because there is no syntax for declaring the target type as [MaybeNull]T.
                     return;
                 }
-                ReportNonSafetyDiagnostic(location);
+                ReportNonSafetyDiagnostic(location, isSuppressed);
             }
             else
             {
-                ReportDiagnostic(assignmentKind == AssignmentKind.Return ? ErrorCode.WRN_NullReferenceReturn : ErrorCode.WRN_NullReferenceAssignment, location);
+                ReportDiagnostic(assignmentKind == AssignmentKind.Return ? ErrorCode.WRN_NullReferenceReturn : ErrorCode.WRN_NullReferenceAssignment, location, isSuppressed);
             }
 
             static bool isMaybeDefaultValue(TypeWithState valueType)
@@ -1599,14 +1604,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        private void ReportNullabilityMismatchInAssignment(SyntaxNode syntaxNode, object sourceType, object destinationType)
+        private void ReportNullabilityMismatchInAssignment(SyntaxNode syntaxNode, object sourceType, object destinationType, bool isSuppressed)
         {
-            ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, syntaxNode, sourceType, destinationType);
+            ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, syntaxNode, isSuppressed, sourceType, destinationType);
         }
 
-        private void ReportNullabilityMismatchInAssignment(Location location, object sourceType, object destinationType)
+        private void ReportNullabilityMismatchInAssignment(Location location, object sourceType, object destinationType, bool isSuppressed)
         {
-            ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, location, sourceType, destinationType);
+            ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, location, isSuppressed, sourceType, destinationType);
         }
 
         /// <summary>
@@ -1663,22 +1668,22 @@ namespace Microsoft.CodeAnalysis.CSharp
                 target.Type.Equals(assignedValue.Type, TypeCompareKind.AllIgnoreOptions);
         }
 
-        private void ReportNonSafetyDiagnostic(Location location)
+        private void ReportNonSafetyDiagnostic(Location location, bool isSuppressed)
         {
-            ReportDiagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, location);
+            ReportDiagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, location, isSuppressed);
         }
 
-        private void ReportDiagnostic(ErrorCode errorCode, SyntaxNode syntaxNode, params object[] arguments)
+        private void ReportDiagnostic(ErrorCode errorCode, SyntaxNode syntaxNode, bool isSuppressed, params object[] arguments)
         {
-            ReportDiagnostic(errorCode, syntaxNode.GetLocation(), arguments);
+            ReportDiagnostic(errorCode, syntaxNode.GetLocation(), isSuppressed, arguments);
         }
 
-        private void ReportDiagnostic(ErrorCode errorCode, Location location, params object[] arguments)
+        private void ReportDiagnostic(ErrorCode errorCode, Location location, bool isSuppressed, params object[] arguments)
         {
             Debug.Assert(ErrorFacts.NullableWarnings.Contains(MessageProvider.Instance.GetIdForErrorCode((int)errorCode)));
-            if (IsReachable() && !_disableDiagnostics)
+            if (IsReachable() && !_disableDiagnostics && (!isSuppressed || _reportSuppressedDiagnostics))
             {
-                Diagnostics.Add(errorCode, location, arguments);
+                Diagnostics.AddNullable(errorCode, location, isSuppressed, arguments);
             }
         }
 
@@ -1978,18 +1983,21 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             Visit(expr);
             TypeWithState resultType = ResultType;
-            if (!expr.IsSuppressed && RemoveConversion(expr, includeExplicitConversions: false).expression.Kind != BoundKind.ThrowExpression)
+
+            var isSuppressed = expr.IsSuppressed;
+            if ((!isSuppressed || _reportSuppressedDiagnostics) &&
+                RemoveConversion(expr, includeExplicitConversions: false).expression.Kind != BoundKind.ThrowExpression)
             {
                 var lvalueResultType = LvalueResultType;
                 if (IsNullabilityMismatch(lvalueResultType, destinationType))
                 {
                     // declared types must match
-                    ReportNullabilityMismatchInAssignment(expr.Syntax, lvalueResultType, destinationType);
+                    ReportNullabilityMismatchInAssignment(expr.Syntax, lvalueResultType, destinationType, isSuppressed);
                 }
                 else
                 {
                     // types match, but state would let a null in
-                    ReportNullableAssignmentIfNecessary(expr, destinationType, resultType, useLegacyWarnings: false);
+                    ReportNullableAssignmentIfNecessary(expr, destinationType, resultType, useLegacyWarnings: false, isSuppressed);
                 }
             }
 
@@ -2603,7 +2611,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     if (!node.Type.IsValueType && State[containingSlot].MayBeNull())
                     {
-                        ReportDiagnostic(ErrorCode.WRN_NullReferenceInitializer, node.Syntax, containingSymbol);
+                        ReportDiagnostic(ErrorCode.WRN_NullReferenceInitializer, node.Syntax, isSuppressed: false, containingSymbol);
                     }
                 }
             }
@@ -2856,7 +2864,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var expressionNoConversion = expressionsNoConversions[i];
                         var expression = GetConversionIfApplicable(expressions[i], expressionNoConversion);
                         resultTypes[i] = VisitConversion(expression, expressionNoConversion, conversions[i], inferredType, resultTypes[i], checkConversion: true,
-                            fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Assignment, reportRemainingWarnings: true, reportTopLevelWarnings: false);
+                            fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Assignment, reportRemainingWarnings: ReportWarningKind.True, reportTopLevelWarnings: ReportWarningKind.False);
                     }
 
                     // Set top-level nullability on inferred element type
@@ -2867,7 +2875,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         // Report top-level warnings
                         _ = VisitConversion(conversionOpt: null, conversionOperand: expressionsNoConversions[i], Conversion.Identity, targetTypeWithNullability: inferredType, operandType: resultTypes[i],
-                            checkConversion: true, fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Assignment, reportRemainingWarnings: false);
+                            checkConversion: true, fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Assignment, reportRemainingWarnings: ReportWarningKind.False);
                     }
                 }
                 else
@@ -2941,7 +2949,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     Conversion conversion = conversionsWithoutNullability.ClassifyConversionFromExpression(placeholder, bestType, ref useSiteDiagnostics);
                     resultTypes[i] = walker.VisitConversion(conversionOpt: null, placeholder, conversion, bestTypeWithObliviousAnnotation, resultTypes[i].ToTypeWithState(),
                         checkConversion: false, fromExplicitCast: false, useLegacyWarnings: false, AssignmentKind.Return,
-                        reportRemainingWarnings: false, reportTopLevelWarnings: false).ToTypeWithAnnotations();
+                        reportRemainingWarnings: ReportWarningKind.False, reportTopLevelWarnings: ReportWarningKind.False).ToTypeWithAnnotations();
                 }
 
                 // Set top-level nullability on inferred type
@@ -3739,7 +3747,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (IsNullabilityMismatch(consequenceLValue, alternativeLValue))
                 {
                     // l-value types must match
-                    ReportNullabilityMismatchInAssignment(node.Syntax, consequenceLValue, alternativeLValue);
+                    ReportNullabilityMismatchInAssignment(node.Syntax, consequenceLValue, alternativeLValue, isSuppressed: false);
                 }
                 else if (!node.HasErrors)
                 {
@@ -3902,7 +3910,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     fromExplicitCast: false,
                     useLegacyWarnings: false,
                     AssignmentKind.Assignment,
-                    reportTopLevelWarnings: false);
+                    reportTopLevelWarnings: ReportWarningKind.False);
 
                 if (!isReachable)
                 {
@@ -4764,21 +4772,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                     break;
                 case RefKind.Ref:
-                    if (!argumentNoConversion.IsSuppressed)
+                    var lvalueResultType = result.LValueType;
+                    if (IsNullabilityMismatch(lvalueResultType.Type, parameterType.Type))
                     {
-                        var lvalueResultType = result.LValueType;
-                        if (IsNullabilityMismatch(lvalueResultType.Type, parameterType.Type))
-                        {
-                            // declared types must match, ignoring top-level nullability
-                            ReportNullabilityMismatchInRefArgument(argumentNoConversion, argumentType: lvalueResultType.Type, parameter, parameterType.Type);
-                        }
-                        else
-                        {
-                            // types match, but state would let a null in
-                            ReportNullableAssignmentIfNecessary(argumentNoConversion, ApplyLValueAnnotations(parameterType, parameterAnnotations), resultType, useLegacyWarnings: false);
-                            // If the parameter has annotations, we perform an additional check for nullable value types
-                            CheckDisallowedNullAssignment(resultType, parameterAnnotations, argumentNoConversion.Syntax.Location);
-                        }
+                        // declared types must match, ignoring top-level nullability
+                        ReportNullabilityMismatchInRefArgument(argumentNoConversion, argumentType: lvalueResultType.Type, parameter, parameterType.Type, argumentNoConversion.IsSuppressed);
+                    }
+                    else
+                    {
+                        // types match, but state would let a null in
+                        ReportNullableAssignmentIfNecessary(argumentNoConversion, ApplyLValueAnnotations(parameterType, parameterAnnotations), resultType, useLegacyWarnings: false, argumentNoConversion.IsSuppressed);
+                        // If the parameter has annotations, we perform an additional check for nullable value types
+                        CheckDisallowedNullAssignment(resultType, parameterAnnotations, argumentNoConversion.Syntax.Location, isSuppressed: argumentNoConversion.IsSuppressed);
                     }
 
                     break;
@@ -4791,7 +4796,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!this.IsConditionalState);
         }
 
-        private void CheckDisallowedNullAssignment(TypeWithState state, FlowAnalysisAnnotations annotations, Location location, BoundExpression boundValueOpt = null)
+        private void CheckDisallowedNullAssignment(TypeWithState state, FlowAnalysisAnnotations annotations, Location location, BoundExpression boundValueOpt = null, bool isSuppressed = false)
         {
             if (boundValueOpt is { WasCompilerGenerated: true })
             {
@@ -4802,7 +4807,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // We do this extra check for types whose non-nullable version cannot be represented
             if (IsDisallowedNullAssignment(state, annotations))
             {
-                ReportDiagnostic(ErrorCode.WRN_DisallowNullAttributeForbidsMaybeNullAssignment, location);
+                ReportDiagnostic(ErrorCode.WRN_DisallowNullAttributeForbidsMaybeNullAssignment, location, isSuppressed);
             }
         }
 
@@ -4876,14 +4881,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                         trackNullableStateForAssignment(parameterValue, lValueType, MakeSlot(argument), parameterWithState, argument.IsSuppressed, parameterAnnotations);
 
                         // check whether parameter would unsafely let a null out in the worse case
-                        if (!argument.IsSuppressed)
+                        if (!argument.IsSuppressed || _reportSuppressedDiagnostics)
                         {
                             var leftAnnotations = GetLValueAnnotations(argument);
                             ReportNullableAssignmentIfNecessary(
                                 parameterValue,
                                 targetType: ApplyLValueAnnotations(lValueType, leftAnnotations),
                                 valueType: applyPostConditionsUnconditionally(parameterWithState, parameterAnnotations),
-                                UseLegacyWarnings(argument, result.LValueType));
+                                UseLegacyWarnings(argument, result.LValueType),
+                                argument.IsSuppressed);
                         }
                     }
                     break;
@@ -4920,15 +4926,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                         trackNullableStateForAssignment(parameterValue, lValueType, MakeSlot(argument), parameterWithState, argument.IsSuppressed, parameterAnnotations);
 
                         // report warnings if parameter would unsafely let a null out in the worst case
-                        if (!argument.IsSuppressed)
-                        {
-                            ReportNullableAssignmentIfNecessary(parameterValue, lValueType, worstCaseParameterWithState, UseLegacyWarnings(argument, result.LValueType));
+                        ReportNullableAssignmentIfNecessary(parameterValue, lValueType, worstCaseParameterWithState, UseLegacyWarnings(argument, result.LValueType), argument.IsSuppressed);
 
-                            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-                            if (!_conversions.HasIdentityOrImplicitReferenceConversion(parameterType.Type, lValueType.Type, ref useSiteDiagnostics))
-                            {
-                                ReportNullabilityMismatchInArgument(argument.Syntax, lValueType.Type, parameter, parameterType.Type, forOutput: true);
-                            }
+                        HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+                        if (!_conversions.HasIdentityOrImplicitReferenceConversion(parameterType.Type, lValueType.Type, ref useSiteDiagnostics))
+                        {
+                            ReportNullabilityMismatchInArgument(argument.Syntax, lValueType.Type, parameter, parameterType.Type, forOutput: true, argument.IsSuppressed);
                         }
                     }
                     break;
@@ -5431,9 +5434,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var conversion = GenerateConversion(_conversions, sourceExpression, sourceType, destinationType, fromExplicitCast: false, extensionMethodThisArgument: false);
             bool canConvertNestedNullability = conversion.Exists;
-            if (!canConvertNestedNullability && reportMismatch && !sourceExpression.IsSuppressed)
+            if (!canConvertNestedNullability && reportMismatch)
             {
-                ReportNullabilityMismatchInAssignment(sourceExpression.Syntax, GetTypeAsDiagnosticArgument(sourceType), destinationType);
+                ReportNullabilityMismatchInAssignment(sourceExpression.Syntax, GetTypeAsDiagnosticArgument(sourceType), destinationType, sourceExpression.IsSuppressed);
             }
             return conversion;
         }
@@ -5626,8 +5629,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     fromExplicitCast: fromExplicitCast,
                     useLegacyWarnings: fromExplicitCast,
                     AssignmentKind.Assignment,
-                    reportTopLevelWarnings: fromExplicitCast,
-                    reportRemainingWarnings: true,
+                    reportTopLevelWarnings: fromExplicitCast ? ReportWarningKind.True : ReportWarningKind.False,
+                    reportRemainingWarnings: ReportWarningKind.True,
                     trackMembers: true));
 
             return null;
@@ -5664,8 +5667,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 fromExplicitCast: false,
                 useLegacyWarnings: useLegacyWarnings,
                 assignmentKind,
-                reportTopLevelWarnings: true,
-                reportRemainingWarnings: reportNestedWarnings,
+                reportTopLevelWarnings: ReportWarningKind.True,
+                reportRemainingWarnings: reportNestedWarnings ? ReportWarningKind.True : ReportWarningKind.False,
                 trackMembers: trackMembers);
 
             return resultType;
@@ -5830,7 +5833,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             int valueSlot,
             AssignmentKind assignmentKind,
             ParameterSymbol parameterOpt,
-            bool reportWarnings)
+            ReportWarningKind reportWarnings)
         {
             Debug.Assert(conversion.Kind == ConversionKind.ImplicitTuple || conversion.Kind == ConversionKind.ExplicitTuple);
             Debug.Assert(slot > 0);
@@ -5933,19 +5936,28 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 
-        private void ReportNullabilityMismatchWithTargetDelegate(Location location, TypeSymbol targetType, MethodSymbol targetInvokeMethod, MethodSymbol sourceInvokeMethod, bool invokedAsExtensionMethod)
+        private void ReportNullabilityMismatchWithTargetDelegate(Location location, TypeSymbol targetType, MethodSymbol targetInvokeMethod, MethodSymbol sourceInvokeMethod, bool invokedAsExtensionMethod, ReportWarningKind reportWarningKind)
+        {
+            if (reportWarningKind == ReportWarningKind.False)
+                return;
+
+            var isSuppressed = reportWarningKind == ReportWarningKind.Suppressed;
+            ReportNullabilityMismatchWithTargetDelegate(location, targetType, targetInvokeMethod, sourceInvokeMethod, invokedAsExtensionMethod, isSuppressed);
+        }
+
+        private void ReportNullabilityMismatchWithTargetDelegate(Location location, TypeSymbol targetType, MethodSymbol targetInvokeMethod, MethodSymbol sourceInvokeMethod, bool invokedAsExtensionMethod, bool isSuppressed)
         {
             Debug.Assert((object)sourceInvokeMethod != null);
             Debug.Assert(sourceInvokeMethod.MethodKind != MethodKind.LambdaMethod);
 
-            if (targetInvokeMethod is null)
+            if (targetInvokeMethod is null || isSuppressed && !_reportSuppressedDiagnostics)
             {
                 return;
             }
 
             if (IsNullabilityMismatch(sourceInvokeMethod.ReturnTypeWithAnnotations, targetInvokeMethod.ReturnTypeWithAnnotations, requireIdentity: false))
             {
-                ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInReturnTypeOfTargetDelegate, location,
+                ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInReturnTypeOfTargetDelegate, location, isSuppressed,
                     new FormattedSymbol(sourceInvokeMethod, SymbolDisplayFormat.MinimallyQualifiedFormat),
                     targetType);
             }
@@ -5969,7 +5981,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (IsNullabilityMismatch(sourceParameter.TypeWithAnnotations, destinationParameter.TypeWithAnnotations, requireIdentity: invokeRefKind == RefKind.Ref))
                 {
-                    ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInParameterTypeOfTargetDelegate, location,
+                    ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInParameterTypeOfTargetDelegate, location, isSuppressed,
                         GetParameterAsDiagnosticArgument(methodParameter),
                         GetContainingSymbolAsDiagnosticArgument(methodParameter),
                         targetType);
@@ -5977,8 +5989,22 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        private void ReportNullabilityMismatchWithTargetDelegate(Location location, NamedTypeSymbol delegateType, UnboundLambda unboundLambda)
+        private void ReportNullabilityMismatchWithTargetDelegate(Location location, NamedTypeSymbol delegateType, UnboundLambda unboundLambda, ReportWarningKind reportWarningKind)
         {
+            if (reportWarningKind == ReportWarningKind.False)
+                return;
+
+            var isSuppressed = reportWarningKind == ReportWarningKind.Suppressed;
+            ReportNullabilityMismatchWithTargetDelegate(location, delegateType, unboundLambda, isSuppressed);
+        }
+
+        private void ReportNullabilityMismatchWithTargetDelegate(Location location, NamedTypeSymbol delegateType, UnboundLambda unboundLambda, bool isSuppressed)
+        {
+            if (isSuppressed && !_reportSuppressedDiagnostics)
+            {
+                return;
+            }
+
             if (!unboundLambda.HasExplicitlyTypedParameterList)
             {
                 return;
@@ -6002,7 +6028,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (IsNullabilityMismatch(invokeParameter.TypeWithAnnotations, unboundLambda.ParameterTypeWithAnnotations(i), requireIdentity: true))
                 {
                     // Should the warning be reported using location of specific lambda parameter?
-                    ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInParameterTypeOfTargetDelegate, location,
+                    ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInParameterTypeOfTargetDelegate, location, isSuppressed,
                         unboundLambda.ParameterName(i),
                         unboundLambda.MessageID.Localize(),
                         delegateType);
@@ -6034,7 +6060,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         /// <summary>
-        /// Gets the conversion node for passing to <see cref="VisitConversion(BoundConversion, BoundExpression, Conversion, TypeWithAnnotations, TypeWithState, bool, bool, bool, AssignmentKind, ParameterSymbol, bool, bool, bool, Optional{LocalState}, bool, Location)"/>,
+        /// Gets the conversion node for passing to <see cref="VisitConversion(BoundConversion, BoundExpression, Conversion, TypeWithAnnotations, TypeWithState, bool, bool, bool, AssignmentKind, ParameterSymbol, ReportWarningKind, ReportWarningKind, bool, Optional{LocalState}, bool, Location)"/>,
         /// if one should be passed.
         /// </summary>
         private static BoundConversion GetConversionIfApplicable(BoundExpression conversionOpt, BoundExpression convertedNode)
@@ -6067,8 +6093,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             bool useLegacyWarnings,
             AssignmentKind assignmentKind,
             ParameterSymbol parameterOpt = null,
-            bool reportTopLevelWarnings = true,
-            bool reportRemainingWarnings = true,
+            ReportWarningKind reportTopLevelWarnings = ReportWarningKind.True,
+            ReportWarningKind reportRemainingWarnings = ReportWarningKind.True,
             bool extensionMethodThisArgument = false,
             Optional<LocalState> stateForLambda = default,
             bool trackMembers = false,
@@ -6084,8 +6110,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (conversionOperand?.IsSuppressed == true)
             {
-                reportTopLevelWarnings = false;
-                reportRemainingWarnings = false;
+                reportTopLevelWarnings = reportTopLevelWarnings == ReportWarningKind.False ? ReportWarningKind.False : ReportWarningKind.Suppressed;
+                reportRemainingWarnings = reportRemainingWarnings == ReportWarningKind.False ? ReportWarningKind.False : ReportWarningKind.Suppressed;
                 isSuppressed = true;
             }
 
@@ -6105,10 +6131,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                             }
                             method = CheckMethodGroupReceiverNullability(group, parameters, method, conversion.IsExtensionMethod);
                         }
-                        if (reportRemainingWarnings)
-                        {
-                            ReportNullabilityMismatchWithTargetDelegate(diagnosticLocationOpt, targetType, invokeSignature, method, conversion.IsExtensionMethod);
-                        }
+
+                        ReportNullabilityMismatchWithTargetDelegate(diagnosticLocationOpt, targetType, invokeSignature, method, conversion.IsExtensionMethod, reportRemainingWarnings);
                     }
                     resultState = NullableFlowState.NotNull;
                     break;
@@ -6127,11 +6151,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var delegateType = targetType.GetDelegateType();
                         var variableState = GetVariableState(stateForLambda);
                         VisitLambda(lambda, delegateType, Diagnostics, variableState);
-                        if (reportRemainingWarnings)
-                        {
-                            ReportNullabilityMismatchWithTargetDelegate(diagnosticLocationOpt, delegateType, lambda.UnboundLambda);
-                        }
-
+                        ReportNullabilityMismatchWithTargetDelegate(diagnosticLocationOpt, delegateType, lambda.UnboundLambda, reportRemainingWarnings);
                         TrackAnalyzedNullabilityThroughConversionGroup(targetTypeWithNullability.ToTypeWithState(), conversionOpt, conversionOperand);
 
                         return TypeWithState.Create(targetType, NullableFlowState.NotNull);
@@ -6163,9 +6183,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case ConversionKind.Unboxing:
                     if (targetType.IsNonNullableValueType())
                     {
-                        if (!operandType.IsNotNull && reportRemainingWarnings)
+                        if (!operandType.IsNotNull && reportRemainingWarnings != ReportWarningKind.False)
                         {
-                            ReportDiagnostic(ErrorCode.WRN_UnboxPossibleNull, diagnosticLocationOpt);
+                            ReportDiagnostic(ErrorCode.WRN_UnboxPossibleNull, diagnosticLocationOpt, isSuppressed);
                         }
 
                         LearnFromNonNullTest(conversionOperand, ref State);
@@ -6257,9 +6277,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (operandType.Type?.IsNullableType() == true && !targetType.IsNullableType())
                     {
                         // Explicit conversion of Nullable<T> to T is equivalent to Nullable<T>.Value.
-                        if (reportTopLevelWarnings && operandType.MayBeNull)
+                        if (reportTopLevelWarnings != ReportWarningKind.False && operandType.MayBeNull)
                         {
-                            ReportDiagnostic(ErrorCode.WRN_NullableValueTypeMayBeNull, diagnosticLocationOpt);
+                            ReportDiagnostic(ErrorCode.WRN_NullableValueTypeMayBeNull, diagnosticLocationOpt, isSuppressed);
                         }
 
                         // Mark the value as not nullable, regardless of whether it was known to be nullable,
@@ -6323,19 +6343,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (operandType.Type?.IsErrorType() != true && !targetType.IsErrorType())
             {
                 // Need to report all warnings that apply since the warnings can be suppressed individually.
-                if (reportTopLevelWarnings)
+                if (reportTopLevelWarnings != ReportWarningKind.False)
                 {
-                    ReportNullableAssignmentIfNecessary(conversionOperand, targetTypeWithNullability, resultType, useLegacyWarnings, assignmentKind, parameterOpt, diagnosticLocationOpt);
+                    ReportNullableAssignmentIfNecessary(conversionOperand, targetTypeWithNullability, resultType, useLegacyWarnings, isSuppressed, assignmentKind, parameterOpt, diagnosticLocationOpt);
                 }
-                if (reportRemainingWarnings && !canConvertNestedNullability)
+
+                if (reportRemainingWarnings != ReportWarningKind.False && !canConvertNestedNullability)
                 {
                     if (assignmentKind == AssignmentKind.Argument)
                     {
-                        ReportNullabilityMismatchInArgument(diagnosticLocationOpt, operandType.Type, parameterOpt, targetType, forOutput: false);
+                        ReportNullabilityMismatchInArgument(diagnosticLocationOpt, operandType.Type, parameterOpt, targetType, forOutput: false, isSuppressed);
                     }
                     else
                     {
-                        ReportNullabilityMismatchInAssignment(diagnosticLocationOpt, GetTypeAsDiagnosticArgument(operandType.Type), targetType);
+                        ReportNullabilityMismatchInAssignment(diagnosticLocationOpt, GetTypeAsDiagnosticArgument(operandType.Type), targetType, isSuppressed);
                     }
                 }
             }
@@ -6418,6 +6439,25 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        private enum ReportWarningKind
+        {
+            /// <summary>
+            /// Do not report any warnings
+            /// </summary>
+            False,
+
+            /// <summary>
+            /// Report all warnings as unsuppressed warnings.
+            /// </summary>
+            True,
+
+            /// <summary>
+            /// Report all warnings as suppressed warnings if <see cref="_reportSuppressedDiagnostics"/> is true.
+            /// Otherwise, do not report warnings.
+            /// </summary>
+            Suppressed
+        }
+
         private TypeWithState VisitUserDefinedConversion(
             BoundConversion conversionOpt,
             BoundExpression conversionOperand,
@@ -6427,8 +6467,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             bool useLegacyWarnings,
             AssignmentKind assignmentKind,
             ParameterSymbol parameterOpt,
-            bool reportTopLevelWarnings,
-            bool reportRemainingWarnings,
+            ReportWarningKind reportTopLevelWarnings,
+            ReportWarningKind reportRemainingWarnings,
             Location diagnosticLocation)
         {
             Debug.Assert(!IsConditionalState);
@@ -6622,22 +6662,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             bool useLegacyWarnings,
             AssignmentKind assignmentKind,
             ParameterSymbol parameterOpt,
-            bool reportWarnings,
+            ReportWarningKind reportWarnings,
             bool fromExplicitCast,
             Location diagnosticLocation)
         {
             Debug.Assert(diagnosticLocation != null);
             HashSet<DiagnosticInfo> useSiteDiagnostics = null;
             var conversion = _conversions.ClassifyStandardConversion(null, operandType.Type, targetType.Type, ref useSiteDiagnostics);
-            if (reportWarnings && !conversion.Exists)
+            if (reportWarnings != ReportWarningKind.False && !conversion.Exists)
             {
+                var isSuppressed = reportWarnings == ReportWarningKind.Suppressed;
                 if (assignmentKind == AssignmentKind.Argument)
                 {
-                    ReportNullabilityMismatchInArgument(diagnosticLocation, operandType.Type, parameterOpt, targetType.Type, forOutput: false);
+                    ReportNullabilityMismatchInArgument(diagnosticLocation, operandType.Type, parameterOpt, targetType.Type, forOutput: false, isSuppressed);
                 }
                 else
                 {
-                    ReportNullabilityMismatchInAssignment(diagnosticLocation, operandType.Type, targetType.Type);
+                    ReportNullabilityMismatchInAssignment(diagnosticLocation, operandType.Type, targetType.Type, isSuppressed);
                 }
             }
 
@@ -6653,7 +6694,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 assignmentKind,
                 parameterOpt,
                 reportTopLevelWarnings: reportWarnings,
-                reportRemainingWarnings: !fromExplicitCast && reportWarnings,
+                reportRemainingWarnings: !fromExplicitCast ? ReportWarningKind.False : reportWarnings,
                 diagnosticLocationOpt: diagnosticLocation);
         }
 
@@ -6676,10 +6717,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         if (method is object)
                         {
                             method = CheckMethodGroupReceiverNullability(group, delegateType.DelegateInvokeMethod.Parameters, method, node.IsExtensionMethod);
-                            if (!group.IsSuppressed)
-                            {
-                                ReportNullabilityMismatchWithTargetDelegate(group.Syntax.Location, delegateType, delegateType.DelegateInvokeMethod, method, node.IsExtensionMethod);
-                            }
+                            ReportNullabilityMismatchWithTargetDelegate(group.Syntax.Location, delegateType, delegateType.DelegateInvokeMethod, method, node.IsExtensionMethod, group.IsSuppressed);
                         }
                         SetAnalyzedNullability(group, default);
                     }
@@ -6688,21 +6726,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         VisitLambda(lambda, delegateType, Diagnostics);
                         SetNotNullResult(lambda);
-                        if (!lambda.IsSuppressed)
-                        {
-                            ReportNullabilityMismatchWithTargetDelegate(lambda.Symbol.DiagnosticLocation, delegateType, lambda.UnboundLambda);
-                        }
+                        ReportNullabilityMismatchWithTargetDelegate(lambda.Symbol.DiagnosticLocation, delegateType, lambda.UnboundLambda, lambda.IsSuppressed);
                     }
                     break;
                 case BoundExpression arg when arg.Type is { TypeKind: TypeKind.Delegate } argType:
                     {
                         var argTypeWithAnnotations = TypeWithAnnotations.Create(argType, NullableAnnotation.NotAnnotated);
                         var argState = VisitRvalueWithState(arg);
-                        ReportNullableAssignmentIfNecessary(arg, argTypeWithAnnotations, argState, useLegacyWarnings: false);
-                        if (!arg.IsSuppressed)
-                        {
-                            ReportNullabilityMismatchWithTargetDelegate(arg.Syntax.Location, delegateType, delegateType.DelegateInvokeMethod, argType.DelegateInvokeMethod(), invokedAsExtensionMethod: false);
-                        }
+                        ReportNullableAssignmentIfNecessary(arg, argTypeWithAnnotations, argState, useLegacyWarnings: false, isSuppressed: false);
+                        ReportNullabilityMismatchWithTargetDelegate(arg.Syntax.Location, delegateType, delegateType.DelegateInvokeMethod, argType.DelegateInvokeMethod(), invokedAsExtensionMethod: false, arg.IsSuppressed);
 
                         // Delegate creation will throw an exception if the argument is null
                         LearnFromNonNullTest(arg, ref State);
@@ -7258,8 +7290,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                             fromExplicitCast: false,
                             useLegacyWarnings: true,
                             AssignmentKind.Assignment,
-                            reportTopLevelWarnings: true,
-                            reportRemainingWarnings: true,
+                            reportTopLevelWarnings: ReportWarningKind.True,
+                            reportRemainingWarnings: ReportWarningKind.True,
                             trackMembers: false);
                         valueSlot = -1;
                     }
@@ -7418,8 +7450,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                         useLegacyWarnings: false,
                         assignmentKind,
                         parameter,
-                        reportTopLevelWarnings: true,
-                        reportRemainingWarnings: true);
+                        reportTopLevelWarnings: ReportWarningKind.True,
+                        reportRemainingWarnings: ReportWarningKind.True);
                 }
                 else
                 {
@@ -7495,8 +7527,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     fromExplicitCast: false,
                     useLegacyWarnings: false,
                     AssignmentKind.Assignment,
-                    reportTopLevelWarnings: false,
-                    reportRemainingWarnings: true);
+                    reportTopLevelWarnings: ReportWarningKind.False,
+                    reportRemainingWarnings: ReportWarningKind.True);
             }
             else
             {
@@ -7572,18 +7604,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         private void ReportArgumentWarnings(BoundExpression argument, TypeWithState argumentType, ParameterSymbol parameter)
         {
             var paramType = parameter.TypeWithAnnotations;
-            ReportNullableAssignmentIfNecessary(argument, paramType, argumentType, useLegacyWarnings: false, AssignmentKind.Argument, parameterOpt: parameter);
+            ReportNullableAssignmentIfNecessary(argument, paramType, argumentType, useLegacyWarnings: false, isSuppressed: false, AssignmentKind.Argument, parameterOpt: parameter);
 
             if (!argumentType.HasNullType && IsNullabilityMismatch(paramType.Type, argumentType.Type))
             {
-                ReportNullabilityMismatchInArgument(argument.Syntax, argumentType.Type, parameter, paramType.Type, forOutput: false);
+                ReportNullabilityMismatchInArgument(argument.Syntax, argumentType.Type, parameter, paramType.Type, forOutput: false, isSuppressed: false);
             }
         }
 
-        private void ReportNullabilityMismatchInRefArgument(BoundExpression argument, TypeSymbol argumentType, ParameterSymbol parameter, TypeSymbol parameterType)
+        private void ReportNullabilityMismatchInRefArgument(BoundExpression argument, TypeSymbol argumentType, ParameterSymbol parameter, TypeSymbol parameterType, bool isSuppressed)
         {
             ReportDiagnostic(ErrorCode.WRN_NullabilityMismatchInArgument,
-                argument.Syntax, argumentType, parameterType,
+                argument.Syntax, isSuppressed, argumentType, parameterType,
                 GetParameterAsDiagnosticArgument(parameter),
                 GetContainingSymbolAsDiagnosticArgument(parameter));
         }
@@ -7592,15 +7624,15 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Report warning passing argument where nested nullability does not match
         /// parameter (e.g.: calling `void F(object[] o)` with `F(new[] { maybeNull })`).
         /// </summary>
-        private void ReportNullabilityMismatchInArgument(SyntaxNode argument, TypeSymbol argumentType, ParameterSymbol parameter, TypeSymbol parameterType, bool forOutput)
+        private void ReportNullabilityMismatchInArgument(SyntaxNode argument, TypeSymbol argumentType, ParameterSymbol parameter, TypeSymbol parameterType, bool forOutput, bool isSuppressed)
         {
-            ReportNullabilityMismatchInArgument(argument.GetLocation(), argumentType, parameter, parameterType, forOutput);
+            ReportNullabilityMismatchInArgument(argument.GetLocation(), argumentType, parameter, parameterType, forOutput, isSuppressed);
         }
 
-        private void ReportNullabilityMismatchInArgument(Location argument, TypeSymbol argumentType, ParameterSymbol parameterOpt, TypeSymbol parameterType, bool forOutput)
+        private void ReportNullabilityMismatchInArgument(Location argument, TypeSymbol argumentType, ParameterSymbol parameterOpt, TypeSymbol parameterType, bool forOutput, bool isSuppressed)
         {
             ReportDiagnostic(forOutput ? ErrorCode.WRN_NullabilityMismatchInArgumentForOutput : ErrorCode.WRN_NullabilityMismatchInArgument,
-                argument, argumentType,
+                argument, isSuppressed, argumentType,
                 parameterOpt?.Type.IsNonNullableValueType() == true && parameterType.IsNullableType() ? parameterOpt.Type : parameterType, // Compensate for operator lifting
                 GetParameterAsDiagnosticArgument(parameterOpt),
                 GetContainingSymbolAsDiagnosticArgument(parameterOpt));
@@ -7883,7 +7915,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 SetResultType(expression: null, resultTypeWithState);
             }
 
-            if (reportedDiagnostic || node.EnumeratorInfoOpt == null || node.Expression is BoundConversion { Operand: { IsSuppressed: true } })
+            if (reportedDiagnostic || node.EnumeratorInfoOpt == null)
             {
                 return;
             }
@@ -7892,7 +7924,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             var enumeratorReturnType = getEnumeratorMethod.ReturnTypeWithAnnotations.ToTypeWithState();
             if (enumeratorReturnType.State != NullableFlowState.NotNull)
             {
-                ReportDiagnostic(ErrorCode.WRN_NullReferenceReceiver, expr.Syntax.GetLocation());
+                var isSuppressed = node.Expression is BoundConversion { Operand: { IsSuppressed: true } };
+                ReportDiagnostic(ErrorCode.WRN_NullReferenceReceiver, expr.Syntax.GetLocation(), isSuppressed);
             }
         }
 
@@ -7971,7 +8004,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             if (IsNullabilityMismatch(sourceType, destinationType))
                             {
                                 var foreachSyntax = (ForEachStatementSyntax)node.Syntax;
-                                ReportNullabilityMismatchInAssignment(foreachSyntax.Type, sourceType, destinationType);
+                                ReportNullabilityMismatchInAssignment(foreachSyntax.Type, sourceType, destinationType, isSuppressed: false);
                             }
                         }
                         else if (iterationVariable is SourceLocalSymbol { IsVar: true })
@@ -7999,8 +8032,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 fromExplicitCast: !conversion.IsImplicit,
                                 useLegacyWarnings: true,
                                 AssignmentKind.ForEachIterationVariable,
-                                reportTopLevelWarnings: true,
-                                reportRemainingWarnings: true,
+                                reportTopLevelWarnings: ReportWarningKind.True,
+                                reportRemainingWarnings: ReportWarningKind.True,
                                 diagnosticLocationOpt: variableLocation);
                         }
 
@@ -8673,7 +8706,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return false;
                 }
 
-                ReportDiagnostic(isValueType ? ErrorCode.WRN_NullableValueTypeMayBeNull : ErrorCode.WRN_NullReferenceReceiver, syntax);
+                ReportDiagnostic(isValueType ? ErrorCode.WRN_NullableValueTypeMayBeNull : ErrorCode.WRN_NullReferenceReceiver, syntax, isSuppressed: false);
                 reportedDiagnostic = true;
             }
 
@@ -8784,7 +8817,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Other (typed) expression, including suppressed ones
                 if (result.MayBeNull)
                 {
-                    ReportDiagnostic(ErrorCode.WRN_ThrowPossibleNull, expr.Syntax);
+                    ReportDiagnostic(ErrorCode.WRN_ThrowPossibleNull, expr.Syntax, isSuppressed: false);
                 }
             }
             SetUnreachable();
