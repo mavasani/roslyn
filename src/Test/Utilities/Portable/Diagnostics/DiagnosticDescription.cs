@@ -33,6 +33,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
         private readonly bool _ignoreArgumentsWhenComparing;
         private readonly DiagnosticSeverity? _defaultSeverityOpt;
         private readonly DiagnosticSeverity? _effectiveSeverityOpt;
+        private readonly bool _isSuppressed;
 
         // fields for DiagnosticDescriptions constructed via factories
         private readonly Func<SyntaxNode, bool> _syntaxPredicate;
@@ -71,7 +72,8 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             bool argumentOrderDoesNotMatter,
             Type errorCodeType = null,
             DiagnosticSeverity? defaultSeverityOpt = null,
-            DiagnosticSeverity? effectiveSeverityOpt = null)
+            DiagnosticSeverity? effectiveSeverityOpt = null,
+            bool isSuppressed = false)
         {
             _code = code;
             _isWarningAsError = isWarningAsError;
@@ -83,6 +85,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             _errorCodeType = errorCodeType ?? code.GetType();
             _defaultSeverityOpt = defaultSeverityOpt;
             _effectiveSeverityOpt = effectiveSeverityOpt;
+            _isSuppressed = isSuppressed;
         }
 
         public DiagnosticDescription(
@@ -94,7 +97,8 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             bool argumentOrderDoesNotMatter,
             Type errorCodeType = null,
             DiagnosticSeverity? defaultSeverityOpt = null,
-            DiagnosticSeverity? effectiveSeverityOpt = null)
+            DiagnosticSeverity? effectiveSeverityOpt = null,
+            bool isSuppressed = false)
         {
             _code = code;
             _isWarningAsError = false;
@@ -106,6 +110,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             _errorCodeType = errorCodeType ?? code.GetType();
             _defaultSeverityOpt = defaultSeverityOpt;
             _effectiveSeverityOpt = effectiveSeverityOpt;
+            _isSuppressed = isSuppressed;
         }
 
         public DiagnosticDescription(Diagnostic d, bool errorCodeOnly, bool includeDefaultSeverity = false, bool includeEffectiveSeverity = false)
@@ -115,6 +120,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             _location = d.Location;
             _defaultSeverityOpt = includeDefaultSeverity ? d.DefaultSeverity : (DiagnosticSeverity?)null;
             _effectiveSeverityOpt = includeEffectiveSeverity ? d.Severity : (DiagnosticSeverity?)null;
+            _isSuppressed = d.IsSuppressed;
 
             DiagnosticWithInfo dinfo = null;
             if (d.Code == 0 || d.Descriptor.CustomTags.Contains(WellKnownDiagnosticTags.CustomObsolete))
@@ -175,27 +181,32 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
 
         public DiagnosticDescription WithArguments(params object[] arguments)
         {
-            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, arguments, _startPosition, _syntaxPredicate, false, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt);
+            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, arguments, _startPosition, _syntaxPredicate, false, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt, _isSuppressed);
         }
 
         public DiagnosticDescription WithArgumentsAnyOrder(params string[] arguments)
         {
-            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt);
+            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt, _isSuppressed);
         }
 
         public DiagnosticDescription WithWarningAsError(bool isWarningAsError)
         {
-            return new DiagnosticDescription(_code, isWarningAsError, _squiggledText, _arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt);
+            return new DiagnosticDescription(_code, isWarningAsError, _squiggledText, _arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt, _isSuppressed);
+        }
+
+        public DiagnosticDescription WithIsSuppressed(bool isSuppressed)
+        {
+            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt, isSuppressed);
         }
 
         public DiagnosticDescription WithDefaultSeverity(DiagnosticSeverity defaultSeverity)
         {
-            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, defaultSeverity, _effectiveSeverityOpt);
+            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, defaultSeverity, _effectiveSeverityOpt, _isSuppressed);
         }
 
         public DiagnosticDescription WithEffectiveSeverity(DiagnosticSeverity effectiveSeverity)
         {
-            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, _defaultSeverityOpt, effectiveSeverity);
+            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, _startPosition, _syntaxPredicate, true, _errorCodeType, _defaultSeverityOpt, effectiveSeverity, _isSuppressed);
         }
 
         /// <summary>
@@ -203,7 +214,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
         /// </summary>
         public DiagnosticDescription WithLocation(int line, int column)
         {
-            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, new LinePosition(line - 1, column - 1), _syntaxPredicate, _argumentOrderDoesNotMatter, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt);
+            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, new LinePosition(line - 1, column - 1), _syntaxPredicate, _argumentOrderDoesNotMatter, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt, _isSuppressed);
         }
 
         /// <summary>
@@ -212,7 +223,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
         /// <param name="syntaxPredicate">The argument to syntaxPredicate will be the nearest SyntaxNode whose Span contains first squiggled character.</param>
         public DiagnosticDescription WhereSyntax(Func<SyntaxNode, bool> syntaxPredicate)
         {
-            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, _startPosition, syntaxPredicate, _argumentOrderDoesNotMatter, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt);
+            return new DiagnosticDescription(_code, _isWarningAsError, _squiggledText, _arguments, _startPosition, syntaxPredicate, _argumentOrderDoesNotMatter, _errorCodeType, _defaultSeverityOpt, _effectiveSeverityOpt, _isSuppressed);
         }
 
         public object Code => _code;
@@ -220,6 +231,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
         public bool IsWarningAsError => _isWarningAsError;
         public DiagnosticSeverity? DefaultSeverity => _defaultSeverityOpt;
         public DiagnosticSeverity? EffectiveSeverity => _effectiveSeverityOpt;
+        public bool IsSuppressed => _isSuppressed;
 
         public override bool Equals(object obj)
         {
@@ -232,6 +244,9 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
                 return false;
 
             if (_isWarningAsError != d._isWarningAsError)
+                return false;
+
+            if (_isSuppressed != d.IsSuppressed)
                 return false;
 
             if (!_ignoreArgumentsWhenComparing)
@@ -322,6 +337,7 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             int hashCode;
             hashCode = _code.GetHashCode();
             hashCode = Hash.Combine(_isWarningAsError.GetHashCode(), hashCode);
+            hashCode = Hash.Combine(_isSuppressed.GetHashCode(), hashCode);
 
             // TODO: !!! This implementation isn't consistent with Equals, which might ignore inequality of some members based on ignoreArgumentsWhenComparing flag, etc.
             hashCode = Hash.Combine(_squiggledText, hashCode);
@@ -398,6 +414,11 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             if (_isWarningAsError)
             {
                 sb.Append(".WithWarningAsError(true)");
+            }
+
+            if (_isSuppressed)
+            {
+                sb.Append($".WithIsSuppressed(true)");
             }
 
             if (_defaultSeverityOpt != null)

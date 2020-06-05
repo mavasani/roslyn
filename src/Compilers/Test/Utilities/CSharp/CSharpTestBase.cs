@@ -561,19 +561,24 @@ namespace System.Runtime.CompilerServices
             return WithNonNullTypes(options, NullableContextOptions.Enable);
         }
 
+        protected static CSharpCompilationOptions WithNonNullTypesTrue(bool reportSuppressedDiagnostics)
+        {
+            return WithNonNullTypes(options: null, NullableContextOptions.Enable, reportSuppressedDiagnostics);
+        }
+
         protected static CSharpCompilationOptions WithNonNullTypesFalse(CSharpCompilationOptions options = null)
         {
             return WithNonNullTypes(options, NullableContextOptions.Disable);
         }
 
-        protected static CSharpCompilationOptions WithNonNullTypes(NullableContextOptions nullableContextOptions)
+        protected static CSharpCompilationOptions WithNonNullTypes(NullableContextOptions nullableContextOptions, bool reportSuppressedDiagnostics = false)
         {
-            return WithNonNullTypes(null, nullableContextOptions);
+            return WithNonNullTypes(null, nullableContextOptions, reportSuppressedDiagnostics);
         }
 
-        protected static CSharpCompilationOptions WithNonNullTypes(CSharpCompilationOptions options, NullableContextOptions nullableContextOptions)
+        protected static CSharpCompilationOptions WithNonNullTypes(CSharpCompilationOptions options, NullableContextOptions nullableContextOptions, bool reportSuppressedDiagnostics = false)
         {
-            return (options ?? TestOptions.ReleaseDll).WithNullableContextOptions(nullableContextOptions);
+            return (options ?? TestOptions.ReleaseDll).WithNullableContextOptions(nullableContextOptions).WithReportSuppressedDiagnostics(reportSuppressedDiagnostics);
         }
 
         internal CompilationVerifier CompileAndVerifyWithMscorlib40(
