@@ -60,9 +60,10 @@ namespace Microsoft.VisualStudio.IntegrationTest.Utilities.OutOfProcess
                 bool verifyNotShowing = false,
                 bool ensureExpectedItemsAreOrdered = false,
                 FixAllScope? fixAllScope = null,
-                bool blockUntilComplete = true)
+                bool blockUntilComplete = true,
+                bool inMargin = true)
             {
-                _textViewWindow.ShowLightBulb();
+                _textViewWindow.ShowLightBulb(inMargin);
                 _textViewWindow.WaitForLightBulbSession();
 
                 if (verifyNotShowing)

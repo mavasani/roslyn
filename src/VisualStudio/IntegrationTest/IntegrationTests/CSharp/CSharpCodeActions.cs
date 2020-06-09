@@ -712,5 +712,39 @@ public class Program
 
             VisualStudio.Editor.Verify.CodeActions(expectedItems, ensureExpectedItemsAreOrdered: true);
         }
+
+        [WpfTheory, CombinatorialData, Trait(Traits.Feature, Traits.Features.RenameTracking)]
+        public void RenameTrackingShowsInMarginAndUnderCaret(bool inMargin)
+        {
+            SetUpEditor(@"
+public class C
+{
+    static object M()
+    {
+        var x$$ = new object();
+        return x;
+    }
+}");
+
+            VisualStudio.Editor.SendKeys(VirtualKey.Backspace, "y");
+
+            var expectedItems = new[]
+            {
+                "Rename 'x' to 'y'",
+            };
+
+            VisualStudio.Editor.Verify.CodeActions(expectedItems, applyFix: expectedItems[0], ensureExpectedItemsAreOrdered: true, inMargin: inMargin);
+
+            var expectedText = @"
+public class C
+{
+    static object M()
+    {
+        var y = new object();
+        return y;
+    }
+}";
+            Assert.Equal(expectedText, VisualStudio.Editor.GetText());
+        }
     }
 }

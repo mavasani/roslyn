@@ -64,18 +64,20 @@ namespace Microsoft.VisualStudio.IntegrationTest.Utilities.InProcess
                 return selectedCompletionSet.SelectionStatus.Completion.DisplayText;
             });
 
-        public void ShowLightBulb()
+        public void ShowLightBulb(bool inMargin = true)
         {
             InvokeOnUIThread(cancellationToken =>
             {
                 var shell = GetGlobalService<SVsUIShell, IVsUIShell>();
-                var cmdGroup = typeof(VSConstants.VSStd2KCmdID).GUID;
+                var cmdGroup = inMargin
+                    ? typeof(VSConstants.VSStd2KCmdID).GUID
+                    : VSConstants.CMDSETID.StandardCommandSet14_guid;
                 var cmdExecOpt = OLECMDEXECOPT.OLECMDEXECOPT_DONTPROMPTUSER;
 
-                const VSConstants.VSStd2KCmdID ECMD_SMARTTASKS = (VSConstants.VSStd2KCmdID)147;
-                var cmdID = ECMD_SMARTTASKS;
+                // VSConstants.VSStd2KCmdID.ECMD_SMARTTASKS = 147;
+                var cmdID = inMargin ? 147 : (uint)VSConstants.VSStd14CmdID.ShowQuickFixesForPosition;
                 object obj = null;
-                shell.PostExecCommand(cmdGroup, (uint)cmdID, (uint)cmdExecOpt, ref obj);
+                shell.PostExecCommand(cmdGroup, cmdID, (uint)cmdExecOpt, ref obj);
             });
         }
 

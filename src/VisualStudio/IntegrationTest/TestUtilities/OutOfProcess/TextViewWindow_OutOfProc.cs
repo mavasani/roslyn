@@ -65,8 +65,8 @@ namespace Microsoft.VisualStudio.IntegrationTest.Utilities.OutOfProcess
         public void VerifyTags(string tagTypeName, int expectedCount)
             => _textViewWindowInProc.VerifyTags(tagTypeName, expectedCount);
 
-        public void ShowLightBulb()
-            => _textViewWindowInProc.ShowLightBulb();
+        public void ShowLightBulb(bool inMargin = true)
+            => _textViewWindowInProc.ShowLightBulb(inMargin);
 
         public void WaitForLightBulbSession()
             => _textViewWindowInProc.WaitForLightBulbSession();
@@ -95,12 +95,12 @@ namespace Microsoft.VisualStudio.IntegrationTest.Utilities.OutOfProcess
             _instance.Workspace.WaitForAsyncOperations(Helper.HangMitigatingTimeout, FeatureAttribute.CompletionSet);
         }
 
-        public void InvokeCodeActionList()
+        public void InvokeCodeActionList(bool inMargin = true)
         {
             _instance.Workspace.WaitForAsyncOperations(Helper.HangMitigatingTimeout, FeatureAttribute.SolutionCrawler);
             _instance.Workspace.WaitForAsyncOperations(Helper.HangMitigatingTimeout, FeatureAttribute.DiagnosticService);
 
-            ShowLightBulb();
+            ShowLightBulb(inMargin);
             WaitForLightBulbSession();
             _instance.Workspace.WaitForAsyncOperations(Helper.HangMitigatingTimeout, FeatureAttribute.LightBulb);
         }
@@ -109,9 +109,9 @@ namespace Microsoft.VisualStudio.IntegrationTest.Utilities.OutOfProcess
         /// Invokes the lightbulb without waiting for diagnostics
         /// Compare to <see cref="InvokeCodeActionList"/>
         /// </summary>
-        public void InvokeCodeActionListWithoutWaiting()
+        public void InvokeCodeActionListWithoutWaiting(bool inMargin = true)
         {
-            ShowLightBulb();
+            ShowLightBulb(inMargin);
             WaitForLightBulbSession();
         }
 
