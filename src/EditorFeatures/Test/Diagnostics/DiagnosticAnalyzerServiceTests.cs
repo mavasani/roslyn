@@ -564,6 +564,72 @@ dotnet_diagnostic.{NamedTypeAnalyzer.DiagnosticId}.severity = warning
             Assert.Equal(expectAnalyzerExecuted, called);
         }
 
+        [Theory]
+        [InlineData(true, BackgroundAnalysisScope.OpenFilesAndProjects)]
+        [InlineData(true, BackgroundAnalysisScope.FullSolution)]
+        [InlineData(false, BackgroundAnalysisScope.OpenFilesAndProjects)]
+        [InlineData(false, BackgroundAnalysisScope.FullSolution)]
+        internal async Task TestAdditionalFileAnalyzer(bool registerFromInitialize, BackgroundAnalysisScope analysisScope)
+        {
+            using var workspace = new AdhocWorkspace();
+            var options = workspace.Options.WithChangedOption(SolutionCrawlerOptions.BackgroundAnalysisScopeOption, LanguageNames.CSharp, analysisScope);
+            workspace.SetOptions(options);
+
+            var projectInfo = ProjectInfo.Create(ProjectId.CreateNewId(), VersionStamp.Create(), "CSharpProject", "CSharpProject", LanguageNames.CSharp);
+            var project = workspace.AddProject(projectInfo);
+
+            var diagnosticSpan = new TextSpan(2, 2);
+            var analyzer = new AdditionalFileAnalyzer(registerFromInitialize, diagnosticSpan);
+            var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(analyzer);
+            var analyzerReference = new AnalyzerImageReference(analyzers);
+            project = project.WithAnalyzerReferences(new[] { analyzerReference })
+                .AddAdditionalDocument(name: "dummy.txt", text: "Additional File Text", filePath: "dummy.txt").Project;
+
+            var applied = workspace.TryApplyChanges(project.Solution);
+            Assert.True(applied);
+
+            var additionalDocument = project.AdditionalDocuments.Single();
+
+            // create listener/service/analyzer
+            var listener = new AsynchronousOperationListener();
+            var service = new MyDiagnosticAnalyzerService(listener);
+
+            DiagnosticData diagnostic = null;
+            service.DiagnosticsUpdated += (s, e) =>
+            {
+                if (e.Diagnostics.Length == 0)
+                {
+                    return;
+                }
+
+                diagnostic = Assert.Single(e.Diagnostics);
+            };
+
+            var incrementalAnalyzer = (DiagnosticIncrementalAnalyzer)service.CreateIncrementalAnalyzer(workspace);
+
+            switch (analysisScope)
+            {
+                case BackgroundAnalysisScope.OpenFilesAndProjects:
+                    workspace.OpenAdditionalDocument(additionalDocument.Id);
+                    await incrementalAnalyzer.AnalyzeNonSourceDocumentAsync(additionalDocument, InvocationReasons.SyntaxChanged, CancellationToken.None);
+                    break;
+
+                case BackgroundAnalysisScope.FullSolution:
+                    await incrementalAnalyzer.AnalyzeProjectAsync(project, semanticsChanged: true, InvocationReasons.Reanalyze, CancellationToken.None);
+                    break;
+
+                default:
+                    throw ExceptionUtilities.UnexpectedValue(analysisScope);
+            }
+
+            await listener.ExpeditedWaitAsync();
+
+            Assert.True(diagnostic != null);
+            Assert.Equal(analyzer.Descriptor.Id, diagnostic.Id);
+            Assert.Equal(additionalDocument.FilePath, diagnostic.DataLocation.OriginalFilePath);
+            Assert.Equal(diagnosticSpan, diagnostic.GetTextSpan());
+        }
+
         [Theory, CombinatorialData]
         internal async Task TestDiagnosticSuppressor(bool includeAnalyzer, bool includeSuppressor, BackgroundAnalysisScope analysisScope)
         {
@@ -678,11 +744,19 @@ dotnet_diagnostic.{NamedTypeAnalyzer.DiagnosticId}.severity = warning
             return (syntax, semantic);
         }
 
-        private static async Task RunAllAnalysisAsync(IIncrementalAnalyzer analyzer, Document document)
+        private static async Task RunAllAnalysisAsync(IIncrementalAnalyzer analyzer, TextDocument textDocument)
         {
-            await analyzer.AnalyzeSyntaxAsync(document, InvocationReasons.Empty, CancellationToken.None).ConfigureAwait(false);
-            await analyzer.AnalyzeDocumentAsync(document, bodyOpt: null, reasons: InvocationReasons.Empty, cancellationToken: CancellationToken.None).ConfigureAwait(false);
-            await analyzer.AnalyzeProjectAsync(document.Project, semanticsChanged: true, reasons: InvocationReasons.Empty, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            if (textDocument is Document document)
+            {
+                await analyzer.AnalyzeSyntaxAsync(document, InvocationReasons.Empty, CancellationToken.None).ConfigureAwait(false);
+                await analyzer.AnalyzeDocumentAsync(document, bodyOpt: null, reasons: InvocationReasons.Empty, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            }
+            else if (analyzer is IIncrementalAnalyzer2 analyzer2)
+            {
+                await analyzer2.AnalyzeNonSourceDocumentAsync(textDocument, InvocationReasons.Empty, CancellationToken.None).ConfigureAwait(false);
+            }
+
+            await analyzer.AnalyzeProjectAsync(textDocument.Project, semanticsChanged: true, reasons: InvocationReasons.Empty, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         private class MyDiagnosticAnalyzerService : DiagnosticAnalyzerService
