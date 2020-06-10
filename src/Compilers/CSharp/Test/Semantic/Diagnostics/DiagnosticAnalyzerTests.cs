@@ -17,6 +17,7 @@ using Microsoft.CodeAnalysis.Diagnostics.CSharp;
 using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Test.Utilities;
+using Microsoft.CodeAnalysis.Text;
 using Roslyn.Test.Utilities;
 using Roslyn.Utilities;
 using Xunit;
@@ -3517,6 +3518,40 @@ class B
                     Diagnostic("ID0001", "B").WithLocation(5, 12),
                     Diagnostic("ID0001", "B").WithLocation(7, 12)
                 });
+        }
+
+        [Theory, CombinatorialData]
+        public async Task TestAdditionalFileAnalyzer(bool registerFromInitialize)
+        {
+            var tree = CSharpSyntaxTree.ParseText(string.Empty);
+            var compilation = CreateCompilationWithMscorlib45(new[] { tree });
+            compilation.VerifyDiagnostics();
+
+            AdditionalText additionalFile = new TestAdditionalText("Additional File Text");
+            var options = new AnalyzerOptions(ImmutableArray.Create(additionalFile));
+            var diagnosticSpan = new TextSpan(2, 2);
+            var analyzer = new AdditionalFileAnalyzer(registerFromInitialize, diagnosticSpan);
+            var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(analyzer);
+
+            var diagnostics = await compilation.WithAnalyzers(analyzers, options).GetAnalyzerDiagnosticsAsync(CancellationToken.None);
+            verifyDiagnostics(diagnostics);
+
+            diagnostics = await compilation.WithAnalyzers(analyzers, options).GetAnalyzerNonSourceFileDiagnosticsAsync(additionalFile, CancellationToken.None);
+            verifyDiagnostics(diagnostics);
+
+            var analysisResult = await compilation.WithAnalyzers(analyzers, options).GetAnalysisResultAsync(CancellationToken.None);
+            verifyDiagnostics(analysisResult.GetAllDiagnostics());
+            verifyDiagnostics(analysisResult.NonSourceFileDiagnostics[additionalFile][analyzer]);
+
+            void verifyDiagnostics(ImmutableArray<Diagnostic> diagnostics)
+            {
+                var diagnostic = Assert.Single(diagnostics);
+                Assert.Equal(analyzer.Descriptor.Id, diagnostic.Id);
+                Assert.Equal(LocationKind.ExternalFile, diagnostic.Location.Kind);
+                var location = (ExternalFileLocation)diagnostic.Location;
+                Assert.Equal(additionalFile.Path, location.FilePath);
+                Assert.Equal(diagnosticSpan, location.SourceSpan);
+            }
         }
     }
 }

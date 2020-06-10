@@ -56,7 +56,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         /// Lock to track the set of active tasks computing tree diagnostics and task computing compilation diagnostics.
         /// </summary>
         private readonly object _executingTasksLock = new object();
-        private readonly Dictionary<SyntaxTree, Tuple<Task, CancellationTokenSource>>? _executingConcurrentTreeTasksOpt;
+        private readonly Dictionary<SourceOrNonSourceFile, Tuple<Task, CancellationTokenSource>>? _executingConcurrentTreeTasksOpt;
         private Tuple<Task, CancellationTokenSource>? _executingCompilationOrNonConcurrentTreeTask;
 
         /// <summary>
@@ -136,10 +136,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             _compilationData = new CompilationData(_compilation);
             _analysisState = new AnalysisState(analyzers, _compilationData, _compilation.Options);
-            _analysisResultBuilder = new AnalysisResultBuilder(analysisOptions.LogAnalyzerExecutionTime, analyzers);
+            _analysisResultBuilder = new AnalysisResultBuilder(analysisOptions.LogAnalyzerExecutionTime, analyzers, _analysisOptions.Options?.AdditionalFiles ?? ImmutableArray<AdditionalText>.Empty);
             _analyzerManager = new AnalyzerManager(analyzers);
             _driverPool = new ObjectPool<AnalyzerDriver>(() => _compilation.CreateAnalyzerDriver(analyzers, _analyzerManager, severityFilter: SeverityFilter.None));
-            _executingConcurrentTreeTasksOpt = analysisOptions.ConcurrentAnalysis ? new Dictionary<SyntaxTree, Tuple<Task, CancellationTokenSource>>() : null;
+            _executingConcurrentTreeTasksOpt = analysisOptions.ConcurrentAnalysis ? new Dictionary<SourceOrNonSourceFile, Tuple<Task, CancellationTokenSource>>() : null;
             _concurrentTreeTaskTokensOpt = analysisOptions.ConcurrentAnalysis ? new Dictionary<Task, int>() : null;
             _executingCompilationOrNonConcurrentTreeTask = null;
         }
@@ -245,6 +245,19 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
+        private void VerifyNonSourceFile(AdditionalText file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            if (_analysisOptions.Options == null || !_analysisOptions.Options.AdditionalFiles.Contains(file))
+            {
+                throw new ArgumentException(CodeAnalysisResources.InvalidNonSourceFile, nameof(file));
+            }
+        }
+
         #endregion
 
         /// <summary>
@@ -340,7 +353,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             await WaitForActiveAnalysisTasksAsync(waitForTreeTasks: true, waitForCompilationOrNonConcurrentTask: true, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var diagnostics = ImmutableArray<Diagnostic>.Empty;
-            var analysisScope = new AnalysisScope(_compilation, analyzers, _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
+            var analysisScope = new AnalysisScope(_compilation, _analysisOptions.Options, analyzers, _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
             Func<ImmutableArray<CompilationEvent>> getPendingEvents = () =>
                 _analysisState.GetPendingEvents(analyzers, includeSourceEvents: true, includeNonSourceEvents: true, cancellationToken);
 
@@ -365,7 +378,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             await ComputeAnalyzerDiagnosticsWithoutStateTrackingAsync(cancellationToken).ConfigureAwait(false);
 
             // Get analyzer diagnostics for the given analysis scope.
-            var analysisScope = new AnalysisScope(_compilation, analyzers, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
+            var analysisScope = new AnalysisScope(_compilation, _analysisOptions.Options, analyzers, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
             return _analysisResultBuilder.GetDiagnostics(analysisScope, getLocalDiagnostics: true, getNonLocalDiagnostics: true);
         }
 
@@ -391,7 +404,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 var categorizeDiagnostics = true;
                 driver = compilation.CreateAnalyzerDriver(analyzers, _analyzerManager, severityFilter: SeverityFilter.None);
                 driver.Initialize(compilation, _analysisOptions, compilationData, categorizeDiagnostics, cancellationToken);
-                var analysisScope = new AnalysisScope(compilation, analyzers, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: categorizeDiagnostics);
+                var analysisScope = new AnalysisScope(compilation, _analysisOptions.Options, analyzers, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: categorizeDiagnostics);
                 driver.AttachQueueAndStartProcessingEvents(compilation.EventQueue, analysisScope, cancellationToken);
 
                 // Force compilation diagnostics and wait for analyzer execution to complete.
@@ -431,7 +444,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 var categorizeDiagnostics = false;
                 driver = compilation.CreateAnalyzerDriver(analyzers, _analyzerManager, severityFilter: SeverityFilter.None);
                 driver.Initialize(compilation, _analysisOptions, compilationData, categorizeDiagnostics, cancellationToken);
-                var analysisScope = new AnalysisScope(compilation, analyzers, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: categorizeDiagnostics);
+                var analysisScope = new AnalysisScope(compilation, _analysisOptions.Options, analyzers, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: categorizeDiagnostics);
                 driver.AttachQueueAndStartProcessingEvents(compilation.EventQueue, analysisScope, cancellationToken);
 
                 // Force compilation diagnostics and wait for analyzer execution to complete.
@@ -459,7 +472,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             VerifyTree(tree);
 
-            return await GetAnalyzerSyntaxDiagnosticsCoreAsync(tree, Analyzers, cancellationToken).ConfigureAwait(false);
+            return await GetAnalyzerSyntaxDiagnosticsCoreAsync(SourceOrNonSourceFile.Create(tree), Analyzers, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -478,7 +491,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 VerifyTree(tree);
                 VerifyExistingAnalyzersArgument(analyzers);
 
-                return await GetAnalyzerSyntaxDiagnosticsCoreAsync(tree, analyzers, cancellationToken).ConfigureAwait(false);
+                return await GetAnalyzerSyntaxDiagnosticsCoreAsync(SourceOrNonSourceFile.Create(tree), analyzers, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
@@ -486,13 +499,52 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private async Task<ImmutableArray<Diagnostic>> GetAnalyzerSyntaxDiagnosticsCoreAsync(SyntaxTree tree, ImmutableArray<DiagnosticAnalyzer> analyzers, CancellationToken cancellationToken)
+        /// <summary>
+        /// Returns diagnostics produced by all <see cref="Analyzers"/> from analyzing the given non-source <paramref name="file"/>.
+        /// Depending on analyzers' behavior, returned diagnostics can have locations outside the file,
+        /// and some diagnostics that would be reported for the file by an analysis of the complete compilation
+        /// can be absent.
+        /// </summary>
+        /// <param name="file">Non-source file to analyze.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task<ImmutableArray<Diagnostic>> GetAnalyzerNonSourceFileDiagnosticsAsync(AdditionalText file, CancellationToken cancellationToken)
+        {
+            VerifyNonSourceFile(file);
+
+            return await GetAnalyzerSyntaxDiagnosticsCoreAsync(SourceOrNonSourceFile.Create(file), Analyzers, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Returns diagnostics produced by given <paramref name="analyzers"/> from analyzing the given non-source <paramref name="file"/>.
+        /// Depending on analyzers' behavior, returned diagnostics can have locations outside the file,
+        /// and some diagnostics that would be reported for the file by an analysis of the complete compilation
+        /// can be absent.
+        /// </summary>
+        /// <param name="file">Non-source file to analyze.</param>
+        /// <param name="analyzers">Analyzers whose diagnostics are required. All the given analyzers must be from the analyzers passed into the constructor of <see cref="CompilationWithAnalyzers"/>.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task<ImmutableArray<Diagnostic>> GetAnalyzerNonSourceFileDiagnosticsAsync(AdditionalText file, ImmutableArray<DiagnosticAnalyzer> analyzers, CancellationToken cancellationToken)
+        {
+            try
+            {
+                VerifyNonSourceFile(file);
+                VerifyExistingAnalyzersArgument(analyzers);
+
+                return await GetAnalyzerSyntaxDiagnosticsCoreAsync(SourceOrNonSourceFile.Create(file), analyzers, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
+            {
+                throw ExceptionUtilities.Unreachable;
+            }
+        }
+
+        private async Task<ImmutableArray<Diagnostic>> GetAnalyzerSyntaxDiagnosticsCoreAsync(SourceOrNonSourceFile file, ImmutableArray<DiagnosticAnalyzer> analyzers, CancellationToken cancellationToken)
         {
             try
             {
                 var taskToken = Interlocked.Increment(ref _currentToken);
 
-                var analysisScope = new AnalysisScope(analyzers, tree, filterSpan: null, syntaxAnalysis: true, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
+                var analysisScope = new AnalysisScope(analyzers, file, filterSpan: null, syntaxAnalysis: true, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
 
                 var pendingAnalyzers = _analysisResultBuilder.GetPendingAnalyzers(analyzers);
                 if (pendingAnalyzers.Length > 0)
@@ -559,7 +611,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             {
                 var taskToken = Interlocked.Increment(ref _currentToken);
 
-                var analysisScope = new AnalysisScope(analyzers, model.SyntaxTree, filterSpan, syntaxAnalysis: false, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
+                var file = SourceOrNonSourceFile.Create(model.SyntaxTree);
+                var analysisScope = new AnalysisScope(analyzers, file, filterSpan, syntaxAnalysis: false, concurrentAnalysis: _analysisOptions.ConcurrentAnalysis, categorizeDiagnostics: true);
 
                 var pendingAnalyzers = _analysisResultBuilder.GetPendingAnalyzers(analyzers);
                 if (pendingAnalyzers.Length > 0)
@@ -775,7 +828,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
             else if (!analysisScope.IsSyntaxOnlyTreeAnalysis)
             {
-                var mappedModel = _compilationData.GetOrCreateCachedSemanticModel(analysisScope.FilterTreeOpt, _compilation, cancellationToken);
+                var mappedModel = _compilationData.GetOrCreateCachedSemanticModel(analysisScope.FilterTreeOpt!.SourceTree!, _compilation, cancellationToken);
                 _ = mappedModel.GetDiagnostics(cancellationToken: cancellationToken);
             }
         }
@@ -805,6 +858,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 while (_compilation.EventQueue.TryDequeue(out CompilationEvent compilationEvent))
                 {
+                    if (compilationEvent is CompilationStartedEvent compilationStartedEvent &&
+                        _analysisOptions.Options?.AdditionalFiles.Length > 0)
+                    {
+                        compilationEvent = compilationStartedEvent.WithAdditionalFiles(_analysisOptions.Options.AdditionalFiles);
+                    }
+
                     builder.Add(compilationEvent);
                 }
 
@@ -897,7 +956,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private Task<Task> SetActiveAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewAnalysisTask, SyntaxTree? treeOpt, int newTaskToken, CancellationToken cancellationToken)
+        private Task<Task> SetActiveAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewAnalysisTask, SourceOrNonSourceFile? treeOpt, int newTaskToken, CancellationToken cancellationToken)
         {
             if (treeOpt != null)
             {
@@ -967,7 +1026,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private async Task<Task> SetActiveTreeAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewTreeAnalysisTask, SyntaxTree tree, int newTaskToken, CancellationToken cancellationToken)
+        private async Task<Task> SetActiveTreeAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewTreeAnalysisTask, SourceOrNonSourceFile tree, int newTaskToken, CancellationToken cancellationToken)
         {
             try
             {
@@ -1034,7 +1093,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private void ClearExecutingTask(Task? computeTask, SyntaxTree? treeOpt)
+        private void ClearExecutingTask(Task? computeTask, SourceOrNonSourceFile? treeOpt)
         {
             if (computeTask != null)
             {

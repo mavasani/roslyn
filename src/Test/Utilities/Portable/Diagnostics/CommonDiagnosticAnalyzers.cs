@@ -2144,5 +2144,47 @@ namespace Microsoft.CodeAnalysis
                     endContext => endContext.ReportDiagnostic(Diagnostic.Create(s_descriptor, context.OwningSymbol.Locations[0])));
             }
         }
+
+        [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
+        public sealed class AdditionalFileAnalyzer : DiagnosticAnalyzer
+        {
+            private readonly bool _registerFromInitialize;
+            private readonly TextSpan _diagnosticSpan;
+
+            public AdditionalFileAnalyzer(bool registerFromInitialize, TextSpan diagnosticSpan)
+            {
+                _registerFromInitialize = registerFromInitialize;
+                _diagnosticSpan = diagnosticSpan;
+            }
+
+            public DiagnosticDescriptor Descriptor { get; } = new DiagnosticDescriptor(
+                    "ID0001",
+                    "Title1",
+                    "Message1",
+                    "Category1",
+                    defaultSeverity: DiagnosticSeverity.Warning,
+                    isEnabledByDefault: true);
+
+            public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Descriptor);
+            public override void Initialize(AnalysisContext context)
+            {
+                if (_registerFromInitialize)
+                {
+                    context.RegisterAdditionalFileAction(AnalyzeAdditionalFile);
+                }
+                else
+                {
+                    context.RegisterCompilationStartAction(context =>
+                        context.RegisterAdditionalFileAction(AnalyzeAdditionalFile));
+                }
+            }
+
+            private void AnalyzeAdditionalFile(AdditionalFileAnalysisContext context)
+            {
+                var text = context.AdditionalFile.GetText();
+                var location = Location.Create(context.AdditionalFile.Path, _diagnosticSpan, text.Lines.GetLinePositionSpan(_diagnosticSpan));
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, location));
+            }
+        }
     }
 }
