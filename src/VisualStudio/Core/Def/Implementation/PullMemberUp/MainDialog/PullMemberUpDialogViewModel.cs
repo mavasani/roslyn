@@ -23,9 +23,11 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PullMemberUp.Ma
         public bool OkButtonEnabled { get => _okButtonEnabled; set => SetProperty(ref _okButtonEnabled, value, nameof(OkButtonEnabled)); }
         public bool? SelectAllCheckBoxState { get => _selectAllCheckBoxState; set => SetProperty(ref _selectAllCheckBoxState, value, nameof(SelectAllCheckBoxState)); }
         public bool SelectAllCheckBoxThreeStateEnable { get => _selectAllCheckBoxThreeStateEnable; set => SetProperty(ref _selectAllCheckBoxThreeStateEnable, value, nameof(SelectAllCheckBoxThreeStateEnable)); }
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string SelectAllCheckBoxAutomationText => ServicesVSResources.Select_All;
         public string DestinationTreeViewAutomationText => ServicesVSResources.Select_destination;
         public string SelectMemberListViewAutomationText => ServicesVSResources.Select_member;
+#pragma warning restore CA1822 // Mark members as static
         private bool _selectAllCheckBoxThreeStateEnable;
         private bool? _selectAllCheckBoxState;
         private readonly IWaitIndicator _waitIndicator;

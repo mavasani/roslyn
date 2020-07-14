@@ -171,7 +171,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation
             return VSConstants.S_OK;
         }
 
-        private string? GetWinFormsLoaderName(IVsHierarchy vsHierarchy)
+        private static string? GetWinFormsLoaderName(IVsHierarchy vsHierarchy)
         {
             const string LoaderName = "Microsoft.VisualStudio.Design.Serialization.CodeDom.VSCodeDomDesignerLoader";
             const string NewLoaderName = "Microsoft.VisualStudio.Design.Core.Serialization.CodeDom.VSCodeDomDesignerLoader";

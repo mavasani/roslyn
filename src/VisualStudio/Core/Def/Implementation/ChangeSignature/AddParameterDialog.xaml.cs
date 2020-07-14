@@ -17,6 +17,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ChangeSignature
     {
         private readonly AddParameterDialogViewModel _viewModel;
 
+#pragma warning disable CA1822 // Mark members as static - used by xaml
         public string OK { get { return ServicesVSResources.OK; } }
         public string Cancel { get { return ServicesVSResources.Cancel; } }
         public string ParameterInformation { get { return ServicesVSResources.Parameter_information; } }
@@ -33,6 +34,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ChangeSignature
         public string IntroduceUndefinedTodoVariables { get { return ServicesVSResources.IntroduceUndefinedTodoVariables; } }
         public string OmitOnlyForOptionalParameters { get { return ServicesVSResources.Omit_only_for_optional_parameters; } }
         public string InferFromContext { get { return ServicesVSResources.Infer_from_context; } }
+#pragma warning restore CA1822 // Mark members as static
 
         public AddParameterDialog(AddParameterDialogViewModel viewModel)
         {

@@ -17,7 +17,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
         public AbstractRoslynTableDataSource(Workspace workspace) : base(workspace)
             => ConnectToSolutionCrawlerService(workspace);
 
-        protected ImmutableArray<DocumentId> GetDocumentsWithSameFilePath(Solution solution, DocumentId documentId)
+        protected static ImmutableArray<DocumentId> GetDocumentsWithSameFilePath(Solution solution, DocumentId documentId)
         {
             var document = solution.GetDocument(documentId);
             if (document == null)

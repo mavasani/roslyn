@@ -262,10 +262,10 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
             }
         }
 
+#pragma warning disable CA1822 // Mark members as static - TODO: move everybody off of this instance method and replace them with calls to 'ContainedDocument.TryGetContainedDocument'
         internal ContainedDocument? TryGetContainedDocument(DocumentId documentId)
+#pragma warning restore CA1822 // Mark members as static
         {
-            // TODO: move everybody off of this instance method and replace them with calls to
-            // ContainedDocument.TryGetContainedDocument
             return ContainedDocument.TryGetContainedDocument(documentId);
         }
 
@@ -309,7 +309,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
         }
 
         [Obsolete("This is a compatibility shim for TypeScript; please do not use it.")]
+#pragma warning disable CA1822 // Mark members as static - compatibility shim
         internal IVisualStudioHostDocument? GetHostDocument(DocumentId documentId)
+#pragma warning restore CA1822 // Mark members as static
         {
             // TypeScript only calls this to immediately check if the document is a ContainedDocument. Because of that we can just check for
             // ContainedDocuments
@@ -507,7 +509,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
             return true;
         }
 
-        private string? GetAnalyzerPath(AnalyzerReference analyzerReference)
+        private static string? GetAnalyzerPath(AnalyzerReference analyzerReference)
             => analyzerReference.FullPath;
 
         protected override void ApplyCompilationOptionsChanged(ProjectId projectId, CompilationOptions options)
@@ -588,7 +590,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
             }
         }
 
-        private string? GetMetadataPath(MetadataReference metadataReference)
+        private static string? GetMetadataPath(MetadataReference metadataReference)
         {
             if (metadataReference is PortableExecutableReference fileMetadata)
             {
@@ -784,7 +786,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
             }
         }
 
-        private bool IsWebsite(EnvDTE.Project project)
+        private static bool IsWebsite(EnvDTE.Project project)
             => project.Kind == VsWebSite.PrjKind.prjKindVenusProject;
 
         private IEnumerable<string> FilterFolderForProjectType(EnvDTE.Project project, IEnumerable<string> folders)
@@ -1168,7 +1170,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
         /// The <see cref="VisualStudioWorkspace"/> currently supports only a subset of <see cref="DocumentInfo"/> 
         /// changes.
         /// </summary>
-        private void FailIfDocumentInfoChangesNotSupported(CodeAnalysis.Document document, DocumentInfo updatedInfo)
+        private static void FailIfDocumentInfoChangesNotSupported(CodeAnalysis.Document document, DocumentInfo updatedInfo)
         {
             if (document.SourceCodeKind != updatedInfo.SourceCodeKind)
             {

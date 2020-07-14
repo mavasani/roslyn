@@ -305,7 +305,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.LanguageService
             }
         }
 
-        private bool ContainsRegionTag(ITextSnapshot textSnapshot)
+        private static bool ContainsRegionTag(ITextSnapshot textSnapshot)
         {
             foreach (var line in textSnapshot.Lines)
             {
@@ -318,7 +318,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.LanguageService
             return false;
         }
 
-        private bool StartsWithRegionTag(ITextSnapshotLine line)
+        private static bool StartsWithRegionTag(ITextSnapshotLine line)
         {
             var start = line.GetFirstNonWhitespacePosition();
             if (start != null)
@@ -372,7 +372,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.LanguageService
             OnDebugModeChanged();
         }
 
-        private void UninitializeDebugMode()
+        private static void UninitializeDebugMode()
         {
             // Nothing to do here.
         }

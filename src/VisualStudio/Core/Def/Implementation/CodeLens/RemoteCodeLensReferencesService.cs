@@ -226,7 +226,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CodeLens
             return lines[index].ToString().TrimEnd();
         }
 
-        private async Task<IEnumerable<ReferenceLocationDescriptor>> FindReferenceLocationsWorkerAsync(Solution solution, DocumentId documentId, SyntaxNode syntaxNode,
+        private static async Task<IEnumerable<ReferenceLocationDescriptor>> FindReferenceLocationsWorkerAsync(Solution solution, DocumentId documentId, SyntaxNode syntaxNode,
             CancellationToken cancellationToken)
         {
             if (syntaxNode == null)

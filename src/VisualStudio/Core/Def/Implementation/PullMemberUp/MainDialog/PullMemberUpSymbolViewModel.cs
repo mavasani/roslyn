@@ -16,7 +16,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PullMemberUp.Ma
         private bool _isMakeAbstractCheckable;
         private string _tooltipText;
         public string MakeAbstractCheckBoxAutomationText => string.Format(ServicesVSResources.Make_0_abstract, Symbol.Name);
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string RowSelectionAutomationText => ServicesVSResources.Select_member;
+#pragma warning restore CA1822 // Mark members as static
 
         /// <summary>
         /// Property controls the 'Make abstract' check box's Visibility.

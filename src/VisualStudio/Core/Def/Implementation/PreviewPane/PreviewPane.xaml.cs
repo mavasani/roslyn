@@ -103,7 +103,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PreviewPane
             ParentElement = Parent as FrameworkElement;
         }
 
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string AutomationName => ServicesVSResources.Preview_pane;
+#pragma warning restore CA1822 // Mark members as static
 
         private void InitializePreviewElement(IReadOnlyList<object> previewItems)
         {

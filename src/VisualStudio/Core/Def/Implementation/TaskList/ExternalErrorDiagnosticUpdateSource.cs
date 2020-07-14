@@ -607,7 +607,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TaskList
                 }
             }
 
-            private Dictionary<DiagnosticData, int> GetErrorSet<T>(Dictionary<T, Dictionary<DiagnosticData, int>> map, T key)
+            private static Dictionary<DiagnosticData, int> GetErrorSet<T>(Dictionary<T, Dictionary<DiagnosticData, int>> map, T key)
                 => map.GetOrAdd(key, _ => new Dictionary<DiagnosticData, int>(DiagnosticDataComparer.Instance));
         }
 

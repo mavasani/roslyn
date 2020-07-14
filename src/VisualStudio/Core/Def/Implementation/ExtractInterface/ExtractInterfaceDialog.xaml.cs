@@ -19,6 +19,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ExtractInterfac
         private readonly ExtractInterfaceDialogViewModel _viewModel;
 
         // Expose localized strings for binding
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string ExtractInterfaceDialogTitle { get { return ServicesVSResources.Extract_Interface; } }
         public string NewInterfaceName { get { return ServicesVSResources.New_interface_name_colon; } }
         public string GeneratedName { get { return ServicesVSResources.Generated_name_colon; } }
@@ -30,6 +31,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ExtractInterfac
         public string DeselectAll { get { return ServicesVSResources.Deselect_All; } }
         public string OK { get { return ServicesVSResources.OK; } }
         public string Cancel { get { return ServicesVSResources.Cancel; } }
+#pragma warning restore CA1822 // Mark members as static
 
         // Use C# Extract Interface helpTopic for C# and VB.
         internal ExtractInterfaceDialog(ExtractInterfaceDialogViewModel viewModel)

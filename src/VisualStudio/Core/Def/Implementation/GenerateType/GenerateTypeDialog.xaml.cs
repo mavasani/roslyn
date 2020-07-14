@@ -18,6 +18,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.GenerateType
         private readonly GenerateTypeDialogViewModel _viewModel;
 
         // Expose localized strings for binding
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string GenerateTypeDialogTitle { get { return ServicesVSResources.Generate_Type; } }
         public string TypeDetails { get { return ServicesVSResources.Type_Details_colon; } }
         public string Access { get { return ServicesVSResources.Access_colon; } }
@@ -30,6 +31,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.GenerateType
         public string AddToExistingFile { get { return ServicesVSResources.Add_to_existing_file; } }
         public string OK { get { return ServicesVSResources.OK; } }
         public string Cancel { get { return ServicesVSResources.Cancel; } }
+#pragma warning restore CA1822 // Mark members as static
 
         public GenerateTypeDialog(GenerateTypeDialogViewModel viewModel)
             : base("vsl.GenerateFromUsage")

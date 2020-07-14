@@ -21,6 +21,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ChangeSignature
         private readonly ChangeSignatureDialogViewModel _viewModel;
 
         // Expose localized strings for binding
+#pragma warning disable CA1822 // Mark members as static - used by xaml
         public string ChangeSignatureDialogTitle { get { return ServicesVSResources.Change_Signature; } }
         public string Parameters { get { return ServicesVSResources.Parameters_colon2; } }
         public string PreviewMethodSignature { get { return ServicesVSResources.Preview_method_signature_colon; } }
@@ -32,6 +33,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ChangeSignature
         public string Cancel { get { return ServicesVSResources.Cancel; } }
         public string WarningTypeDoesNotBind { get { return ServicesVSResources.Warning_colon_type_does_not_bind; } }
         public string WarningDuplicateParameterName { get { return ServicesVSResources.Warning_colon_duplicate_parameter_name; } }
+#pragma warning restore CA1822 // Mark members as static
 
         public Brush ParameterText { get; }
         public Brush RemovedParameterText { get; }
@@ -178,7 +180,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ChangeSignature
             SetFocusToSelectedRow(false);
         }
 
-        private CallSiteKind GetCallSiteKind(AddParameterDialogViewModel addParameterViewModel)
+        private static CallSiteKind GetCallSiteKind(AddParameterDialogViewModel addParameterViewModel)
         {
             if (addParameterViewModel.IsCallsiteInferred)
                 return CallSiteKind.Inferred;
@@ -213,7 +215,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ChangeSignature
             }
         }
 
-        private void FocusRow(DataGridRow row)
+        private static void FocusRow(DataGridRow row)
         {
             var cell = row.FindDescendant<DataGridCell>();
             if (cell != null)

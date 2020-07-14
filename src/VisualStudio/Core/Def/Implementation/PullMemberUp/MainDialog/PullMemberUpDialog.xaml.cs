@@ -18,6 +18,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PullMemberUp.Ma
     /// </summary>
     internal partial class PullMemberUpDialog : DialogWindow
     {
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string OK => ServicesVSResources.OK;
         public string Cancel => ServicesVSResources.Cancel;
         public string PullMembersUpTitle => ServicesVSResources.Pull_Members_Up;
@@ -28,6 +29,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PullMemberUp.Ma
         public string SelectDependents => ServicesVSResources.Select_Dependents;
         public string MembersHeader => ServicesVSResources.Members;
         public string MakeAbstractHeader => ServicesVSResources.Make_abstract;
+#pragma warning restore CA1822 // Mark members as static
 
         public PullMemberUpDialogViewModel ViewModel { get; }
 
@@ -58,7 +60,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PullMemberUp.Ma
             }
         }
 
-        private bool ShowWarningDialog(PullMembersUpOptions result)
+        private static bool ShowWarningDialog(PullMembersUpOptions result)
         {
             var warningViewModel = new PullMemberUpWarningViewModel(result);
             var warningDialog = new PullMemberUpWarningDialog(warningViewModel);

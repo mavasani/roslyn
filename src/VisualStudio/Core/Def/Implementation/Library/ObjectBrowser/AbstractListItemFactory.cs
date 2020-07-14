@@ -118,7 +118,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return new TypeListItem(projectId, namedTypeSymbol, displayText, fullNameText, searchText, hidden);
         }
 
-        protected NamespaceListItem CreateNamespaceListItem(INamespaceSymbol namespaceSymbol, ProjectId projectId)
+        protected static NamespaceListItem CreateNamespaceListItem(INamespaceSymbol namespaceSymbol, ProjectId projectId)
         {
             var text = namespaceSymbol.ToDisplayString();
 
@@ -162,7 +162,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return false;
         }
 
-        private ImmutableArray<ObjectListItem> CreateListItemsFromSymbols<TSymbol>(
+        private static ImmutableArray<ObjectListItem> CreateListItemsFromSymbols<TSymbol>(
             ImmutableArray<TSymbol> symbols,
             Compilation compilation,
             ProjectId projectId,
@@ -249,7 +249,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return GetBaseTypeListItems(typeSymbol, compilation, parentListItem.ProjectId);
         }
 
-        public ImmutableArray<ObjectListItem> GetFolderListItems(ObjectListItem parentListItem, Compilation compilation)
+        public static ImmutableArray<ObjectListItem> GetFolderListItems(ObjectListItem parentListItem, Compilation compilation)
         {
             Debug.Assert(parentListItem != null);
             Debug.Assert(parentListItem is TypeListItem ||
@@ -320,7 +320,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return builder.ToImmutable();
         }
 
-        private ImmutableArray<ISymbol> GetMemberSymbols(INamedTypeSymbol namedTypeSymbol, Compilation compilation)
+        private static ImmutableArray<ISymbol> GetMemberSymbols(INamedTypeSymbol namedTypeSymbol, Compilation compilation)
         {
             var members = namedTypeSymbol.GetMembers();
             var symbolBuilder = ImmutableArray.CreateBuilder<ISymbol>(members.Length);
@@ -336,7 +336,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return symbolBuilder.ToImmutable();
         }
 
-        private ImmutableArray<ISymbol> GetInheritedMemberSymbols(INamedTypeSymbol namedTypeSymbol, Compilation compilation)
+        private static ImmutableArray<ISymbol> GetInheritedMemberSymbols(INamedTypeSymbol namedTypeSymbol, Compilation compilation)
         {
             var symbolBuilder = ImmutableArray.CreateBuilder<ISymbol>();
 
@@ -380,7 +380,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return symbolBuilder.ToImmutable();
         }
 
-        private void AddOverriddenMembers(INamedTypeSymbol namedTypeSymbol, ref HashSet<ISymbol> overriddenMembers)
+        private static void AddOverriddenMembers(INamedTypeSymbol namedTypeSymbol, ref HashSet<ISymbol> overriddenMembers)
         {
             foreach (var member in namedTypeSymbol.GetMembers())
             {
@@ -417,7 +417,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return GetMemberListItems(typeSymbol, compilation, parentListItem.ProjectId);
         }
 
-        public void CollectNamespaceListItems(IAssemblySymbol assemblySymbol, ProjectId projectId, ImmutableArray<ObjectListItem>.Builder builder, string searchString)
+        public static void CollectNamespaceListItems(IAssemblySymbol assemblySymbol, ProjectId projectId, ImmutableArray<ObjectListItem>.Builder builder, string searchString)
         {
             Debug.Assert(assemblySymbol != null);
 
@@ -452,7 +452,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             }
         }
 
-        public ImmutableArray<ObjectListItem> GetNamespaceListItems(ObjectListItem parentListItem, Compilation compilation)
+        public static ImmutableArray<ObjectListItem> GetNamespaceListItems(ObjectListItem parentListItem, Compilation compilation)
         {
             Debug.Assert(parentListItem != null);
             Debug.Assert(parentListItem is ProjectListItem ||
@@ -479,7 +479,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
                 => obj.Item2.Identity.GetHashCode();
         }
 
-        public ImmutableHashSet<Tuple<ProjectId, IAssemblySymbol>> GetAssemblySet(Solution solution, string languageName, CancellationToken cancellationToken)
+        public static ImmutableHashSet<Tuple<ProjectId, IAssemblySymbol>> GetAssemblySet(Solution solution, string languageName, CancellationToken cancellationToken)
         {
             var set = ImmutableHashSet.CreateBuilder(new AssemblySymbolComparer());
 
@@ -522,7 +522,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return set.ToImmutable();
         }
 
-        public ImmutableHashSet<Tuple<ProjectId, IAssemblySymbol>> GetAssemblySet(Project project, bool lookInReferences, CancellationToken cancellationToken)
+        public static ImmutableHashSet<Tuple<ProjectId, IAssemblySymbol>> GetAssemblySet(Project project, bool lookInReferences, CancellationToken cancellationToken)
         {
             var set = ImmutableHashSet.CreateBuilder(new AssemblySymbolComparer());
 
@@ -552,7 +552,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return set.ToImmutable();
         }
 
-        private bool ContainsAccessibleTypeMember(INamespaceOrTypeSymbol namespaceOrTypeSymbol, IAssemblySymbol assemblySymbol)
+        private static bool ContainsAccessibleTypeMember(INamespaceOrTypeSymbol namespaceOrTypeSymbol, IAssemblySymbol assemblySymbol)
         {
             foreach (var typeMember in namespaceOrTypeSymbol.GetTypeMembers())
             {
@@ -565,7 +565,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return false;
         }
 
-        private ImmutableArray<INamedTypeSymbol> GetAccessibleTypeMembers(INamespaceOrTypeSymbol namespaceOrTypeSymbol, IAssemblySymbol assemblySymbol)
+        private static ImmutableArray<INamedTypeSymbol> GetAccessibleTypeMembers(INamespaceOrTypeSymbol namespaceOrTypeSymbol, IAssemblySymbol assemblySymbol)
         {
             var typeMembers = namespaceOrTypeSymbol.GetTypeMembers();
             var builder = ImmutableArray.CreateBuilder<INamedTypeSymbol>(typeMembers.Length);
@@ -581,7 +581,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return builder.ToImmutable();
         }
 
-        private bool IncludeTypeMember(INamedTypeSymbol typeMember, IAssemblySymbol assemblySymbol)
+        private static bool IncludeTypeMember(INamedTypeSymbol typeMember, IAssemblySymbol assemblySymbol)
         {
             if (!IncludeSymbol(typeMember))
             {
@@ -601,7 +601,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return false;
         }
 
-        public ImmutableArray<ObjectListItem> GetProjectListItems(Solution solution, string languageName, uint listFlags)
+        public static ImmutableArray<ObjectListItem> GetProjectListItems(Solution solution, string languageName, uint listFlags)
         {
             var projectIds = solution.ProjectIds;
             if (!projectIds.Any())
@@ -658,7 +658,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return projectListItemBuilder.ToImmutable();
         }
 
-        public ImmutableArray<ObjectListItem> GetReferenceListItems(ObjectListItem parentListItem, Compilation compilation)
+        public static ImmutableArray<ObjectListItem> GetReferenceListItems(ObjectListItem parentListItem, Compilation compilation)
         {
             Debug.Assert(parentListItem != null);
             Debug.Assert(parentListItem is ProjectListItem);
@@ -683,7 +683,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return builder.ToImmutableAndFree();
         }
 
-        private ImmutableArray<INamedTypeSymbol> GetAccessibleTypes(INamespaceSymbol namespaceSymbol, Compilation compilation)
+        private static ImmutableArray<INamedTypeSymbol> GetAccessibleTypes(INamespaceSymbol namespaceSymbol, Compilation compilation)
         {
             var typeMembers = GetAccessibleTypeMembers(namespaceSymbol, compilation.Assembly);
             var builder = ImmutableArray.CreateBuilder<INamedTypeSymbol>(typeMembers.Length);

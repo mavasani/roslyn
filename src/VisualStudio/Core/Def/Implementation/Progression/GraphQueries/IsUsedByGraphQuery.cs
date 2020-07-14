@@ -47,7 +47,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Progression
             }
         }
 
-        internal GraphNode GetLocationNode(Location location, IGraphContext context, ProjectId projectId, CancellationToken cancellationToken)
+        internal static GraphNode GetLocationNode(Location location, IGraphContext context, ProjectId projectId, CancellationToken cancellationToken)
         {
             var span = location.GetLineSpan();
             var lineText = location.SourceTree.GetText(cancellationToken).Lines[span.StartLinePosition.Line].ToString();

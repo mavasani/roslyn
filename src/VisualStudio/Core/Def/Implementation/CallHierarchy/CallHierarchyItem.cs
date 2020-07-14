@@ -130,7 +130,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.CallHierarchy
         public void NavigateTo()
         {
             // Navigating to an item is not cancellable.
-            _provider.NavigateTo(_symbolId, _workspace.CurrentSolution.GetProject(_projectId), CancellationToken.None);
+            CallHierarchyProvider.NavigateTo(_symbolId, _workspace.CurrentSolution.GetProject(_projectId), CancellationToken.None);
         }
 
         public void StartSearch(string categoryName, CallHierarchySearchScope searchScope, ICallHierarchySearchCallback callback)

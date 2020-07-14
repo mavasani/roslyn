@@ -21,6 +21,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PickMembers
         private readonly PickMembersDialogViewModel _viewModel;
 
         // Expose localized strings for binding
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string PickMembersDialogTitle => ServicesVSResources.Pick_members;
         public string PickMembersTitle { get; }
 
@@ -28,6 +29,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PickMembers
         public string DeselectAll => ServicesVSResources.Deselect_All;
         public string OK => ServicesVSResources.OK;
         public string Cancel => ServicesVSResources.Cancel;
+#pragma warning disable CA1822 // Mark members as static
 
         internal PickMembersDialog(PickMembersDialogViewModel viewModel, string title)
         {

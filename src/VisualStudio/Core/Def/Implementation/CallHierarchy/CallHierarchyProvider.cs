@@ -64,7 +64,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.CallHierarchy
             return null;
         }
 
-        private ISymbol GetTargetSymbol(ISymbol symbol)
+        private static ISymbol GetTargetSymbol(ISymbol symbol)
         {
             if (symbol is IMethodSymbol methodSymbol)
             {
@@ -132,7 +132,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.CallHierarchy
             return null;
         }
 
-        public void NavigateTo(SymbolKey id, Project project, CancellationToken cancellationToken)
+        public static void NavigateTo(SymbolKey id, Project project, CancellationToken cancellationToken)
         {
             var compilation = project.GetCompilationAsync(cancellationToken).WaitAndGetResult(cancellationToken);
             var resolution = id.Resolve(compilation, cancellationToken: cancellationToken);

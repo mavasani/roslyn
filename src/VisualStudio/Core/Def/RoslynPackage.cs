@@ -257,7 +257,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Setup
             base.Dispose(disposing);
         }
 
-        private void ReportSessionWideTelemetry()
+        private static void ReportSessionWideTelemetry()
         {
             PersistedVersionStampLogger.ReportTelemetry();
             LinkedFileDiffMergingLogger.ReportTelemetry();

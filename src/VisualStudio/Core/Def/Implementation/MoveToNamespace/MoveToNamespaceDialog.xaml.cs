@@ -17,10 +17,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.MoveToNamespace
     {
         private readonly MoveToNamespaceDialogViewModel _viewModel;
 
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string MoveToNamespaceDialogTitle => ServicesVSResources.Move_to_namespace;
         public string NamespaceLabelText => ServicesVSResources.Target_Namespace_colon;
         public string OK => ServicesVSResources.OK;
         public string Cancel => ServicesVSResources.Cancel;
+#pragma warning restore CA1822 // Mark members as static
 
         internal MoveToNamespaceDialog(MoveToNamespaceDialogViewModel viewModel)
             : base()

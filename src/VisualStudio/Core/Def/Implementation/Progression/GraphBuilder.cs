@@ -146,7 +146,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Progression
             }
         }
 
-        public ProjectId GetContextProjectId(Project project, ISymbol symbol)
+        private static ProjectId GetContextProjectId(Project project, ISymbol symbol)
         {
             var thisProject = project.Solution.GetProject(symbol.ContainingAssembly) ?? project;
             return thisProject.Id;

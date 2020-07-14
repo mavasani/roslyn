@@ -215,7 +215,7 @@ namespace Microsoft.VisualStudio.LanguageServices.ColorSchemes
                 };
             }
 
-            private bool IsForegroundTheSchemeColor(Guid themeId, ImmutableDictionary<string, uint> schemeThemeColors, string classification, uint foregroundColorRef)
+            private static bool IsForegroundTheSchemeColor(Guid themeId, ImmutableDictionary<string, uint> schemeThemeColors, string classification, uint foregroundColorRef)
             {
                 var coreThemeColors = (themeId == KnownColorThemes.Dark)
                     ? DarkThemeForeground

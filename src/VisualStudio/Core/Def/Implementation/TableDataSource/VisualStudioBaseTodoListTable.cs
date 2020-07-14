@@ -116,7 +116,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                 return key;
             }
 
-            private bool CheckAggregateKey(ImmutableArray<DocumentId> key, TodoItemsUpdatedArgs args)
+            private static bool CheckAggregateKey(ImmutableArray<DocumentId> key, TodoItemsUpdatedArgs args)
             {
                 if (args?.DocumentId == null || args?.Solution == null)
                 {
@@ -269,7 +269,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
                 }
 
                 // TODO: Apply location mapping when creating the TODO item (https://github.com/dotnet/roslyn/issues/36217)
-                private LinePosition GetLineColumn(TodoTableItem item)
+                private static LinePosition GetLineColumn(TodoTableItem item)
                 {
                     return VisualStudioVenusSpanMappingService.GetAdjustedLineColumn(
                         item.Workspace,

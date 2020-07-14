@@ -313,7 +313,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
 
             if (Helpers.IsFindSymbol(flags))
             {
-                var projectAndAssemblySet = this.GetAssemblySet(this.Workspace.CurrentSolution, _languageName, CancellationToken.None);
+                var projectAndAssemblySet = GetAssemblySet(this.Workspace.CurrentSolution, _languageName, CancellationToken.None);
                 return GetSearchList(listKind, flags, pobSrch, projectAndAssemblySet);
             }
 
@@ -324,7 +324,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
 
             Debug.Assert(listKind == ObjectListKind.Projects);
 
-            return new ObjectList(ObjectListKind.Projects, flags, this, this.GetProjectListItems(this.Workspace.CurrentSolution, _languageName, flags));
+            return new ObjectList(ObjectListKind.Projects, flags, this, GetProjectListItems(this.Workspace.CurrentSolution, _languageName, flags));
         }
 
         protected override uint GetUpdateCounter()
@@ -503,7 +503,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
             return false;
         }
 
-        private async Task FindReferencesAsync(
+        private static async Task FindReferencesAsync(
             IStreamingFindUsagesPresenter presenter, SymbolListItem symbolListItem, Project project)
         {
             try

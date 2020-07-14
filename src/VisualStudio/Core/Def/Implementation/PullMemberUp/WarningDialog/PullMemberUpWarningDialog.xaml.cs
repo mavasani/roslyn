@@ -13,10 +13,12 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PullMemberUp.Wa
     /// </summary>
     internal partial class PullMemberUpWarningDialog : DialogWindow
     {
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string Back => ServicesVSResources.Back;
         public string Finish => ServicesVSResources.Finish;
         public string WarningDialogTitle => ServicesVSResources.Review_Changes;
         public string Description => ServicesVSResources.Additional_changes_are_needed_to_complete_the_refactoring_Review_changes_below;
+#pragma warning restore CA1822 // Mark members as static
 
         public PullMemberUpWarningDialog(PullMemberUpWarningViewModel viewModel)
         {

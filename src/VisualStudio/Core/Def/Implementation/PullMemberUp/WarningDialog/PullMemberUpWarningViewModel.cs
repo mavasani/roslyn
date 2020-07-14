@@ -13,12 +13,14 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.PullMemberUp.Wa
     internal class PullMemberUpWarningViewModel : AbstractNotifyPropertyChanged
     {
         public ImmutableArray<string> WarningMessageContainer { get; set; }
+#pragma warning disable CA1822 // Mark members as static - used in xaml
         public string ProblemsListViewAutomationText => ServicesVSResources.Review_Changes;
+#pragma warning restore CA1822 // Mark members as static
 
         public PullMemberUpWarningViewModel(PullMembersUpOptions options)
             => WarningMessageContainer = GenerateMessage(options);
 
-        private ImmutableArray<string> GenerateMessage(PullMembersUpOptions options)
+        private static ImmutableArray<string> GenerateMessage(PullMembersUpOptions options)
         {
             var warningMessagesBuilder = ImmutableArray.CreateBuilder<string>();
 

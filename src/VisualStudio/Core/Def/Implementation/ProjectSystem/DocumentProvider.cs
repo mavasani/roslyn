@@ -17,7 +17,9 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.ProjectSystem
     internal sealed class DocumentProvider
     {
         [Obsolete("This overload is a compatibility shim for TypeScript; please do not use it.")]
+#pragma warning disable CA1822 // Mark members as static - compat shim
         public IVisualStudioHostDocument TryGetDocumentForFile(
+#pragma warning restore CA1822 // Mark members as static
             AbstractProject hostProject,
             string filePath,
             SourceCodeKind sourceCodeKind,

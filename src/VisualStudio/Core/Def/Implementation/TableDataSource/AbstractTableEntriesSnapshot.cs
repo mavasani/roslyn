@@ -226,7 +226,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.TableDataSource
 
         // we don't use these
 #pragma warning disable IDE0060 // Remove unused parameter - Implements interface method for sub-type
-        public object Identity(int index)
+        public static object Identity(int index)
 #pragma warning restore IDE0060 // Remove unused parameter
             => null;
 

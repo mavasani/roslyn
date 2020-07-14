@@ -496,7 +496,7 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
 
                 var lookInReferences = (flags & ((uint)_VSOBSEARCHOPTIONS.VSOBSO_LOOKINREFS | (uint)_VSOBSEARCHOPTIONS2.VSOBSO_LISTREFERENCES)) != 0;
 
-                var projectAndAssemblySet = this.LibraryManager.GetAssemblySet(project, lookInReferences, CancellationToken.None);
+                var projectAndAssemblySet = AbstractObjectBrowserLibraryManager.GetAssemblySet(project, lookInReferences, CancellationToken.None);
                 return this.LibraryManager.GetSearchList(listKind, flags, pobSrch, projectAndAssemblySet);
             }
 
@@ -511,13 +511,13 @@ namespace Microsoft.VisualStudio.LanguageServices.Implementation.Library.ObjectB
                 case ObjectListKind.Types:
                     return new ObjectList(ObjectListKind.Types, flags, this, listItem, _manager, this.LibraryManager.GetTypeListItems(listItem, compilation));
                 case ObjectListKind.Hierarchy:
-                    return new ObjectList(ObjectListKind.Hierarchy, flags, this, listItem, _manager, this.LibraryManager.GetFolderListItems(listItem, compilation));
+                    return new ObjectList(ObjectListKind.Hierarchy, flags, this, listItem, _manager, AbstractObjectBrowserLibraryManager.GetFolderListItems(listItem, compilation));
                 case ObjectListKind.Namespaces:
                     return new ObjectList(ObjectListKind.Namespaces, flags, this, listItem, _manager, this.LibraryManager.GetNamespaceListItems(listItem, compilation));
                 case ObjectListKind.Members:
                     return new ObjectList(ObjectListKind.Members, flags, this, listItem, _manager, this.LibraryManager.GetMemberListItems(listItem, compilation));
                 case ObjectListKind.References:
-                    return new ObjectList(ObjectListKind.References, flags, this, listItem, _manager, this.LibraryManager.GetReferenceListItems(listItem, compilation));
+                    return new ObjectList(ObjectListKind.References, flags, this, listItem, _manager, AbstractObjectBrowserLibraryManager.GetReferenceListItems(listItem, compilation));
                 case ObjectListKind.BaseTypes:
                     return new ObjectList(ObjectListKind.BaseTypes, flags, this, listItem, _manager, this.LibraryManager.GetBaseTypeListItems(listItem, compilation));
             }
