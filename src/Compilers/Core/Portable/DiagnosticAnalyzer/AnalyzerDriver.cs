@@ -82,6 +82,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
+        protected CachingSemanticModelProvider SemanticModelProvider => CurrentCompilationData.SemanticModelProvider;
+
         protected ref readonly AnalyzerActions AnalyzerActions => ref _lazyAnalyzerActions;
 
         private ImmutableHashSet<DiagnosticAnalyzer>? _lazyUnsuppressedAnalyzers;
@@ -440,6 +442,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
            CancellationToken cancellationToken)
         {
             Debug.Assert(_lazyInitializeTask == null);
+            Debug.Assert(compilation.SemanticModelProvider != null);
 
             var diagnosticQueue = DiagnosticQueue.Create(categorizeDiagnostics);
 
@@ -844,7 +847,9 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             CancellationToken cancellationToken)
         {
             AnalyzerDriver analyzerDriver = compilation.CreateAnalyzerDriver(analyzers, analyzerManager, severityFilter);
-            newCompilation = compilation.WithEventQueue(new AsyncQueue<CompilationEvent>());
+            newCompilation = compilation
+                .WithSemanticModelProvider(new CachingSemanticModelProvider())
+                .WithEventQueue(new AsyncQueue<CompilationEvent>());
 
             var categorizeDiagnostics = false;
             var analysisOptions = new CompilationWithAnalyzersOptions(options, onAnalyzerException, analyzerExceptionFilter: analyzerExceptionFilter, concurrentAnalysis: true, logAnalyzerExecutionTime: reportAnalyzer, reportSuppressedDiagnostics: false);
@@ -877,7 +882,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var reportSuppressedDiagnostics = compilation.Options.ReportSuppressedDiagnostics;
             while (DiagnosticQueue.TryDequeue(out var diagnostic))
             {
-                diagnostic = suppressMessageState.ApplySourceSuppressions(diagnostic, GetOrCreateSemanticModel);
+                diagnostic = suppressMessageState.ApplySourceSuppressions(diagnostic, SemanticModelProvider);
                 if (reportSuppressedDiagnostics || !diagnostic.IsSuppressed)
                 {
                     allDiagnostics.Add(diagnostic);
@@ -888,10 +893,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         }
 
         private SemanticModel GetOrCreateSemanticModel(SyntaxTree tree)
-            => GetOrCreateSemanticModel(AnalyzerExecutor.Compilation, tree);
+            => GetOrCreateSemanticModel(tree, AnalyzerExecutor.Compilation);
 
-        private SemanticModel GetOrCreateSemanticModel(Compilation compilation, SyntaxTree tree)
-            => CurrentCompilationData.GetOrCreateCachedSemanticModel(tree, compilation, AnalyzerExecutor.CancellationToken);
+        private SemanticModel GetOrCreateSemanticModel(SyntaxTree tree, Compilation compilation)
+            => SemanticModelProvider.GetSemanticModel(tree, compilation);
 
         public void ApplyProgrammaticSuppressions(DiagnosticBag reportedDiagnostics, Compilation compilation)
         {
@@ -1067,7 +1072,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private ImmutableArray<Diagnostic> FilterDiagnosticsSuppressedInSourceOrByAnalyzers(ImmutableArray<Diagnostic> diagnostics, Compilation compilation)
         {
-            diagnostics = FilterDiagnosticsSuppressedInSource(diagnostics, compilation, CurrentCompilationData.SuppressMessageAttributeState, GetOrCreateSemanticModel);
+            diagnostics = FilterDiagnosticsSuppressedInSource(diagnostics, compilation, CurrentCompilationData.SuppressMessageAttributeState, SemanticModelProvider);
             return ApplyProgrammaticSuppressions(diagnostics, compilation);
         }
 
@@ -1075,7 +1080,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             ImmutableArray<Diagnostic> diagnostics,
             Compilation compilation,
             SuppressMessageAttributeState suppressMessageState,
-            Func<Compilation, SyntaxTree, SemanticModel> getSemanticModel)
+            SemanticModelProvider semanticModelProvider)
         {
             if (diagnostics.IsEmpty)
             {
@@ -1091,7 +1096,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 DiagnosticAnalysisContextHelpers.VerifyDiagnosticLocationsInCompilation(diagnostics[i], compilation);
 #endif
 
-                var diagnostic = suppressMessageState.ApplySourceSuppressions(diagnostics[i], getSemanticModel);
+                var diagnostic = suppressMessageState.ApplySourceSuppressions(diagnostics[i], semanticModelProvider);
                 if (!reportSuppressedDiagnostics && diagnostic.IsSuppressed)
                 {
                     // Diagnostic suppressed in source.
@@ -1507,6 +1512,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     await onSymbolAndMembersProcessedAsync(symbolDeclaredEvent.Symbol, analyzer).ConfigureAwait(false);
                 }
             }
+            else if (compilationEvent is CompilationUnitCompletedEvent compilationUnitCompletedEvent)
+            {
+                SemanticModelProvider.RemoveCachedSemanticModel(compilationUnitCompletedEvent.CompilationUnit);
+            }
+
+            return;
 
             async Task onSymbolAndMembersProcessedAsync(ISymbol symbol, DiagnosticAnalyzer analyzer)
             {
@@ -1739,7 +1750,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private SyntaxNode GetTopmostNodeForAnalysis(ISymbol symbol, SyntaxReference syntaxReference, Compilation compilation, CancellationToken cancellationToken)
         {
-            var model = CurrentCompilationData.GetOrCreateCachedSemanticModel(syntaxReference.SyntaxTree, compilation, cancellationToken);
+            var model = SemanticModelProvider.GetSemanticModel(syntaxReference.SyntaxTree, compilation);
             return model.GetTopmostNodeForDiagnosticAnalysis(symbol, syntaxReference.GetSyntax(cancellationToken));
         }
 
@@ -1765,7 +1776,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             // to get information about unnecessary usings.
 
             var semanticModel = analysisState != null ?
-                CurrentCompilationData.GetOrCreateCachedSemanticModel(completedEvent.CompilationUnit, completedEvent.Compilation, cancellationToken) :
+                SemanticModelProvider.GetSemanticModel(completedEvent.CompilationUnit, completedEvent.Compilation) :
                 completedEvent.SemanticModel;
 
             if (!analysisScope.ShouldAnalyze(semanticModel.SyntaxTree))
@@ -2544,7 +2555,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             var symbol = symbolEvent.Symbol;
 
             SemanticModel semanticModel = analysisState != null ?
-                CurrentCompilationData.GetOrCreateCachedSemanticModel(decl.SyntaxTree, symbolEvent.Compilation, cancellationToken) :
+                SemanticModelProvider.GetSemanticModel(decl.SyntaxTree, symbolEvent.Compilation) :
                 symbolEvent.SemanticModel(decl);
 
             var cacheAnalysisData = analysisScope.Analyzers.Length < Analyzers.Length &&
