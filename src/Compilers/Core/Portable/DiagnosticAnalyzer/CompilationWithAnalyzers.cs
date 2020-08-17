@@ -53,24 +53,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private readonly ConcurrentSet<Diagnostic> _exceptionDiagnostics = new ConcurrentSet<Diagnostic>();
 
         /// <summary>
-        /// Lock to track the set of active tasks computing tree diagnostics and task computing compilation diagnostics.
+        /// Lock to track the active task computing tree diagnostics or compilation diagnostics.
         /// </summary>
-        private readonly object _executingTasksLock = new object();
-        private readonly Dictionary<SourceOrAdditionalFile, Tuple<Task, CancellationTokenSource>>? _executingConcurrentTreeTasksOpt;
-        private Tuple<Task, CancellationTokenSource>? _executingCompilationOrNonConcurrentTreeTask;
-
-        /// <summary>
-        /// Used to generate a unique token for each tree diagnostics request.
-        /// The token is used to determine the priority of each request.
-        /// Each new tree diagnostic request gets an incremented token value and has higher priority over other requests for the same tree.
-        /// Compilation diagnostics requests always have the lowest priority.
-        /// </summary>
-        private int _currentToken = 0;
-
-        /// <summary>
-        /// Map from active tasks computing tree diagnostics to their token number.
-        /// </summary>
-        private readonly Dictionary<Task, int>? _concurrentTreeTaskTokensOpt;
+        private readonly object _executingTaskLock = new object();
+        private Tuple<Task, CancellationTokenSource>? _executingTask;
 
         /// <summary>
         /// Pool of event queues to serve each diagnostics request.
@@ -140,9 +126,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             _analysisResultBuilder = new AnalysisResultBuilder(analysisOptions.LogAnalyzerExecutionTime, analyzers, _analysisOptions.Options?.AdditionalFiles ?? ImmutableArray<AdditionalText>.Empty);
             _analyzerManager = new AnalyzerManager(analyzers);
             _driverPool = new ObjectPool<AnalyzerDriver>(() => _compilation.CreateAnalyzerDriver(analyzers, _analyzerManager, severityFilter: SeverityFilter.None));
-            _executingConcurrentTreeTasksOpt = analysisOptions.ConcurrentAnalysis ? new Dictionary<SourceOrAdditionalFile, Tuple<Task, CancellationTokenSource>>() : null;
-            _concurrentTreeTaskTokensOpt = analysisOptions.ConcurrentAnalysis ? new Dictionary<Task, int>() : null;
-            _executingCompilationOrNonConcurrentTreeTask = null;
+            _executingTask = null;
         }
 
         #region Helper methods for public API argument validation
@@ -350,8 +334,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         private async Task<ImmutableArray<Diagnostic>> GetAnalyzerCompilationDiagnosticsCoreAsync(ImmutableArray<DiagnosticAnalyzer> analyzers, CancellationToken cancellationToken)
         {
-            // Wait for all active tasks to complete.
-            await WaitForActiveAnalysisTasksAsync(waitForTreeTasks: true, waitForCompilationOrNonConcurrentTask: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+            // Wait for active task to complete.
+            await WaitForActiveAnalysisTaskAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var diagnostics = ImmutableArray<Diagnostic>.Empty;
             var hasAllAnalyzers = analyzers.Length == Analyzers.Length;
@@ -360,7 +344,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                 _analysisState.GetPendingEvents(analyzers, includeSourceEvents: true, includeNonSourceEvents: true, cancellationToken);
 
             // Compute the analyzer diagnostics for the given analysis scope.
-            await ComputeAnalyzerDiagnosticsAsync(analysisScope, getPendingEvents, newTaskToken: 0, cancellationToken: cancellationToken).ConfigureAwait(false);
+            await ComputeAnalyzerDiagnosticsAsync(analysisScope, getPendingEvents, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Return computed non-local diagnostics for the given analysis scope.
             return _analysisResultBuilder.GetDiagnostics(analysisScope, getLocalDiagnostics: false, getNonLocalDiagnostics: true);
@@ -584,15 +568,13 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             try
             {
-                var taskToken = Interlocked.Increment(ref _currentToken);
-
                 var pendingAnalyzers = _analysisResultBuilder.GetPendingAnalyzers(analysisScope.Analyzers);
                 if (pendingAnalyzers.Length > 0)
                 {
                     var pendingAnalysisScope = pendingAnalyzers.Length < analysisScope.Analyzers.Length ? analysisScope.WithAnalyzers(pendingAnalyzers, hasAllAnalyzers: false) : analysisScope;
 
                     // Compute the analyzer diagnostics for the pending analysis scope.
-                    await ComputeAnalyzerDiagnosticsAsync(pendingAnalysisScope, getPendingEventsOpt: null, taskToken, cancellationToken).ConfigureAwait(false);
+                    await ComputeAnalyzerDiagnosticsAsync(pendingAnalysisScope, getPendingEventsOpt: null, cancellationToken).ConfigureAwait(false);
                 }
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
@@ -679,8 +661,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             try
             {
-                var taskToken = Interlocked.Increment(ref _currentToken);
-
                 var pendingAnalyzers = _analysisResultBuilder.GetPendingAnalyzers(analysisScope.Analyzers);
                 if (pendingAnalyzers.Length > 0)
                 {
@@ -689,22 +669,12 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     Func<ImmutableArray<CompilationEvent>> getPendingEvents = () => _analysisState.GetPendingEvents(analysisScope.Analyzers, model.SyntaxTree, cancellationToken);
 
                     // Compute the analyzer diagnostics for the given analysis scope.
-                    // We need to loop till symbol analysis is complete for any partial symbols being processed for other tree diagnostic requests.
-                    do
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                        (ImmutableArray<CompilationEvent> compilationEvents, bool hasSymbolStartActions) = await ComputeAnalyzerDiagnosticsAsync(pendingAnalysisScope, getPendingEvents, taskToken, cancellationToken).ConfigureAwait(false);
-                        if (hasSymbolStartActions && forceCompletePartialTrees)
-                        {
-                            await processPartialSymbolLocationsAsync(compilationEvents, analysisScope).ConfigureAwait(false);
-                        }
-                    } while (_analysisOptions.ConcurrentAnalysis && _analysisState.HasPendingSymbolAnalysis(pendingAnalysisScope, cancellationToken));
-
-                    if (_analysisOptions.ConcurrentAnalysis)
+                    (ImmutableArray<CompilationEvent> compilationEvents, bool hasSymbolStartActions) = await ComputeAnalyzerDiagnosticsAsync(pendingAnalysisScope, getPendingEvents, cancellationToken).ConfigureAwait(false);
+                    if (hasSymbolStartActions && forceCompletePartialTrees)
                     {
-                        // Wait for all active tree tasks as they might still be reporting diagnostics for partial symbols defined in this tree.
-                        await WaitForActiveAnalysisTasksAsync(waitForTreeTasks: true, waitForCompilationOrNonConcurrentTask: false, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        await processPartialSymbolLocationsAsync(compilationEvents, analysisScope).ConfigureAwait(false);
                     }
                 }
             }
@@ -747,31 +717,18 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
                 if (partialTrees != null)
                 {
-                    if (AnalysisOptions.ConcurrentAnalysis)
+                    foreach (var tree in partialTrees)
                     {
-                        await Task.WhenAll(partialTrees.Select(tree =>
-                            Task.Run(() =>
-                            {
-                                var treeModel = _compilation.GetSemanticModel(tree);
-                                analysisScope = new AnalysisScope(analysisScope.Analyzers, new SourceOrAdditionalFile(tree), filterSpan: null, isSyntacticSingleFileAnalysis: false, analysisScope.ConcurrentAnalysis, analysisScope.CategorizeDiagnostics);
-                                return ComputeAnalyzerSemanticDiagnosticsAsync(treeModel, analysisScope, cancellationToken, forceCompletePartialTrees: false);
-                            }, cancellationToken))).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        foreach (var tree in partialTrees)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            var treeModel = _compilation.GetSemanticModel(tree);
-                            analysisScope = new AnalysisScope(analysisScope.Analyzers, new SourceOrAdditionalFile(tree), filterSpan: null, isSyntacticSingleFileAnalysis: false, analysisScope.ConcurrentAnalysis, analysisScope.CategorizeDiagnostics);
-                            await ComputeAnalyzerSemanticDiagnosticsAsync(treeModel, analysisScope, cancellationToken, forceCompletePartialTrees: false).ConfigureAwait(false);
-                        }
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var treeModel = _compilation.GetSemanticModel(tree);
+                        analysisScope = new AnalysisScope(analysisScope.Analyzers, new SourceOrAdditionalFile(tree), filterSpan: null, isSyntacticSingleFileAnalysis: false, analysisScope.ConcurrentAnalysis, analysisScope.CategorizeDiagnostics);
+                        await ComputeAnalyzerSemanticDiagnosticsAsync(treeModel, analysisScope, cancellationToken, forceCompletePartialTrees: false).ConfigureAwait(false);
                     }
                 }
             }
         }
 
-        private async Task<(ImmutableArray<CompilationEvent> events, bool hasSymbolStartActions)> ComputeAnalyzerDiagnosticsAsync(AnalysisScope analysisScope, Func<ImmutableArray<CompilationEvent>>? getPendingEventsOpt, int newTaskToken, CancellationToken cancellationToken)
+        private async Task<(ImmutableArray<CompilationEvent> events, bool hasSymbolStartActions)> ComputeAnalyzerDiagnosticsAsync(AnalysisScope analysisScope, Func<ImmutableArray<CompilationEvent>>? getPendingEventsOpt, CancellationToken cancellationToken)
         {
             try
             {
@@ -846,8 +803,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                                     }, linkedCancellationToken),
                                     cancellationSource);
 
-                                // Wait for higher priority tree document tasks to complete.
-                                computeTask = await SetActiveAnalysisTaskAsync(getComputeTask, analysisScope.FilterFileOpt, newTaskToken, cancellationToken).ConfigureAwait(false);
+                                // Set compute task as active analysis task.
+                                computeTask = await SetActiveAnalysisTaskAsync(getComputeTask, analysisScope, cancellationToken).ConfigureAwait(false);
 
                                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -865,7 +822,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                             }
                             finally
                             {
-                                ClearExecutingTask(computeTask, analysisScope.FilterFileOpt);
+                                ClearExecutingTask(computeTask);
                                 computeTask = null;
                             }
                         }
@@ -1023,143 +980,88 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private Task<Task> SetActiveAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewAnalysisTask, SourceOrAdditionalFile? fileOpt, int newTaskToken, CancellationToken cancellationToken)
+        private Task<Task> SetActiveAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewAnalysisTask, AnalysisScope analysisScope, CancellationToken cancellationToken)
         {
-            if (fileOpt.HasValue)
+            // Compiler diagnostic requests force override any executing task.
+            if (analysisScope.IsSingleFileAnalysis &&
+                analysisScope.Analyzers.Length == 1 &&
+                analysisScope.Analyzers[0] is CompilerDiagnosticAnalyzer)
             {
-                return SetActiveTreeAnalysisTaskAsync(getNewAnalysisTask, fileOpt.Value, newTaskToken, cancellationToken);
+                return Task.FromResult(SetActiveTreeAnalysisTaskAsync(getNewAnalysisTask));
             }
             else
             {
-                return SetActiveCompilationAnalysisTaskAsync(getNewAnalysisTask, cancellationToken);
+                return WaitForActiveAnalysisAndThenSetAnalysisTaskAsync(getNewAnalysisTask, cancellationToken);
             }
         }
 
-        private async Task<Task> SetActiveCompilationAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewCompilationTask, CancellationToken cancellationToken)
+        private async Task<Task> WaitForActiveAnalysisAndThenSetAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewAnalysisTask, CancellationToken cancellationToken)
         {
             while (true)
             {
-                // Wait for all active tasks, compilation analysis tasks have lowest priority.
-                await WaitForActiveAnalysisTasksAsync(waitForTreeTasks: true, waitForCompilationOrNonConcurrentTask: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+                // First wait for the active task to complete.
+                await WaitForActiveAnalysisTaskAsync(cancellationToken).ConfigureAwait(false);
 
-                lock (_executingTasksLock)
+                // Then attempt to set new analysis task as the active task.
+                lock (_executingTaskLock)
                 {
-                    if ((_executingConcurrentTreeTasksOpt == null || _executingConcurrentTreeTasksOpt.Count == 0) &&
-                        _executingCompilationOrNonConcurrentTreeTask == null)
+                    if (_executingTask == null)
                     {
-                        _executingCompilationOrNonConcurrentTreeTask = getNewCompilationTask();
-                        return _executingCompilationOrNonConcurrentTreeTask.Item1;
+                        _executingTask = getNewAnalysisTask();
+                        return _executingTask.Item1;
                     }
                 }
             }
         }
 
-        private async Task WaitForActiveAnalysisTasksAsync(bool waitForTreeTasks, bool waitForCompilationOrNonConcurrentTask, CancellationToken cancellationToken)
+        private async Task WaitForActiveAnalysisTaskAsync(CancellationToken cancellationToken)
         {
-            Debug.Assert(waitForTreeTasks || waitForCompilationOrNonConcurrentTask);
-
-            var executingTasks = ArrayBuilder<Tuple<Task, CancellationTokenSource>>.GetInstance();
-
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                lock (_executingTasksLock)
+                Tuple<Task, CancellationTokenSource>? executingTask;
+                lock (_executingTaskLock)
                 {
-                    if (waitForTreeTasks && _executingConcurrentTreeTasksOpt?.Count > 0)
+                    executingTask = _executingTask;
+                    if (executingTask == null)
                     {
-                        executingTasks.AddRange(_executingConcurrentTreeTasksOpt.Values);
-                    }
-
-                    if (waitForCompilationOrNonConcurrentTask && _executingCompilationOrNonConcurrentTreeTask != null)
-                    {
-                        executingTasks.Add(_executingCompilationOrNonConcurrentTreeTask);
+                        return;
                     }
                 }
 
-                if (executingTasks.Count == 0)
+                try
                 {
-                    executingTasks.Free();
-                    return;
+                    await executingTask.Item1.ConfigureAwait(false);
                 }
-
-                foreach (var task in executingTasks)
+                catch (OperationCanceledException)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await WaitForExecutingTaskAsync(task.Item1).ConfigureAwait(false);
+                    // Handle cancelled tasks gracefully.
                 }
-
-                executingTasks.Clear();
             }
         }
 
-        private async Task<Task> SetActiveTreeAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewTreeAnalysisTask, SourceOrAdditionalFile tree, int newTaskToken, CancellationToken cancellationToken)
+        private Task SetActiveTreeAnalysisTaskAsync(Func<Tuple<Task, CancellationTokenSource>> getNewTreeAnalysisTask)
         {
             try
             {
-                while (true)
+                lock (_executingTaskLock)
                 {
-                    // For concurrent analysis, we must wait for any executing tree task with higher tokens.
-                    Tuple<Task, CancellationTokenSource>? executingTreeTask = null;
-
-                    lock (_executingTasksLock)
+                    // Suspend the executing task, if any.
+                    if (_executingTask != null)
                     {
-                        if (!_analysisOptions.ConcurrentAnalysis)
-                        {
-                            // For non-concurrent analysis, just suspend the executing task, if any.
-                            if (_executingCompilationOrNonConcurrentTreeTask != null)
-                            {
-                                SuspendAnalysis_NoLock(_executingCompilationOrNonConcurrentTreeTask.Item1, _executingCompilationOrNonConcurrentTreeTask.Item2);
-                                _executingCompilationOrNonConcurrentTreeTask = null;
-                            }
-
-                            var newTask = getNewTreeAnalysisTask();
-                            _executingCompilationOrNonConcurrentTreeTask = newTask;
-                            return newTask.Item1;
-                        }
-
-                        Debug.Assert(_executingConcurrentTreeTasksOpt != null);
-                        Debug.Assert(_concurrentTreeTaskTokensOpt != null);
-
-                        if (!_executingConcurrentTreeTasksOpt.TryGetValue(tree, out executingTreeTask) ||
-                            _concurrentTreeTaskTokensOpt[executingTreeTask.Item1] < newTaskToken)
-                        {
-                            if (executingTreeTask != null)
-                            {
-                                SuspendAnalysis_NoLock(executingTreeTask.Item1, executingTreeTask.Item2);
-                            }
-
-                            if (_executingCompilationOrNonConcurrentTreeTask != null)
-                            {
-                                SuspendAnalysis_NoLock(_executingCompilationOrNonConcurrentTreeTask.Item1, _executingCompilationOrNonConcurrentTreeTask.Item2);
-                                _executingCompilationOrNonConcurrentTreeTask = null;
-                            }
-
-                            var newTask = getNewTreeAnalysisTask();
-                            _concurrentTreeTaskTokensOpt[newTask.Item1] = newTaskToken;
-                            _executingConcurrentTreeTasksOpt[tree] = newTask;
-                            return newTask.Item1;
-                        }
+                        SuspendAnalysis_NoLock(_executingTask.Item1, _executingTask.Item2);
+                        _executingTask = null;
                     }
 
-                    await WaitForExecutingTaskAsync(executingTreeTask.Item1).ConfigureAwait(false);
+                    var newTask = getNewTreeAnalysisTask();
+                    _executingTask = newTask;
+                    return newTask.Item1;
                 }
             }
             catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
             {
                 throw ExceptionUtilities.Unreachable;
-            }
-        }
-
-        private async Task WaitForExecutingTaskAsync(Task executingTask)
-        {
-            try
-            {
-                await executingTask.ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // Handle cancelled tasks gracefully.
             }
         }
 
@@ -1172,32 +1074,15 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             }
         }
 
-        private void ClearExecutingTask(Task? computeTask, SourceOrAdditionalFile? fileOpt)
+        private void ClearExecutingTask(Task? computeTask)
         {
             if (computeTask != null)
             {
-                lock (_executingTasksLock)
+                lock (_executingTaskLock)
                 {
-                    Tuple<Task, CancellationTokenSource>? executingTask;
-                    if (fileOpt.HasValue && _analysisOptions.ConcurrentAnalysis)
+                    if (_executingTask?.Item1 == computeTask)
                     {
-                        Debug.Assert(_executingConcurrentTreeTasksOpt != null);
-                        Debug.Assert(_concurrentTreeTaskTokensOpt != null);
-
-                        if (_executingConcurrentTreeTasksOpt.TryGetValue(fileOpt.Value, out executingTask) &&
-                            executingTask.Item1 == computeTask)
-                        {
-                            _executingConcurrentTreeTasksOpt.Remove(fileOpt.Value);
-                        }
-
-                        if (_concurrentTreeTaskTokensOpt.ContainsKey(computeTask))
-                        {
-                            _concurrentTreeTaskTokensOpt.Remove(computeTask);
-                        }
-                    }
-                    else if (_executingCompilationOrNonConcurrentTreeTask?.Item1 == computeTask)
-                    {
-                        _executingCompilationOrNonConcurrentTreeTask = null;
+                        _executingTask = null;
                     }
                 }
             }
