@@ -34,8 +34,8 @@ namespace Microsoft.CodeAnalysis.Remote.Diagnostics
         /// NOTE: We do not re-use this cache for project analysis as it leads to significant memory increase in the OOP process,
         /// and CWT does not seem to drop entries until ForceGC happens.
         /// </summary>
-        private static readonly ConditionalWeakTable<Project, CompilationWithAnalyzersCacheEntry> s_compilationWithAnalyzersCache
-            = new ConditionalWeakTable<Project, CompilationWithAnalyzersCacheEntry>();
+        private static readonly ConditionalWeakTable<ProjectId, CompilationWithAnalyzersCacheEntry> s_compilationWithAnalyzersCache
+            = new ConditionalWeakTable<ProjectId, CompilationWithAnalyzersCacheEntry>();
 
         private readonly TextDocument? _document;
         private readonly Project _project;
@@ -193,13 +193,14 @@ namespace Microsoft.CodeAnalysis.Remote.Diagnostics
                     return await CreateCompilationWithAnalyzersCacheEntryAsync(project, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (s_compilationWithAnalyzersCache.TryGetValue(project, out var data))
+                if (s_compilationWithAnalyzersCache.TryGetValue(project.Id, out var data) &&
+                    data.Project == project)
                 {
                     return data;
                 }
 
                 data = await CreateCompilationWithAnalyzersCacheEntryAsync(project, cancellationToken).ConfigureAwait(false);
-                return s_compilationWithAnalyzersCache.GetValue(project, _ => data);
+                return s_compilationWithAnalyzersCache.GetValue(project.Id, _ => data);
             }
         }
 
@@ -229,7 +230,7 @@ namespace Microsoft.CodeAnalysis.Remote.Diagnostics
                 project, analyzerBuilder.ToImmutable(), cancellationToken).ConfigureAwait(false);
             var analyzerToIdMap = new BidirectionalMap<string, DiagnosticAnalyzer>(analyzerMapBuilder);
 
-            return new CompilationWithAnalyzersCacheEntry(compilationWithAnalyzers, analyzerToIdMap);
+            return new CompilationWithAnalyzersCacheEntry(compilationWithAnalyzers, analyzerToIdMap, project);
 
             static async Task<CompilationWithAnalyzers> CreateCompilationWithAnalyzerAsync(
                 Project project,
@@ -267,11 +268,13 @@ namespace Microsoft.CodeAnalysis.Remote.Diagnostics
         {
             public CompilationWithAnalyzers CompilationWithAnalyzers { get; }
             public BidirectionalMap<string, DiagnosticAnalyzer> AnalyzerToIdMap { get; }
+            public Project Project { get; }
 
-            public CompilationWithAnalyzersCacheEntry(CompilationWithAnalyzers compilationWithAnalyzers, BidirectionalMap<string, DiagnosticAnalyzer> analyzerToIdMap)
+            public CompilationWithAnalyzersCacheEntry(CompilationWithAnalyzers compilationWithAnalyzers, BidirectionalMap<string, DiagnosticAnalyzer> analyzerToIdMap, Project project)
             {
                 CompilationWithAnalyzers = compilationWithAnalyzers;
                 AnalyzerToIdMap = analyzerToIdMap;
+                Project = project;
             }
         }
     }
