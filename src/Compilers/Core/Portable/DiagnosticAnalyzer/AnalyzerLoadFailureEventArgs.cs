@@ -15,7 +15,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             None = 0,
             UnableToLoadAnalyzer = 1,
             UnableToCreateAnalyzer = 2,
-            NoAnalyzers = 3
+            NoAnalyzers = 3,
+            VersionMismatch = 4,
         }
 
         /// <summary>

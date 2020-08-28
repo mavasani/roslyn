@@ -17,6 +17,11 @@
         <target state="translated">Das Ändern der Version eines Assemblyverweises ist während des Debuggens nicht zulässig: "{0}" hat die Version in "{1}" geändert.</target>
         <note />
       </trans-unit>
+      <trans-unit id="CodeAnalysisDependencyVersionMismatch">
+        <source>Current compiler version '{0}' is lesser then the minimum required compiler version '{1}'. Fix the version mismatch by moving to a newer analyzer or an older version of the compiler.</source>
+        <target state="new">Current compiler version '{0}' is lesser then the minimum required compiler version '{1}'. Fix the version mismatch by moving to a newer analyzer or an older version of the compiler.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="CompilerAnalyzerThrowsDescription">
         <source>Analyzer '{0}' threw the following exception:
 '{1}'.</source>

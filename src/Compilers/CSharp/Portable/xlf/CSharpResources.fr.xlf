@@ -1950,6 +1950,16 @@
         <target state="translated">SyntaxTree ne faisant pas partie de la compilation, il ne peut pas être supprimé</target>
         <note />
       </trans-unit>
+      <trans-unit id="WRN_AnalyzerDependencyVersionMismatch">
+        <source>Analyzers in assembly '{0}' may not execute correctly due to a dependency version mismatch: {1}</source>
+        <target state="new">Analyzers in assembly '{0}' may not execute correctly due to a dependency version mismatch: {1}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="WRN_AnalyzerDependencyVersionMismatch_Title">
+        <source>Analyzer dependency version mismatch</source>
+        <target state="new">Analyzer dependency version mismatch</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WRN_CaseConstantNamedUnderscore">
         <source>The name '_' refers to the constant, not the discard pattern. Use 'var _' to discard the value, or '@_' to refer to a constant by that name.</source>
         <target state="translated">Le nom '_' fait référence à la constante, pas au modèle d'abandon. Utilisez 'var _' pour abandonner la valeur, ou '@_' pour faire référence à une constante par ce nom.</target>

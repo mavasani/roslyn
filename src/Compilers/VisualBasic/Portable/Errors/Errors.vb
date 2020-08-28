@@ -1975,6 +1975,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         WRN_Experimental = 42380
 
         WRN_AttributeNotSupportedInVB = 42381
+        WRN_AnalyzerDependencyVersionMismatch = 42382
         ERR_MultipleAnalyzerConfigsInSameDir = 42500
 
         ' // AVAILABLE                             42600 - 49998

@@ -522,10 +522,53 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         {
             if (_lazyAssembly == null)
             {
-                _lazyAssembly = _assemblyLoader.LoadFromPath(FullPath);
+                var assembly = _assemblyLoader.LoadFromPath(FullPath);
+                if (Interlocked.CompareExchange(ref _lazyAssembly, assembly, null) == null)
+                {
+                    ValidateCodeAnalysisDependencyVersion(assembly);
+                }
             }
 
             return _lazyAssembly;
+        }
+
+        private void ValidateCodeAnalysisDependencyVersion(Assembly assembly)
+        {
+            var executingAssemblyName = Assembly.GetExecutingAssembly().GetName();
+            if (executingAssemblyName.Version == null)
+            {
+                return;
+            }
+
+            foreach (var reference in assembly.GetReferencedAssemblies())
+            {
+                if (string.Equals(reference.Name, executingAssemblyName.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (reference.Version == null)
+                    {
+                        return;
+                    }
+
+                    // Skip verification for analyzers compiled against debug bits.
+                    if (reference.Version.Major == 42 &&
+                        reference.Version.Minor == 42)
+                    {
+                        return;
+                    }
+
+                    if (reference.Version <= executingAssemblyName.Version)
+                    {
+                        return;
+                    }
+
+                    // Current compiler version '{0}' is lesser then the minimum required compiler version '{1}'. Fix the version mismatch by moving to a newer analyzer or an older version of the compiler.
+                    var arg0 = executingAssemblyName.Version.ToString();
+                    var arg1 = reference.Version.ToString();
+                    var message = string.Format(CodeAnalysisResources.CodeAnalysisDependencyVersionMismatch, arg0, arg1);
+                    AnalyzerLoadFailed?.Invoke(this, new AnalyzerLoadFailureEventArgs(AnalyzerLoadFailureEventArgs.FailureErrorCode.VersionMismatch, message));
+                    return;
+                }
+            }
         }
     }
 }

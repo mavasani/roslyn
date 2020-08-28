@@ -553,6 +553,9 @@
   <data name="UnsupportedAnalyzerInstance" xml:space="preserve">
     <value>Argument contains an analyzer instance that does not belong to the 'Analyzers' for this CompilationWithAnalyzers instance.</value>
   </data>
+  <data name="CodeAnalysisDependencyVersionMismatch" xml:space="preserve">
+    <value>Current compiler version '{0}' is lesser then the minimum required compiler version '{1}'. Fix the version mismatch by moving to a newer analyzer or an older version of the compiler.</value>
+  </data>
   <data name="InvalidTree" xml:space="preserve">
     <value>Syntax tree doesn't belong to the underlying 'Compilation'.</value>
   </data>

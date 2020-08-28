@@ -1950,6 +1950,16 @@
         <target state="translated">SyntaxTree는 컴파일의 일부가 아니므로 제거할 수 없습니다.</target>
         <note />
       </trans-unit>
+      <trans-unit id="WRN_AnalyzerDependencyVersionMismatch">
+        <source>Analyzers in assembly '{0}' may not execute correctly due to a dependency version mismatch: {1}</source>
+        <target state="new">Analyzers in assembly '{0}' may not execute correctly due to a dependency version mismatch: {1}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="WRN_AnalyzerDependencyVersionMismatch_Title">
+        <source>Analyzer dependency version mismatch</source>
+        <target state="new">Analyzer dependency version mismatch</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WRN_CaseConstantNamedUnderscore">
         <source>The name '_' refers to the constant, not the discard pattern. Use 'var _' to discard the value, or '@_' to refer to a constant by that name.</source>
         <target state="translated">'_' 이름은 상수를 참조하며, 무시 패턴은 참조하지 않습니다. 'var _'을 사용하여 값을 무시하거나 '@_'을 사용하여 해당 이름별 상수를 참조하세요.</target>

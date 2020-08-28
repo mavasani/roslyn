@@ -4786,6 +4786,12 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="WRN_UnableToLoadAnalyzer_Title" xml:space="preserve">
     <value>Unable to load Analyzer assembly</value>
   </data>
+  <data name="WRN_AnalyzerDependencyVersionMismatch" xml:space="preserve">
+    <value>Analyzers in assembly '{0}' may not execute correctly due to a dependency version mismatch: {1}</value>
+  </data>
+  <data name="WRN_AnalyzerDependencyVersionMismatch_Title" xml:space="preserve">
+    <value>Analyzer dependency version mismatch</value>
+  </data>
   <data name="INF_UnableToLoadSomeTypesInAnalyzer" xml:space="preserve">
     <value>Skipping some types in analyzer assembly {0} due to a ReflectionTypeLoadException : {1}.</value>
   </data>

@@ -463,6 +463,16 @@
         <target state="translated">型引数に Nothing は使用できません。</target>
         <note />
       </trans-unit>
+      <trans-unit id="WRN_AnalyzerDependencyVersionMismatch">
+        <source>Analyzers in assembly '{0}' may not execute correctly due to a dependency version mismatch: {1}</source>
+        <target state="new">Analyzers in assembly '{0}' may not execute correctly due to a dependency version mismatch: {1}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="WRN_AnalyzerDependencyVersionMismatch_Title">
+        <source>Analyzer dependency version mismatch</source>
+        <target state="new">Analyzer dependency version mismatch</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WrongNumberOfTypeArguments">
         <source>Wrong number of type arguments</source>
         <target state="translated">型引数の数が正しくありません。</target>

@@ -487,6 +487,9 @@ namespace Microsoft.CodeAnalysis
                     case AnalyzerLoadFailureEventArgs.FailureErrorCode.NoAnalyzers:
                         diagnostic = new DiagnosticInfo(messageProvider, messageProvider.WRN_NoAnalyzerInAssembly, analyzerReference.FullPath);
                         break;
+                    case AnalyzerLoadFailureEventArgs.FailureErrorCode.VersionMismatch:
+                        diagnostic = new DiagnosticInfo(messageProvider, messageProvider.WRN_AnalyzerDependencyVersionMismatch, e.Message);
+                        break;
                     case AnalyzerLoadFailureEventArgs.FailureErrorCode.None:
                     default:
                         return;
