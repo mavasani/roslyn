@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -75,21 +76,33 @@ namespace Microsoft.CodeAnalysis.CodeFixes
             progressTracker.AddItems(fixAllContexts.Length * 3);
 
             // Process each context one at a time, allowing us to dump any information we computed for each once done with it.
+
+
+            using var _2 = ArrayBuilder<Task>.GetInstance(out var tasks);
+            var diagnostics = new ConcurrentDictionary<FixAllContext, ImmutableArray<Diagnostic>>();
+            foreach (var fixAllContext in fixAllContexts)
+            {
+                tasks.Add(Task.Run(async () =>
+                {
+                    // Determine the diagnostics to fix.
+                    diagnostics[fixAllContext] = await DetermineDiagnosticsAsync(fixAllContext, progressTracker).ConfigureAwait(false);
+                }, fixAllContext.CancellationToken));
+            }
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+
             var currentSolution = solution;
             foreach (var fixAllContext in fixAllContexts)
             {
                 Contract.ThrowIfFalse(fixAllContext.Scope is FixAllScope.Document or FixAllScope.Project);
-                currentSolution = await FixSingleContextAsync(currentSolution, fixAllContext, progressTracker).ConfigureAwait(false);
+                currentSolution = await FixSingleContextAsync(currentSolution, fixAllContext, diagnostics[fixAllContext], progressTracker).ConfigureAwait(false);
             }
 
             return currentSolution;
         }
 
-        private async Task<Solution> FixSingleContextAsync(Solution currentSolution, FixAllContext fixAllContext, IProgressTracker progressTracker)
+        private async Task<Solution> FixSingleContextAsync(Solution currentSolution, FixAllContext fixAllContext, ImmutableArray<Diagnostic> diagnostics, IProgressTracker progressTracker)
         {
-            // First, determine the diagnostics to fix.
-            var diagnostics = await DetermineDiagnosticsAsync(fixAllContext, progressTracker).ConfigureAwait(false);
-
             // Second, get the fixes for all the diagnostics, and apply them to determine the new root/text for each doc.
             var docIdToNewRootOrText = await GetFixedDocumentsAsync(fixAllContext, progressTracker, diagnostics).ConfigureAwait(false);
 
