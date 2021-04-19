@@ -292,6 +292,11 @@
         <target state="translated">啟用 Razor 'pull' 診斷 (實驗性，需要重新啟動)</target>
         <note />
       </trans-unit>
+      <trans-unit id="Enable_file_logging_for_telemetry">
+        <source>Enable_file_logging_for_telemetry (logged within '%Temp%\Roslyn' folder)</source>
+        <target state="new">Enable_file_logging_for_telemetry (logged within '%Temp%\Roslyn' folder)</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Enable_pull_diagnostics_experimental_requires_restart">
         <source>Enable 'pull' diagnostics (experimental, requires restart)</source>
         <target state="translated">啟用 'pull' 診斷 (實驗性，需要重新啟動)</target>

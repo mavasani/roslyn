@@ -267,5 +267,8 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Options
 
         public static string Option_Show_Remove_Unused_References_command_in_Solution_Explorer_experimental
             => ServicesVSResources.Show_Remove_Unused_References_command_in_Solution_Explorer_experimental;
+
+        public static string Option_Enable_file_logging_for_telemetry
+            => ServicesVSResources.Enable_file_logging_for_telemetry;
     }
 }

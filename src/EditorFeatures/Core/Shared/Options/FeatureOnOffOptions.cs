@@ -91,7 +91,6 @@ namespace Microsoft.CodeAnalysis.Editor.Shared.Options
         public static readonly Option2<bool> AutomaticallyCompleteStatementOnSemicolon = new(
             nameof(FeatureOnOffOptions), nameof(AutomaticallyCompleteStatementOnSemicolon), defaultValue: true,
             storageLocations: new RoamingProfileStorageLocation($"TextEditor.{nameof(AutomaticallyCompleteStatementOnSemicolon)}"));
-
     }
 
     [ExportOptionProvider, Shared]
