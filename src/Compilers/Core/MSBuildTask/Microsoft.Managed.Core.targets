@@ -66,10 +66,26 @@
         continue running analyzers in the background in Visual Studio while typing (i.e. intellisense),
         while disabling analyzer execution on explicitly invoked non-design time builds.
       -->
-    <PropertyGroup Condition="'$(RunAnalyzers)' == 'false' or
+    <PropertyGroup Condition="'$(IsIndirectlyTriggeredBuildInsideVisualStudio)' == 'true' or
+                              '$(RunAnalyzers)' == 'false' or
                               ('$(RunAnalyzers)' == '' and '$(RunAnalyzersDuringBuild)' == 'false')">
       <_SkipAnalyzers>true</_SkipAnalyzers>
     </PropertyGroup>
+	
+	<!-- Semaphore file to indicate the time stamp for last build with skipAnalyzers flag. -->
+	<PropertyGroup>
+      <LastBuildWithSkipAnalyzers>$(IntermediateOutputPath)$(MSBuildProjectFile).BuildWithSkipAnalyzers</LastBuildWithSkipAnalyzers>
+    </PropertyGroup>
+	
+	<!-- 'LastBuildWithSkipAnalyzers' semaphore file, if exists, is passed as custom additional file input to builds without skipAnalyzers flag to ensure correct incremental builds. -->
+    <ItemGroup Condition="'$(_SkipAnalyzers)' != 'true' and Exists('$(LastBuildWithSkipAnalyzers)')">
+      <CustomAdditionalCompileInputs Include="$(LastBuildWithSkipAnalyzers)" />
+    </ItemGroup>
+  </Target>
+  
+  <!-- We touch and create a semaphore file after build to indicate the time stamp for last build with skipAnalyzers flag. -->
+  <Target Name="_TouchLastBuildWithSkipAnalyzers" Condition="'$(_SkipAnalyzers)' == 'true'" AfterTargets="CoreCompile">
+    <Touch AlwaysCreate="true" Files="$(LastBuildWithSkipAnalyzers)"/>
   </Target>
 
   <!--
